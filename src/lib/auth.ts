@@ -1,9 +1,9 @@
-import NextAuth from 'next-auth'
+import NextAuth, { type NextAuthOptions } from 'next-auth'
 import GoogleProvider from 'next-auth/providers/google'
 import { supabaseAdmin } from '@/lib/supabase'
 import type { User } from '@/types/database'
 
-export const authOptions = {
+export const authOptions: NextAuthOptions = {
   providers: [
     GoogleProvider({
       clientId: process.env.GOOGLE_CLIENT_ID!,
@@ -127,6 +127,6 @@ export const authOptions = {
     error: '/auth/error',
   },
   session: {
-    strategy: 'jwt' as const,
+    strategy: 'jwt',
   },
 }

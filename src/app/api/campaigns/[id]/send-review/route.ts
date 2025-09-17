@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { supabaseAdmin } from '@/lib/supabase'
 import { MailerLiteService } from '@/lib/mailerlite'
-import { authOptions } from '../../auth/[...nextauth]/route'
+import { authOptions } from '@/lib/auth'
 
 interface RouteParams {
   params: Promise<{

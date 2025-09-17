@@ -29,9 +29,13 @@ const handler = NextAuth({
             return false
           }
 
-          const supabaseUserId = authData?.user?.id || authError.message === 'User already registered'
-            ? (await supabaseAdmin.auth.admin.listUsers()).data.users.find(u => u.email === user.email)?.id
-            : null
+          let supabaseUserId = authData?.user?.id
+
+          if (!supabaseUserId && authError && authError.message === 'User already registered') {
+            // User already exists, get their ID
+            const { data: existingUsers } = await supabaseAdmin.auth.admin.listUsers()
+            supabaseUserId = existingUsers.users.find(u => u.email === user.email)?.id
+          }
 
           if (!supabaseUserId) {
             console.error('Could not get Supabase user ID')

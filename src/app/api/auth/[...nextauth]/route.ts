@@ -3,7 +3,7 @@ import GoogleProvider from 'next-auth/providers/google'
 import { supabaseAdmin } from '@/lib/supabase'
 import type { User } from '@/types/database'
 
-const handler = NextAuth({
+export const authOptions = {
   providers: [
     GoogleProvider({
       clientId: process.env.GOOGLE_CLIENT_ID!,
@@ -129,6 +129,7 @@ const handler = NextAuth({
   session: {
     strategy: 'jwt',
   },
-})
+}
 
+const handler = NextAuth(authOptions)
 export { handler as GET, handler as POST }

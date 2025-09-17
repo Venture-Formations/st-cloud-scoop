@@ -4,9 +4,9 @@ import { supabaseAdmin } from '@/lib/supabase'
 import { MailerLiteService } from '@/lib/mailerlite'
 
 interface RouteParams {
-  params: {
+  params: Promise<{
     id: string
-  }
+  }>
 }
 
 export async function POST(request: NextRequest, { params }: RouteParams) {
@@ -15,6 +15,8 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     if (!session) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
+
+    const { id } = await params
 
     // Fetch campaign with articles
     const { data: campaign, error } = await supabaseAdmin
@@ -30,7 +32,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         ),
         manual_articles:manual_articles(*)
       `)
-      .eq('id', params.id)
+      .eq('id', id)
       .single()
 
     if (error || !campaign) {
@@ -59,7 +61,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
           .from('user_activities')
           .insert([{
             user_id: user.id,
-            campaign_id: params.id,
+            campaign_id: id,
             action: 'review_campaign_sent',
             details: { mailerlite_campaign_id: result.campaignId }
           }])

@@ -3,9 +3,9 @@ import { getServerSession } from 'next-auth'
 import { supabaseAdmin } from '@/lib/supabase'
 
 interface RouteParams {
-  params: {
+  params: Promise<{
     id: string
-  }
+  }>
 }
 
 export async function PATCH(request: NextRequest, { params }: RouteParams) {
@@ -14,6 +14,8 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     if (!session) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
+
+    const { id } = await params
 
     const body = await request.json()
     const { article_updates } = body
@@ -34,7 +36,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
         .from('articles')
         .update(updateData)
         .eq('id', article_id)
-        .eq('campaign_id', params.id)
+        .eq('campaign_id', id)
     })
 
     await Promise.all(updatePromises)
@@ -52,7 +54,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
           .from('user_activities')
           .insert([{
             user_id: user.id,
-            campaign_id: params.id,
+            campaign_id: id,
             action: 'articles_updated',
             details: { updates_count: article_updates.length }
           }])

@@ -3,9 +3,9 @@ import { getServerSession } from 'next-auth'
 import { supabaseAdmin } from '@/lib/supabase'
 
 interface RouteParams {
-  params: {
+  params: Promise<{
     id: string
-  }
+  }>
 }
 
 export async function GET(request: NextRequest, { params }: RouteParams) {
@@ -14,6 +14,8 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     if (!session) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
+
+    const { id } = await params
 
     const { data: campaign, error } = await supabaseAdmin
       .from('newsletter_campaigns')
@@ -30,7 +32,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
         manual_articles:manual_articles(*),
         email_metrics(*)
       `)
-      .eq('id', params.id)
+      .eq('id', id)
       .single()
 
     if (error) {
@@ -59,6 +61,8 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
+    const { id } = await params
+
     const body = await request.json()
     const { status, subject_line } = body
 
@@ -69,7 +73,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     const { data: campaign, error } = await supabaseAdmin
       .from('newsletter_campaigns')
       .update(updateData)
-      .eq('id', params.id)
+      .eq('id', id)
       .select('*')
       .single()
 
@@ -90,7 +94,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
           .from('user_activities')
           .insert([{
             user_id: user.id,
-            campaign_id: params.id,
+            campaign_id: id,
             action: 'campaign_updated',
             details: updateData
           }])

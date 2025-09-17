@@ -165,7 +165,7 @@ export class RSSProcessor {
               title: item.title || '',
               description: item.contentSnippet || item.content || '',
               content: item.content || '',
-              author: item.creator || item['dc:creator'] || null,
+              author: item.creator || (item as any)['dc:creator'] || null,
               publication_date: item.pubDate,
               source_url: item.link,
               image_url: imageUrl,

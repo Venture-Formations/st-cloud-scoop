@@ -14,7 +14,31 @@ const handler = NextAuth({
     async signIn({ user, account, profile }) {
       if (account?.provider === 'google') {
         try {
-          // Check if user exists in our database
+          // First, create or get user in Supabase auth
+          const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
+            email: user.email!,
+            email_confirm: true,
+            user_metadata: {
+              name: user.name,
+              avatar_url: user.image,
+            }
+          })
+
+          if (authError && authError.message !== 'User already registered') {
+            console.error('Error creating auth user:', authError)
+            return false
+          }
+
+          const supabaseUserId = authData?.user?.id || authError.message === 'User already registered'
+            ? (await supabaseAdmin.auth.admin.listUsers()).data.users.find(u => u.email === user.email)?.id
+            : null
+
+          if (!supabaseUserId) {
+            console.error('Could not get Supabase user ID')
+            return false
+          }
+
+          // Check if user exists in our users table
           const { data: existingUser } = await supabaseAdmin
             .from('users')
             .select('*')
@@ -22,12 +46,12 @@ const handler = NextAuth({
             .single()
 
           if (!existingUser) {
-            // Create new user
+            // Create new user in our users table
             const { error } = await supabaseAdmin
               .from('users')
               .insert([
                 {
-                  id: user.id,
+                  id: supabaseUserId,
                   email: user.email!,
                   name: user.name,
                   role: 'reviewer',
@@ -37,8 +61,9 @@ const handler = NextAuth({
               ])
 
             if (error) {
-              console.error('Error creating user:', error)
-              return false
+              console.error('Error creating user in users table:', error)
+              // Don't fail auth if users table doesn't exist yet
+              console.log('Users table may not exist yet - continuing with auth')
             }
           } else {
             // Update last login
@@ -51,23 +76,36 @@ const handler = NextAuth({
           return true
         } catch (error) {
           console.error('Error in signIn callback:', error)
-          return false
+          // Don't fail auth during setup phase
+          console.log('Allowing auth during setup phase')
+          return true
         }
       }
       return true
     },
     async jwt({ token, user }) {
       if (user) {
-        // Fetch user role from database
-        const { data: dbUser } = await supabaseAdmin
-          .from('users')
-          .select('role, is_active')
-          .eq('email', user.email)
-          .single()
+        try {
+          // Fetch user role from database
+          const { data: dbUser } = await supabaseAdmin
+            .from('users')
+            .select('role, is_active')
+            .eq('email', user.email)
+            .single()
 
-        if (dbUser) {
-          token.role = dbUser.role
-          token.isActive = dbUser.is_active
+          if (dbUser) {
+            token.role = dbUser.role
+            token.isActive = dbUser.is_active
+          } else {
+            // Default values if users table doesn't exist or user not found
+            token.role = 'reviewer'
+            token.isActive = true
+          }
+        } catch (error) {
+          console.error('Error fetching user role:', error)
+          // Default values during setup
+          token.role = 'reviewer'
+          token.isActive = true
         }
       }
       return token

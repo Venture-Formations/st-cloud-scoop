@@ -45,7 +45,15 @@ export class MailerLiteService {
         }
       }
 
+      console.log('Sending MailerLite API request with data:', JSON.stringify(campaignData, null, 2))
+
       const response = await mailerliteClient.post('/campaigns', campaignData)
+
+      console.log('MailerLite API response:', {
+        status: response.status,
+        statusText: response.statusText,
+        data: response.data
+      })
 
       if (response.status === 201) {
         const campaignId = response.data.data.id
@@ -72,13 +80,39 @@ export class MailerLiteService {
       throw new Error('Failed to create review campaign')
 
     } catch (error) {
+      console.error('MailerLite API error details:', error)
+
+      // Extract more specific error information
+      let errorMessage = 'Unknown error'
+      let errorDetails = {}
+
+      if (error instanceof Error) {
+        errorMessage = error.message
+        if ('response' in error && error.response) {
+          const axiosError = error as any
+          console.error('MailerLite API error response:', {
+            status: axiosError.response?.status,
+            statusText: axiosError.response?.statusText,
+            data: axiosError.response?.data,
+            headers: axiosError.response?.headers
+          })
+          errorDetails = {
+            status: axiosError.response?.status,
+            statusText: axiosError.response?.statusText,
+            apiError: axiosError.response?.data
+          }
+          errorMessage = `MailerLite API Error: ${axiosError.response?.status} - ${JSON.stringify(axiosError.response?.data)}`
+        }
+      }
+
       await this.errorHandler.handleError(error, {
         source: 'mailerlite_service',
         operation: 'createReviewCampaign',
-        campaignId: campaign.id
+        campaignId: campaign.id,
+        errorDetails
       })
-      await this.slack.sendEmailCampaignAlert('review', false, campaign.id, error instanceof Error ? error.message : 'Unknown error')
-      throw error
+      await this.slack.sendEmailCampaignAlert('review', false, campaign.id, errorMessage)
+      throw new Error(errorMessage)
     }
   }
 

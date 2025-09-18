@@ -46,8 +46,18 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       }, { status: 400 })
     }
 
+    console.log('Creating MailerLite service...')
+    console.log('Environment check:', {
+      hasApiKey: !!process.env.MAILERLITE_API_KEY,
+      hasReviewGroupId: !!process.env.MAILERLITE_REVIEW_GROUP_ID,
+      apiKeyPrefix: process.env.MAILERLITE_API_KEY?.substring(0, 8) + '...',
+      reviewGroupId: process.env.MAILERLITE_REVIEW_GROUP_ID
+    })
+
     const mailerLiteService = new MailerLiteService()
+    console.log('Calling createReviewCampaign...')
     const result = await mailerLiteService.createReviewCampaign(campaign)
+    console.log('MailerLite result:', result)
 
     // Log user activity
     if (session.user?.email) {

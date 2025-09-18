@@ -242,7 +242,9 @@ export class MailerLiteService {
   }
 
   private generateEmailHTML(campaign: CampaignWithArticles, isReview: boolean): string {
-    const activeArticles = campaign.articles.filter(article => article.is_active)
+    const activeArticles = campaign.articles
+      .filter(article => article.is_active)
+      .sort((a, b) => (b.rss_post?.post_rating?.[0]?.total_score || 0) - (a.rss_post?.post_rating?.[0]?.total_score || 0))
 
     // Use the same format as the preview template
     const formattedDate = new Date(campaign.date).toLocaleDateString('en-US', {

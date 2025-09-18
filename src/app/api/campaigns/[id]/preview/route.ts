@@ -62,6 +62,7 @@ export async function GET(
       const beforeFilter = campaign.articles.length
       campaign.articles = campaign.articles
         .filter((article: any) => article.is_active)
+        .sort((a: any, b: any) => (b.rss_post?.post_rating?.[0]?.total_score || 0) - (a.rss_post?.post_rating?.[0]?.total_score || 0))
         .slice(0, 5) // Limit to 5 articles maximum
       console.log('Active articles after filter:', campaign.articles.length, 'from', beforeFilter, '(max 5)')
     }

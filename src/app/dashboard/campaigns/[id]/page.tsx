@@ -16,6 +16,7 @@ export default function CampaignDetailPage() {
   const [previewHtml, setPreviewHtml] = useState<string | null>(null)
   const [showPreview, setShowPreview] = useState(false)
   const [sendingReview, setSendingReview] = useState(false)
+  const [generatingSubject, setGeneratingSubject] = useState(false)
 
   useEffect(() => {
     if (params.id) {
@@ -190,6 +191,35 @@ export default function CampaignDetailPage() {
 
     setSendingReview(true)
     try {
+      // First, generate subject line with AI if not already set
+      let subjectLine = campaign.subject_line
+      if (!subjectLine) {
+        console.log('Generating AI subject line...')
+        const subjectResponse = await fetch(`/api/campaigns/${campaign.id}/generate-subject`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          }
+        })
+
+        if (subjectResponse.ok) {
+          const subjectData = await subjectResponse.json()
+          subjectLine = subjectData.subject_line
+
+          // Update campaign locally with new subject line
+          setCampaign(prev => {
+            if (!prev) return prev
+            return {
+              ...prev,
+              subject_line: subjectLine
+            }
+          })
+        } else {
+          console.warn('Failed to generate subject line, proceeding without it')
+        }
+      }
+
+      // Now send for review
       const response = await fetch(`/api/campaigns/${campaign.id}/send-review`, {
         method: 'POST',
         headers: {
@@ -219,6 +249,50 @@ export default function CampaignDetailPage() {
       alert('Failed to send for review: ' + (error instanceof Error ? error.message : 'Unknown error'))
     } finally {
       setSendingReview(false)
+    }
+  }
+
+  const generateSubjectLine = async () => {
+    if (!campaign) return
+
+    // Check if there are any active articles
+    const activeArticles = campaign.articles.filter(article => article.is_active)
+    if (activeArticles.length === 0) {
+      alert('Please select at least one article before generating a subject line.')
+      return
+    }
+
+    setGeneratingSubject(true)
+    try {
+      const response = await fetch(`/api/campaigns/${campaign.id}/generate-subject`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Failed to generate subject line')
+      }
+
+      const data = await response.json()
+
+      // Update campaign locally with new subject line
+      setCampaign(prev => {
+        if (!prev) return prev
+        return {
+          ...prev,
+          subject_line: data.subject_line
+        }
+      })
+
+      console.log(`Generated subject line: "${data.subject_line}" (${data.character_count} characters)`)
+
+    } catch (error) {
+      alert('Failed to generate subject line: ' + (error instanceof Error ? error.message : 'Unknown error'))
+    } finally {
+      setGeneratingSubject(false)
     }
   }
 
@@ -290,24 +364,24 @@ export default function CampaignDetailPage() {
             <div className="flex space-x-2">
               <button
                 onClick={processRSSFeeds}
-                disabled={processing || saving || sendingReview}
+                disabled={processing || saving || sendingReview || generatingSubject}
                 className="bg-green-600 hover:bg-green-700 disabled:opacity-50 text-white px-4 py-2 rounded text-sm font-medium"
               >
                 {processing ? 'Processing...' : 'Process RSS Feeds'}
               </button>
               <button
                 onClick={previewNewsletter}
-                disabled={saving || sendingReview}
+                disabled={saving || sendingReview || generatingSubject}
                 className="bg-gray-200 hover:bg-gray-300 disabled:opacity-50 text-gray-800 px-4 py-2 rounded text-sm font-medium"
               >
                 Preview Newsletter
               </button>
               <button
                 onClick={sendForReview}
-                disabled={saving || sendingReview || campaign.status === 'sent' || campaign.status === 'approved'}
+                disabled={saving || sendingReview || generatingSubject || campaign.status === 'sent' || campaign.status === 'approved'}
                 className="bg-brand-primary hover:bg-blue-700 disabled:opacity-50 text-white px-4 py-2 rounded text-sm font-medium"
               >
-                {sendingReview ? 'Sending...' : 'Send for Review'}
+                {sendingReview ? (generatingSubject ? 'Generating Subject...' : 'Sending...') : 'Send for Review'}
               </button>
             </div>
           </div>
@@ -318,12 +392,26 @@ export default function CampaignDetailPage() {
             </div>
           )}
 
-          {campaign.subject_line && (
-            <div className="mt-4 p-3 bg-gray-50 rounded">
-              <div className="text-sm text-gray-600 mb-1">Subject Line:</div>
-              <div className="font-medium">{campaign.subject_line}</div>
+          {/* Subject Line Section */}
+          <div className="mt-4 p-3 bg-gray-50 rounded">
+            <div className="flex justify-between items-start">
+              <div className="flex-1">
+                <div className="text-sm text-gray-600 mb-1">Subject Line:</div>
+                {campaign.subject_line ? (
+                  <div className="font-medium text-gray-900">{campaign.subject_line}</div>
+                ) : (
+                  <div className="text-gray-500 italic">No subject line generated yet</div>
+                )}
+              </div>
+              <button
+                onClick={generateSubjectLine}
+                disabled={generatingSubject || processing || sendingReview}
+                className="ml-4 bg-purple-600 hover:bg-purple-700 disabled:opacity-50 text-white px-3 py-1 rounded text-sm font-medium"
+              >
+                {generatingSubject ? 'Generating...' : campaign.subject_line ? 'Regenerate' : 'Generate'}
+              </button>
             </div>
-          )}
+          </div>
         </div>
 
         {/* Articles Section */}

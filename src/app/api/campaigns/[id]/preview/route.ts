@@ -84,6 +84,66 @@ export async function GET(
   }
 }
 
+function generateNewsletterHeader(formattedDate: string): string {
+  return `<html>
+<body style='margin:0!important;padding:0!important;background-color:#f7f7f7;'>
+   <div style='width:100%;margin:0 auto;padding:10px;background-color:#f7f7f7;box-sizing:border-box;overflow-x:auto;'>
+     <div style='width:100%;max-width:990px;margin:0 auto;padding:5px;text-align:right;font-weight:bold;'>
+       <a href='{$url}' style='color:#000;text-decoration:underline;'>View Online</a>&nbsp;|&nbsp;
+       <a href='https://stcscoop.com/' style='color:#000;text-decoration:underline;'>Sign Up</a>&nbsp;|&nbsp;
+       <a href='{$forward}' style='color:#000;text-decoration:underline;'>Share</a>
+     </div>
+     <div style='width:100%;max-width:990px;margin:0 auto;padding:0px;'>
+       <div style='font-family:Arial,sans-serif;background-color:#1877F2;text-align:center;border-radius:12px;border:1px solid #333;'>
+         <img alt='St. Cloud Scoop' src='https://raw.githubusercontent.com/VFDavid/STCScoop/refs/heads/main/STCSCOOP_Logo_824X148_clear.png' style='width:100%;max-width:500px;height:auto;margin-bottom:2px;'/>
+         <div style='color:#fff;font-size:16px;font-weight:bold;padding:0 0 5px;'>${formattedDate}</div>
+       </div>
+     </div>
+   </div>
+<br>`
+}
+
+function generateLocalScoopSection(articles: any[]): string {
+  const articlesHtml = articles.map((article: any) => `
+<tr class='row'>
+ <td class='column' style='padding:8px; vertical-align: top;'>
+ <table width='100%' cellpadding='0' cellspacing='0' style='border: 1px solid #ddd; border-radius: 8px; background: #fff; font-family: Arial, sans-serif; font-size: 16px; line-height: 26px; box-shadow:0 4px 12px rgba(0,0,0,.15);'>
+ <tr><td style='padding: 12px 12px 4px; font-size: 20px; font-weight: bold;'>${article.headline}</td></tr>
+ <tr><td style='padding: 0 12px 20px;'>${article.content} ${article.rss_post?.source_url ? `(<a href='${article.rss_post.source_url}' style='color: #0080FE; text-decoration: none;'>read more</a>)` : ''}</td></tr>
+ </table>
+ </td>
+</tr>`).join('');
+
+  return `
+<table width="100%" cellpadding="0" cellspacing="0" style="border: 1px solid #f7f7f7; border-radius: 10px; margin-top: 10px; max-width: 990px; margin: 0 auto; background-color: #f7f7f7; font-family: Arial, sans-serif;">
+  <tr>
+    <td style="padding: 5px;">
+      <h2 style="font-size: 1.625em; line-height: 1.16em; font-family: Arial, sans-serif; color: #1877F2; margin: 0; padding: 0;">The Local Scoop</h2>
+    </td>
+  </tr>
+  ${articlesHtml}
+</table>
+<br>`
+}
+
+function generateNewsletterFooter(): string {
+  return `
+<div style="max-width: 990px; margin: 0 auto; background-color: #1877F2; padding: 8px 0; text-align: center;">
+  <a href="https://www.facebook.com/61578947310955/" target="_blank">
+    <img src="https://raw.githubusercontent.com/VFDavid/STCScoop/refs/heads/main/facebook_light.png" alt="Facebook" width="24" height="24" style="border: none; display: inline-block;">
+  </a>
+</div>
+<div style="font-family: Arial, sans-serif; font-size: 12px; color: #777; text-align: center; padding: 20px 10px; border-top: 1px solid #ccc; background-color: #ffffff; max-width: 990px; margin: 0 auto ;">
+  <p style="margin: 0;text-align: center;">You're receiving this email because you subscribed to <strong>St. Cloud Scoop</strong>.</p>
+  <p style="margin: 5px 0 0;text-align: center;">
+    <a href="{$unsubscribe}" style='text-decoration: underline;'>Unsubscribe</a>
+  </p>
+  <p style="margin: 5px;text-align: center;">©2025 Venture Formations LLC, all rights reserved</p>
+</div>
+</body>
+</html>`
+}
+
 function generateNewsletterHtml(campaign: any): string {
   try {
     console.log('Generating HTML for campaign:', campaign?.id)
@@ -107,127 +167,13 @@ function generateNewsletterHtml(campaign: any): string {
     const formattedDate = formatDate(campaign.date)
     console.log('Formatted date:', formattedDate)
 
-    const html = `
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>St. Cloud Scoop - ${formatDate(campaign.date)}</title>
-  <style>
-    body {
-      font-family: Georgia, 'Times New Roman', serif;
-      line-height: 1.6;
-      color: #333;
-      max-width: 600px;
-      margin: 0 auto;
-      padding: 20px;
-      background-color: #f8f9fa;
-    }
-    .container {
-      background-color: white;
-      padding: 30px;
-      border-radius: 8px;
-      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-    }
-    .header {
-      text-align: center;
-      border-bottom: 3px solid #2563eb;
-      padding-bottom: 20px;
-      margin-bottom: 30px;
-    }
-    .logo {
-      font-size: 2.2em;
-      font-weight: bold;
-      color: #2563eb;
-      margin-bottom: 5px;
-    }
-    .tagline {
-      font-style: italic;
-      color: #666;
-      font-size: 1.1em;
-    }
-    .date {
-      color: #666;
-      margin-top: 10px;
-      font-size: 0.9em;
-    }
-    .article {
-      margin-bottom: 25px;
-      padding-bottom: 20px;
-      border-bottom: 1px solid #eee;
-    }
-    .article:last-child {
-      border-bottom: none;
-    }
-    .article-headline {
-      font-size: 1.3em;
-      font-weight: bold;
-      color: #1f2937;
-      margin-bottom: 10px;
-      line-height: 1.3;
-    }
-    .article-content {
-      color: #4b5563;
-      margin-bottom: 10px;
-    }
-    .article-meta {
-      font-size: 0.85em;
-      color: #6b7280;
-      font-style: italic;
-    }
-    .article-image {
-      max-width: 100%;
-      height: auto;
-      border-radius: 4px;
-      margin: 10px 0;
-    }
-    .footer {
-      margin-top: 30px;
-      padding-top: 20px;
-      border-top: 2px solid #e5e7eb;
-      text-align: center;
-      color: #6b7280;
-      font-size: 0.9em;
-    }
-    .footer a {
-      color: #2563eb;
-      text-decoration: none;
-    }
-  </style>
-</head>
-<body>
-  <div class="container">
-    <div class="header">
-      <div class="logo">St. Cloud Scoop</div>
-      <div class="tagline">Your Local News Connection</div>
-      <div class="date">${formattedDate}</div>
-    </div>
+    // Generate modular HTML sections
+    const header = generateNewsletterHeader(formattedDate)
+    const localScoopSection = generateLocalScoopSection(articles)
+    const footer = generateNewsletterFooter()
 
-    ${articles.map((article: any) => `
-      <div class="article">
-        <h2 class="article-headline">${article.headline}</h2>
-        <div class="article-content">${article.content}</div>
-        <div class="article-meta">
-          Source: ${article.rss_post?.rss_feed?.name || 'Unknown'} • ${article.word_count} words
-          ${article.rss_post?.source_url ? ` • <a href="${article.rss_post.source_url}" target="_blank">Read more</a>` : ''}
-        </div>
-      </div>
-    `).join('')}
-
-    <div class="footer">
-      <p>
-        📧 St. Cloud Scoop Newsletter<br>
-        Keeping St. Cloud connected to what matters most.
-      </p>
-      <p>
-        <a href="#">Unsubscribe</a> • <a href="#">Update Preferences</a>
-      </p>
-    </div>
-  </div>
-</body>
-</html>
-  `.trim()
+    // Combine all sections
+    const html = header + localScoopSection + footer
 
     console.log('HTML template generated successfully, length:', html.length)
     return html

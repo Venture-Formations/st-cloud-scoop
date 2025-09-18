@@ -123,12 +123,12 @@ export class RSSProcessor {
     try {
       const rssFeed = await parser.parseURL(feed.url)
       const now = new Date()
-      const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000)
+      const timeRange = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000) // Last 7 days for testing
 
       const recentPosts = rssFeed.items.filter(item => {
         if (!item.pubDate) return false
         const pubDate = new Date(item.pubDate)
-        return pubDate >= yesterday && pubDate <= now
+        return pubDate >= timeRange && pubDate <= now
       })
 
       console.log(`Found ${recentPosts.length} recent posts from ${feed.name}`)

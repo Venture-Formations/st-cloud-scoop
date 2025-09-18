@@ -26,13 +26,12 @@ export async function GET(
       .from('newsletter_campaigns')
       .select(`
         *,
-        articles:newsletter_articles(
+        articles(
           id,
           headline,
           content,
           word_count,
-          image_url,
-          image_alt_text,
+          fact_check_score,
           is_active,
           rss_post:rss_posts(
             source_url,
@@ -208,9 +207,6 @@ function generateNewsletterHtml(campaign: any): string {
     ${articles.map((article: any) => `
       <div class="article">
         <h2 class="article-headline">${article.headline}</h2>
-        ${article.image_url ? `
-          <img src="${article.image_url}" alt="${article.image_alt_text || ''}" class="article-image">
-        ` : ''}
         <div class="article-content">${article.content}</div>
         <div class="article-meta">
           Source: ${article.rss_post?.rss_feed?.name || 'Unknown'} • ${article.word_count} words

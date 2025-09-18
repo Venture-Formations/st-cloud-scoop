@@ -10,8 +10,7 @@ export async function POST(request: NextRequest) {
       .createBucket('newsletter-images', {
         public: true,
         allowedMimeTypes: ['image/jpeg', 'image/png', 'image/gif', 'image/webp'],
-        fileSizeLimit: 5242880, // 5MB
-        path: 'articles'
+        fileSizeLimit: 5242880 // 5MB
       })
 
     if (createError && createError.message !== 'Bucket already exists') {

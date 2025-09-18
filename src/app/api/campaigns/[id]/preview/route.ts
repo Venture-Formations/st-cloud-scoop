@@ -111,18 +111,21 @@ function generateLocalScoopSection(articles: any[]): string {
     // Debug logging for image URLs
     console.log(`Article: "${article.headline}" - Image URL: ${article.rss_post?.image_url || 'None'}`)
 
-    // Check if article has any image URL (hosted or external)
+    // Check if article has any image URL (GitHub, hosted, or external)
     const hasImage = article.rss_post?.image_url
-    const isHostedImage = hasImage && article.rss_post.image_url.startsWith('/images/')
+    const isLegacyHostedImage = hasImage && article.rss_post.image_url.startsWith('/images/')
+    const isGithubImage = hasImage && (article.rss_post.image_url.includes('github.com') || article.rss_post.image_url.includes('githubusercontent.com'))
 
-    console.log(`Has image: ${hasImage}, Is hosted: ${isHostedImage}`)
+    console.log(`Has image: ${hasImage}, Is GitHub: ${isGithubImage}, Is legacy hosted: ${isLegacyHostedImage}`)
 
-    // Use hosted image if available, otherwise use external image for testing
-    const imageUrl = isHostedImage
-      ? `https://stcscoop.com${article.rss_post.image_url}`
-      : hasImage
-        ? article.rss_post.image_url
-        : null
+    // Use GitHub image if available, legacy hosted image, or external image
+    const imageUrl = isGithubImage
+      ? article.rss_post.image_url  // GitHub URLs are already complete
+      : isLegacyHostedImage
+        ? `https://stcscoop.com${article.rss_post.image_url}`
+        : hasImage
+          ? article.rss_post.image_url
+          : null
 
     const imageHtml = imageUrl
       ? `<tr><td style='padding: 0 12px; text-align: center;'><img src='${imageUrl}' alt='${article.headline}' style='max-width: 100%; max-height: 500px; border-radius: 4px;'></td></tr>

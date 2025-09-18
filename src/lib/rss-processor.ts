@@ -2,6 +2,7 @@ import Parser from 'rss-parser'
 import { supabaseAdmin } from './supabase'
 import { AI_PROMPTS, callOpenAI } from './openai'
 import { ErrorHandler, SlackNotificationService } from './slack'
+import { GitHubImageStorage } from './github-storage'
 import type {
   RssFeed,
   RssPost,
@@ -20,10 +21,12 @@ const parser = new Parser({
 export class RSSProcessor {
   private errorHandler: ErrorHandler
   private slack: SlackNotificationService
+  private githubStorage: GitHubImageStorage
 
   constructor() {
     this.errorHandler = new ErrorHandler()
     this.slack = new SlackNotificationService()
+    this.githubStorage = new GitHubImageStorage()
   }
 
   async processAllFeeds() {
@@ -617,7 +620,7 @@ export class RSSProcessor {
 
   private async processArticleImages(campaignId: string) {
     try {
-      console.log('=== STARTING IMAGE PROCESSING ===')
+      console.log('=== STARTING IMAGE PROCESSING (GitHub) ===')
       console.log('Campaign ID:', campaignId)
 
       // Log that image processing function is running
@@ -669,47 +672,27 @@ export class RSSProcessor {
           const originalImageUrl = rssPost.image_url
           console.log(`Processing image for article ${article.id}: ${originalImageUrl}`)
 
-          // Generate hash of the image URL for deduplication
-          const imageHash = crypto.createHash('md5').update(originalImageUrl).digest('hex')
-          const fileExtension = this.getImageExtension(originalImageUrl)
-          const fileName = `${imageHash}${fileExtension}`
-
-          // Check if image already exists in Supabase Storage
-          const { data: existingFile } = await supabaseAdmin.storage
-            .from('newsletter-images')
-            .list('articles', { search: imageHash })
-
-          if (existingFile && existingFile.length > 0) {
-            console.log(`Image already exists in Supabase Storage: ${fileName}`)
-
-            // Get the existing public URL
-            const { data: urlData } = supabaseAdmin.storage
-              .from('newsletter-images')
-              .getPublicUrl(`articles/${fileName}`)
-
-            // Update the RSS post with hosted URL
-            await supabaseAdmin
-              .from('rss_posts')
-              .update({ image_url: urlData.publicUrl })
-              .eq('id', rssPost.id)
-
+          // Skip if already a GitHub URL
+          if (originalImageUrl.includes('github.com') || originalImageUrl.includes('githubusercontent.com')) {
+            console.log(`Image already hosted on GitHub: ${originalImageUrl}`)
             skipCount++
             continue
           }
 
-          // Download and save the image to Supabase Storage
-          const hostedUrl = await this.downloadAndSaveImage(originalImageUrl, fileName, rssPost.title)
+          // Upload image to GitHub
+          const githubUrl = await this.githubStorage.uploadImage(originalImageUrl, rssPost.title)
 
-          if (hostedUrl) {
-            // Update the RSS post with hosted URL
+          if (githubUrl) {
+            // Update the RSS post with GitHub URL
             await supabaseAdmin
               .from('rss_posts')
-              .update({ image_url: hostedUrl })
+              .update({ image_url: githubUrl })
               .eq('id', rssPost.id)
 
-            console.log(`Successfully downloaded and stored image: ${fileName}`)
+            console.log(`Successfully uploaded image to GitHub: ${githubUrl}`)
             downloadCount++
           } else {
+            console.error(`Failed to upload image to GitHub for article ${article.id}`)
             errorCount++
           }
 
@@ -719,8 +702,8 @@ export class RSSProcessor {
         }
       }
 
-      console.log(`Image processing complete: ${downloadCount} downloaded, ${skipCount} skipped (already existed), ${errorCount} errors`)
-      await this.logInfo(`Image processing complete: ${downloadCount} downloaded, ${skipCount} skipped, ${errorCount} errors`, {
+      console.log(`Image processing complete: ${downloadCount} uploaded to GitHub, ${skipCount} skipped (already hosted), ${errorCount} errors`)
+      await this.logInfo(`Image processing complete: ${downloadCount} uploaded to GitHub, ${skipCount} skipped, ${errorCount} errors`, {
         campaignId,
         downloadCount,
         skipCount,
@@ -733,97 +716,6 @@ export class RSSProcessor {
     }
   }
 
-  private getImageExtension(url: string): string {
-    try {
-      const parsedUrl = new URL(url)
-      const pathname = parsedUrl.pathname.toLowerCase()
-
-      if (pathname.includes('.jpg') || pathname.includes('.jpeg')) return '.jpg'
-      if (pathname.includes('.png')) return '.png'
-      if (pathname.includes('.gif')) return '.gif'
-      if (pathname.includes('.webp')) return '.webp'
-      if (pathname.includes('.svg')) return '.svg'
-
-      // Default to .jpg if no extension found
-      return '.jpg'
-    } catch {
-      return '.jpg'
-    }
-  }
-
-  private async downloadAndSaveImage(imageUrl: string, fileName: string, articleTitle: string): Promise<string | null> {
-    try {
-      console.log(`Downloading image from: ${imageUrl}`)
-
-      // Download image with timeout
-      const controller = new AbortController()
-      const timeoutId = setTimeout(() => controller.abort(), 15000) // 15 second timeout
-
-      const response = await fetch(imageUrl, {
-        signal: controller.signal,
-        headers: {
-          'User-Agent': 'StCloudScoop-Newsletter/1.0'
-        }
-      })
-
-      clearTimeout(timeoutId)
-
-      if (!response.ok) {
-        console.error(`Failed to download image: HTTP ${response.status} ${response.statusText}`)
-        return null
-      }
-
-      // Check content type
-      const contentType = response.headers.get('content-type')
-      if (!contentType || !contentType.startsWith('image/')) {
-        console.error(`Invalid content type for image: ${contentType}`)
-        return null
-      }
-
-      // Get image data
-      const arrayBuffer = await response.arrayBuffer()
-      const buffer = Buffer.from(arrayBuffer)
-
-      // Check file size (limit to 5MB)
-      if (buffer.length > 5 * 1024 * 1024) {
-        console.error(`Image too large: ${buffer.length} bytes (max 5MB)`)
-        return null
-      }
-
-      // Upload to Supabase Storage
-      const { data, error } = await supabaseAdmin.storage
-        .from('newsletter-images')
-        .upload(`articles/${fileName}`, buffer, {
-          contentType: contentType,
-          cacheControl: '3600'
-        })
-
-      if (error) {
-        console.error(`Failed to upload to Supabase Storage:`, error)
-        return null
-      }
-
-      // Get public URL
-      const { data: urlData } = supabaseAdmin.storage
-        .from('newsletter-images')
-        .getPublicUrl(`articles/${fileName}`)
-
-      console.log(`Image saved to Supabase Storage: ${urlData.publicUrl}`)
-      return urlData.publicUrl
-
-    } catch (error) {
-      if (error instanceof Error && error.name === 'AbortError') {
-        console.error(`Image download timeout for: ${imageUrl}`)
-      } else {
-        console.error(`Error downloading image from ${imageUrl}:`, error)
-      }
-      await this.logError(`Failed to download image for article: ${articleTitle}`, {
-        imageUrl,
-        error: error instanceof Error ? error.message : 'Unknown error'
-      })
-      return null
-    }
-  }
 
   private async processPostIntoArticle(post: any, campaignId: string) {
     try {

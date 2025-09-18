@@ -8,13 +8,19 @@ export async function GET(
   props: { params: Promise<{ id: string }> }
 ) {
   try {
+    console.log('Preview API called')
     const { id } = await props.params
+    console.log('Campaign ID:', id)
+
     const session = await getServerSession(authOptions)
+    console.log('Session check:', !!session?.user?.email)
 
     if (!session?.user?.email) {
+      console.log('Authorization failed - no session')
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
+    console.log('Fetching campaign with ID:', id)
     // Fetch campaign with active articles
     const { data: campaign, error: campaignError } = await supabaseAdmin
       .from('newsletter_campaigns')
@@ -37,22 +43,31 @@ export async function GET(
       .eq('id', id)
       .single()
 
+    console.log('Campaign query result:', { campaign: !!campaign, error: campaignError })
+
     if (campaignError) {
       console.error('Campaign fetch error:', campaignError)
-      return NextResponse.json({ error: 'Campaign not found' }, { status: 404 })
+      return NextResponse.json({ error: `Campaign fetch failed: ${campaignError.message}` }, { status: 404 })
     }
 
     if (!campaign) {
+      console.log('No campaign found')
       return NextResponse.json({ error: 'Campaign not found' }, { status: 404 })
     }
 
+    console.log('Campaign found, articles count:', campaign.articles?.length || 0)
+
     // Filter to only active articles
     if (campaign.articles) {
+      const beforeFilter = campaign.articles.length
       campaign.articles = campaign.articles.filter((article: any) => article.is_active)
+      console.log('Active articles after filter:', campaign.articles.length, 'from', beforeFilter)
     }
 
+    console.log('Generating HTML newsletter')
     // Generate HTML newsletter
     const newsletterHtml = generateNewsletterHtml(campaign)
+    console.log('HTML generated, length:', newsletterHtml.length)
 
     return NextResponse.json({
       success: true,
@@ -62,25 +77,38 @@ export async function GET(
 
   } catch (error) {
     console.error('Preview generation error:', error)
+    console.error('Error stack:', error instanceof Error ? error.stack : 'No stack trace')
     return NextResponse.json(
-      { error: 'Failed to generate newsletter preview' },
+      { error: `Failed to generate newsletter preview: ${error instanceof Error ? error.message : 'Unknown error'}` },
       { status: 500 }
     )
   }
 }
 
 function generateNewsletterHtml(campaign: any): string {
-  const articles = campaign.articles || []
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      weekday: 'long',
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    })
-  }
+  try {
+    console.log('Generating HTML for campaign:', campaign?.id)
+    const articles = campaign.articles || []
+    console.log('Articles to render:', articles.length)
 
-  return `
+    const formatDate = (dateString: string) => {
+      try {
+        return new Date(dateString).toLocaleDateString('en-US', {
+          weekday: 'long',
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric'
+        })
+      } catch (e) {
+        console.error('Date formatting error:', e)
+        return dateString
+      }
+    }
+
+    const formattedDate = formatDate(campaign.date)
+    console.log('Formatted date:', formattedDate)
+
+    const html = `
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -174,7 +202,7 @@ function generateNewsletterHtml(campaign: any): string {
     <div class="header">
       <div class="logo">St. Cloud Scoop</div>
       <div class="tagline">Your Local News Connection</div>
-      <div class="date">${formatDate(campaign.date)}</div>
+      <div class="date">${formattedDate}</div>
     </div>
 
     ${articles.map((article: any) => `
@@ -204,4 +232,12 @@ function generateNewsletterHtml(campaign: any): string {
 </body>
 </html>
   `.trim()
+
+    console.log('HTML template generated successfully, length:', html.length)
+    return html
+
+  } catch (error) {
+    console.error('HTML generation error:', error)
+    throw new Error(`HTML generation failed: ${error instanceof Error ? error.message : 'Unknown error'}`)
+  }
 }

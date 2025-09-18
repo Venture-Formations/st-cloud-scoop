@@ -13,7 +13,10 @@
       "Bash(taskkill:*)",
       "Bash(git add:*)",
       "Bash(git commit:*)",
-      "Bash(git push:*)"
+      "Bash(git push:*)",
+      "Read(//c/**)",
+      "WebFetch(domain:stc-scoop.vercel.app)",
+      "WebFetch(domain:st-cloud-scoop.vercel.app)"
     ],
     "deny": [],
     "ask": []

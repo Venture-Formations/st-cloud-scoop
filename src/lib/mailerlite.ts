@@ -23,7 +23,7 @@ export class MailerLiteService {
     this.slack = new SlackNotificationService()
   }
 
-  async createReviewCampaign(campaign: CampaignWithArticles) {
+  async createReviewCampaign(campaign: CampaignWithArticles, forcedSubjectLine?: string) {
     try {
       console.log(`Creating review campaign for ${campaign.date}`)
 
@@ -31,10 +31,12 @@ export class MailerLiteService {
 
       // Log subject line status
       console.log('Campaign subject line:', campaign.subject_line)
+      console.log('Forced subject line parameter:', forcedSubjectLine)
 
-      const subjectLine = campaign.subject_line || `Newsletter Review - ${new Date(campaign.date).toLocaleDateString()}`
+      // Use forced subject line if provided, otherwise fall back to campaign subject line
+      const subjectLine = forcedSubjectLine || campaign.subject_line || `Newsletter Review - ${new Date(campaign.date).toLocaleDateString()}`
 
-      console.log('Using subject line for MailerLite:', subjectLine)
+      console.log('Final subject line being sent to MailerLite:', subjectLine)
 
       const campaignData = {
         name: `Review: ${campaign.date}`,
@@ -462,6 +464,74 @@ ${reviewHeaderTop}
     const utcTime = new Date(deliveryDate.getTime() + (6 * 60 * 60 * 1000))
 
     return utcTime.toISOString()
+  }
+
+  async createFinalCampaign(campaign: CampaignWithArticles, mainGroupId: string) {
+    try {
+      console.log(`Creating final campaign for ${campaign.date}`)
+
+      const emailContent = this.generateEmailHTML(campaign, false) // Not a review
+
+      const subjectLine = campaign.subject_line || `Newsletter - ${new Date(campaign.date).toLocaleDateString()}`
+
+      console.log('Creating final campaign with subject line:', subjectLine)
+
+      const campaignData = {
+        name: `Newsletter: ${campaign.date}`,
+        type: 'regular',
+        emails: [{
+          subject: `🍦 ${subjectLine}`,
+          from_name: 'St. Cloud Scoop',
+          from: 'scoop@stcscoop.com',
+          content: emailContent,
+        }],
+        groups: [mainGroupId],
+        delivery_schedule: {
+          type: 'instant'
+        }
+      }
+
+      console.log('Creating MailerLite campaign with data:', {
+        name: campaignData.name,
+        subject: campaignData.emails[0].subject,
+        groupId: mainGroupId
+      })
+
+      const response = await mailerliteClient.post('/campaigns', campaignData)
+
+      if (response.data && response.data.data && response.data.data.id) {
+        const campaignId = response.data.data.id
+
+        console.log('Final campaign created successfully:', campaignId)
+
+        await this.errorHandler.logInfo('Final campaign created successfully', {
+          campaignId: campaign.id,
+          mailerliteCampaignId: campaignId,
+          mainGroupId: mainGroupId
+        }, 'mailerlite_service')
+
+        await this.slack.sendEmailCampaignAlert('final', true, campaign.id)
+
+        return { success: true, campaignId }
+      }
+
+      throw new Error('Failed to create final campaign')
+
+    } catch (error) {
+      console.error('Failed to create final campaign:', error)
+
+      if (error instanceof Error) {
+        await this.errorHandler.logError('Failed to create final campaign', {
+          error: error.message,
+          campaignId: campaign.id,
+          mainGroupId: mainGroupId
+        }, 'mailerlite_service')
+
+        await this.slack.sendEmailCampaignAlert('final', false, campaign.id, error.message)
+      }
+
+      throw error
+    }
   }
 
   private async logInfo(message: string, context: Record<string, any> = {}) {

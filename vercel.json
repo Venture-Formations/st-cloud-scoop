@@ -1,6 +1,22 @@
 {
   "crons": [
     {
+      "path": "/api/cron/rss-processing",
+      "schedule": "30 20 * * *"
+    },
+    {
+      "path": "/api/cron/generate-subject",
+      "schedule": "45 20 * * *"
+    },
+    {
+      "path": "/api/cron/create-campaign",
+      "schedule": "50 20 * * *"
+    },
+    {
+      "path": "/api/cron/send-newsletter",
+      "schedule": "0 21 * * *"
+    },
+    {
       "path": "/api/cron/process-rss",
       "schedule": "30 20 * * *"
     },
@@ -18,6 +34,18 @@
     }
   ],
   "functions": {
+    "app/api/cron/rss-processing/route.ts": {
+      "maxDuration": 300
+    },
+    "app/api/cron/generate-subject/route.ts": {
+      "maxDuration": 60
+    },
+    "app/api/cron/create-campaign/route.ts": {
+      "maxDuration": 120
+    },
+    "app/api/cron/send-newsletter/route.ts": {
+      "maxDuration": 120
+    },
     "app/api/cron/process-rss/route.ts": {
       "maxDuration": 300
     },

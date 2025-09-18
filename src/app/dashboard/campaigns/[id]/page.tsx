@@ -227,12 +227,21 @@ export default function CampaignDetailPage() {
         console.log('Skipping AI generation - subject line already exists:', subjectLine)
       }
 
-      // Now send for review
+      // Now send for review - make sure we're using updated subject line
+      console.log('About to send for review with subject line:', subjectLine)
+      console.log('Campaign object subject_line before send:', campaign.subject_line)
+
+      // Add a small delay to ensure database is updated
+      await new Promise(resolve => setTimeout(resolve, 1000))
+
       const response = await fetch(`/api/campaigns/${campaign.id}/send-review`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-        }
+        },
+        body: JSON.stringify({
+          force_subject_line: subjectLine // Send the generated subject line directly
+        })
       })
 
       if (!response.ok) {

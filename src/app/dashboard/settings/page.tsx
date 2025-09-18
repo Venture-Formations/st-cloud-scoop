@@ -19,6 +19,7 @@ export default function SettingsPage() {
             <nav className="-mb-px flex space-x-8">
               {[
                 { id: 'system', name: 'System Status' },
+                { id: 'email', name: 'Email' },
                 { id: 'rss', name: 'RSS Feeds' },
                 { id: 'notifications', name: 'Notifications' },
                 { id: 'users', name: 'Users' }
@@ -42,6 +43,7 @@ export default function SettingsPage() {
         {/* Tab Content */}
         <div className="mt-6">
           {activeTab === 'system' && <SystemStatus />}
+          {activeTab === 'email' && <EmailSettings />}
           {activeTab === 'rss' && <RSSFeeds />}
           {activeTab === 'notifications' && <Notifications />}
           {activeTab === 'users' && <Users />}
@@ -224,6 +226,237 @@ function Notifications() {
           </ul>
         </div>
       </div>
+    </div>
+  )
+}
+
+function EmailSettings() {
+  const [settings, setSettings] = useState({
+    // MailerLite Settings
+    apiKey: '',
+    reviewGroupId: '',
+    mainGroupId: '',
+    fromEmail: 'scoop@stcscoop.com',
+    senderName: 'St. Cloud Scoop',
+
+    // Scheduling Settings (Central Time)
+    rssProcessingTime: '20:30',  // 8:30 PM
+    subjectGenerationTime: '20:45',  // 8:45 PM
+    campaignCreationTime: '20:50',  // 8:50 PM
+    scheduledSendTime: '21:00'  // 9:00 PM
+  })
+  const [saving, setSaving] = useState(false)
+  const [message, setMessage] = useState('')
+
+  useEffect(() => {
+    loadSettings()
+  }, [])
+
+  const loadSettings = async () => {
+    try {
+      const response = await fetch('/api/settings/email')
+      if (response.ok) {
+        const data = await response.json()
+        setSettings(prev => ({ ...prev, ...data }))
+      }
+    } catch (error) {
+      console.error('Failed to load email settings:', error)
+    }
+  }
+
+  const handleSave = async () => {
+    setSaving(true)
+    setMessage('')
+
+    try {
+      const response = await fetch('/api/settings/email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(settings)
+      })
+
+      if (response.ok) {
+        setMessage('Settings saved successfully!')
+        setTimeout(() => setMessage(''), 3000)
+      } else {
+        throw new Error('Failed to save settings')
+      }
+    } catch (error) {
+      setMessage('Failed to save settings. Please try again.')
+      console.error('Save error:', error)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const handleChange = (field: string, value: string) => {
+    setSettings(prev => ({ ...prev, [field]: value }))
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* MailerLite Configuration */}
+      <div className="bg-white shadow rounded-lg p-6">
+        <h3 className="text-lg font-medium text-gray-900 mb-4">MailerLite Configuration</h3>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              API Key
+            </label>
+            <input
+              type="password"
+              value={settings.apiKey}
+              onChange={(e) => handleChange('apiKey', e.target.value)}
+              placeholder="Enter MailerLite API Key"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-brand-primary"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Review Group ID
+            </label>
+            <input
+              type="text"
+              value={settings.reviewGroupId}
+              onChange={(e) => handleChange('reviewGroupId', e.target.value)}
+              placeholder="Group ID for review emails"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-brand-primary"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Main Group ID
+            </label>
+            <input
+              type="text"
+              value={settings.mainGroupId}
+              onChange={(e) => handleChange('mainGroupId', e.target.value)}
+              placeholder="Group ID for main newsletter"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-brand-primary"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              From Email
+            </label>
+            <input
+              type="email"
+              value={settings.fromEmail}
+              onChange={(e) => handleChange('fromEmail', e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-brand-primary"
+            />
+          </div>
+
+          <div className="md:col-span-2">
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Sender Name
+            </label>
+            <input
+              type="text"
+              value={settings.senderName}
+              onChange={(e) => handleChange('senderName', e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-brand-primary"
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* Automated Scheduling */}
+      <div className="bg-white shadow rounded-lg p-6">
+        <h3 className="text-lg font-medium text-gray-900 mb-4">Automated Newsletter Schedule</h3>
+        <p className="text-sm text-gray-600 mb-4">
+          Configure the automated daily newsletter workflow times (Central Time Zone).
+        </p>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              RSS Processing Time
+            </label>
+            <input
+              type="time"
+              value={settings.rssProcessingTime}
+              onChange={(e) => handleChange('rssProcessingTime', e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-brand-primary"
+            />
+            <p className="text-xs text-gray-500 mt-1">Daily RSS feed processing and article rating</p>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Subject Line Generation
+            </label>
+            <input
+              type="time"
+              value={settings.subjectGenerationTime}
+              onChange={(e) => handleChange('subjectGenerationTime', e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-brand-primary"
+            />
+            <p className="text-xs text-gray-500 mt-1">AI-generated subject line creation</p>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Campaign Creation Time
+            </label>
+            <input
+              type="time"
+              value={settings.campaignCreationTime}
+              onChange={(e) => handleChange('campaignCreationTime', e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-brand-primary"
+            />
+            <p className="text-xs text-gray-500 mt-1">Newsletter campaign setup and review</p>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Scheduled Send Time
+            </label>
+            <input
+              type="time"
+              value={settings.scheduledSendTime}
+              onChange={(e) => handleChange('scheduledSendTime', e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-brand-primary"
+            />
+            <p className="text-xs text-gray-500 mt-1">Final newsletter delivery to subscribers</p>
+          </div>
+        </div>
+
+        <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+          <h4 className="font-medium text-blue-900 mb-2">Workflow Overview</h4>
+          <div className="text-sm text-blue-800 space-y-1">
+            <div>1. <strong>{settings.rssProcessingTime}</strong> - Process RSS feeds and rate articles</div>
+            <div>2. <strong>{settings.subjectGenerationTime}</strong> - Generate AI subject line from top article</div>
+            <div>3. <strong>{settings.campaignCreationTime}</strong> - Create campaign and send for review</div>
+            <div>4. <strong>{settings.scheduledSendTime}</strong> - Send newsletter to all subscribers</div>
+          </div>
+        </div>
+      </div>
+
+      {/* Save Button */}
+      <div className="flex justify-end">
+        <button
+          onClick={handleSave}
+          disabled={saving}
+          className="bg-brand-primary hover:bg-blue-700 disabled:bg-gray-400 text-white px-6 py-2 rounded-md font-medium"
+        >
+          {saving ? 'Saving...' : 'Save Settings'}
+        </button>
+      </div>
+
+      {message && (
+        <div className={`mt-4 p-4 rounded-md ${
+          message.includes('successfully')
+            ? 'bg-green-50 border border-green-200 text-green-800'
+            : 'bg-red-50 border border-red-200 text-red-800'
+        }`}>
+          {message}
+        </div>
+      )}
     </div>
   )
 }

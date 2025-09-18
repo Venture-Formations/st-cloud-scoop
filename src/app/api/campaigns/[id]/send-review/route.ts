@@ -18,6 +18,11 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     }
 
     const { id } = await params
+    const body = await request.json().catch(() => ({}))
+    const forcedSubjectLine = body.force_subject_line
+
+    console.log('=== SEND REVIEW REQUEST ===')
+    console.log('Forced subject line from frontend:', forcedSubjectLine)
 
     // Fetch campaign with articles
     const { data: campaign, error } = await supabaseAdmin
@@ -46,6 +51,16 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       }, { status: 400 })
     }
 
+    console.log('=== SEND FOR REVIEW DEBUG ===')
+    console.log('Campaign object received:', {
+      id: campaign.id,
+      date: campaign.date,
+      subject_line: campaign.subject_line,
+      subject_line_type: typeof campaign.subject_line,
+      subject_line_length: campaign.subject_line?.length || 0,
+      active_articles_count: campaign.articles.filter(a => a.is_active).length
+    })
+
     console.log('Creating MailerLite service...')
     console.log('Environment check:', {
       hasApiKey: !!process.env.MAILERLITE_API_KEY,
@@ -55,8 +70,14 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     })
 
     const mailerLiteService = new MailerLiteService()
-    console.log('Calling createReviewCampaign...')
-    const result = await mailerLiteService.createReviewCampaign(campaign)
+    console.log('Calling createReviewCampaign with campaign subject_line:', campaign.subject_line)
+    console.log('Using forced subject line:', forcedSubjectLine)
+
+    // Use forced subject line if provided, otherwise fall back to campaign subject line
+    const finalSubjectLine = forcedSubjectLine || campaign.subject_line
+    console.log('Final subject line for MailerLite:', finalSubjectLine)
+
+    const result = await mailerLiteService.createReviewCampaign(campaign, finalSubjectLine)
     console.log('MailerLite result:', result)
 
     // Log user activity

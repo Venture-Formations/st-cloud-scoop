@@ -11,6 +11,7 @@ export default function CampaignDetailPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
+  const [processing, setProcessing] = useState(false)
 
   useEffect(() => {
     if (params.id) {
@@ -72,6 +73,35 @@ export default function CampaignDetailPage() {
       alert('Failed to update article: ' + (error instanceof Error ? error.message : 'Unknown error'))
     } finally {
       setSaving(false)
+    }
+  }
+
+  const processRSSFeeds = async () => {
+    if (!campaign) return
+
+    setProcessing(true)
+    try {
+      const response = await fetch('/api/rss/process', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          campaign_id: campaign.id
+        })
+      })
+
+      if (!response.ok) {
+        const data = await response.json()
+        throw new Error(data.message || 'Failed to process RSS feeds')
+      }
+
+      // Refresh the campaign data to show new articles
+      await fetchCampaign(campaign.id)
+    } catch (error) {
+      alert('Failed to process RSS feeds: ' + (error instanceof Error ? error.message : 'Unknown error'))
+    } finally {
+      setProcessing(false)
     }
   }
 
@@ -142,6 +172,13 @@ export default function CampaignDetailPage() {
             </div>
             <div className="flex space-x-2">
               <button
+                onClick={processRSSFeeds}
+                disabled={processing || saving}
+                className="bg-green-600 hover:bg-green-700 disabled:opacity-50 text-white px-4 py-2 rounded text-sm font-medium"
+              >
+                {processing ? 'Processing...' : 'Process RSS Feeds'}
+              </button>
+              <button
                 disabled={saving}
                 className="bg-gray-200 hover:bg-gray-300 disabled:opacity-50 text-gray-800 px-4 py-2 rounded text-sm font-medium"
               >
@@ -178,7 +215,14 @@ export default function CampaignDetailPage() {
           <div className="divide-y divide-gray-200">
             {campaign.articles.length === 0 ? (
               <div className="p-6 text-center text-gray-500">
-                No articles generated yet. Run RSS processing to generate articles.
+                <p className="mb-4">No articles generated yet. Run RSS processing to generate articles.</p>
+                <button
+                  onClick={processRSSFeeds}
+                  disabled={processing}
+                  className="bg-green-600 hover:bg-green-700 disabled:opacity-50 text-white px-4 py-2 rounded text-sm font-medium"
+                >
+                  {processing ? 'Processing...' : 'Process RSS Feeds'}
+                </button>
               </div>
             ) : (
               campaign.articles

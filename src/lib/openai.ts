@@ -28,6 +28,7 @@ BLANK RATING CONDITIONS: Leave all fields blank if:
 - Post is about weather happening today/tomorrow
 - Post is written before an event happening "today"/"tonight"/"this evening"
 - Post mentions events happening "today", "tonight", or "this evening" (we do not include same-day events)
+- Post is about lost, missing, or found pets (lost dogs, cats, etc.)
 
 Article Title: ${post.title}
 Article Description: ${post.description || 'No description available'}

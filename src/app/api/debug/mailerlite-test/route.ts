@@ -45,24 +45,52 @@ export async function GET(request: NextRequest) {
 
     console.log('Testing MailerLite API connection...')
 
-    // Test 1: Get account info
+    // Test 1: Simple API authentication test
     try {
-      const accountResponse = await mailerliteClient.get('/me')
-      console.log('Account test successful:', accountResponse.status)
+      // Try the campaigns endpoint first (most commonly available)
+      const campaignsResponse = await mailerliteClient.get('/campaigns?limit=1')
+      console.log('Campaigns endpoint test successful:', campaignsResponse.status)
+
+      // If that works, the API key is valid
+      console.log('API authentication successful')
+
     } catch (error: any) {
-      console.error('Account test failed:', {
+      console.error('API authentication test failed:', {
         status: error.response?.status,
         data: error.response?.data,
         message: error.message
       })
-      return NextResponse.json({
-        success: false,
-        error: 'Failed to authenticate with MailerLite API',
-        details: {
-          status: error.response?.status,
-          data: error.response?.data
-        }
-      }, { status: 500 })
+
+      // Try to diagnose the specific issue
+      if (error.response?.status === 401) {
+        return NextResponse.json({
+          success: false,
+          error: 'Invalid MailerLite API key - check your MAILERLITE_API_KEY environment variable',
+          details: {
+            status: error.response?.status,
+            data: error.response?.data
+          }
+        }, { status: 500 })
+      } else if (error.response?.status === 404) {
+        return NextResponse.json({
+          success: false,
+          error: 'MailerLite API endpoint not found - possible API version issue',
+          details: {
+            status: error.response?.status,
+            data: error.response?.data,
+            baseUrl: MAILERLITE_API_BASE
+          }
+        }, { status: 500 })
+      } else {
+        return NextResponse.json({
+          success: false,
+          error: 'Failed to connect to MailerLite API',
+          details: {
+            status: error.response?.status,
+            data: error.response?.data
+          }
+        }, { status: 500 })
+      }
     }
 
     // Test 2: Get groups to verify review group exists

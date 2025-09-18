@@ -297,11 +297,13 @@ export class RSSProcessor {
     }
 
     console.log(`AI evaluation complete: ${successCount} successful, ${errorCount} errors`)
+    await this.logInfo(`AI evaluation complete: ${successCount} successful, ${errorCount} errors`, { campaignId, successCount, errorCount })
 
     // Step 2: Detect and handle duplicates
     await this.handleDuplicates(posts, campaignId)
 
     // Step 3: Generate newsletter articles for top posts
+    await this.logInfo('Starting newsletter article generation...', { campaignId })
     await this.generateNewsletterArticles(campaignId)
   }
 
@@ -398,9 +400,11 @@ export class RSSProcessor {
     }
 
     console.log(`Found ${topPosts.length} top posts for article generation`)
+    await this.logInfo(`Found ${topPosts.length} top posts for article generation`, { campaignId, topPostsCount: topPosts.length })
 
     const postsWithRatings = topPosts.filter(post => post.post_ratings?.[0])
     console.log(`${postsWithRatings.length} posts have ratings`)
+    await this.logInfo(`${postsWithRatings.length} posts have ratings`, { campaignId, postsWithRatings: postsWithRatings.length })
 
     if (postsWithRatings.length === 0) {
       console.log('No posts with ratings found - checking all posts with ratings')
@@ -416,6 +420,7 @@ export class RSSProcessor {
         .not('post_ratings', 'is', null)
 
       console.log(`Alternative query found ${allRatedPosts?.length || 0} posts with ratings`)
+      await this.logInfo(`Alternative query found ${allRatedPosts?.length || 0} posts with ratings`, { campaignId, alternativePostsCount: allRatedPosts?.length || 0 })
 
       if (allRatedPosts && allRatedPosts.length > 0) {
         // Use these posts instead
@@ -465,6 +470,7 @@ export class RSSProcessor {
           console.error(`Error inserting article for post ${post.id}:`, error)
         } else {
           console.log(`Successfully created article: "${content.headline}"`)
+          await this.logInfo(`Successfully created article: "${content.headline}"`, { campaignId, postId: post.id })
         }
       } else {
         console.log(`Article rejected due to fact-check failure: "${post.title}"`)

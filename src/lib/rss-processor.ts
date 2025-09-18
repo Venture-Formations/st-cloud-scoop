@@ -550,6 +550,7 @@ export class RSSProcessor {
     } catch (error) {
       console.error('Error selecting top 5 articles:', error)
     }
+  }
 
   private async processPostIntoArticle(post: any, campaignId: string) {
     try {

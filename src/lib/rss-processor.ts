@@ -229,44 +229,70 @@ export class RSSProcessor {
 
     console.log(`Processing ${posts.length} posts with AI`)
 
-    // Step 1: Evaluate posts
+    // Step 1: Evaluate posts in batches
+    const BATCH_SIZE = 3 // Process 3 posts at a time
     let successCount = 0
     let errorCount = 0
 
-    for (const post of posts) {
-      try {
-        console.log(`Evaluating post ${successCount + errorCount + 1}/${posts.length}: ${post.title}`)
+    // Split posts into batches
+    for (let i = 0; i < posts.length; i += BATCH_SIZE) {
+      const batch = posts.slice(i, i + BATCH_SIZE)
+      const batchNum = Math.floor(i / BATCH_SIZE) + 1
+      const totalBatches = Math.ceil(posts.length / BATCH_SIZE)
 
-        const evaluation = await this.evaluatePost(post)
+      console.log(`Processing batch ${batchNum}/${totalBatches} (${batch.length} posts)`)
 
-        // Store evaluation
-        await supabaseAdmin
-          .from('post_ratings')
-          .insert([{
-            post_id: post.id,
-            interest_level: evaluation.interest_level,
-            local_relevance: evaluation.local_relevance,
-            community_impact: evaluation.community_impact,
-            ai_reasoning: evaluation.reasoning,
-          }])
+      // Process batch concurrently
+      const batchPromises = batch.map(async (post, index) => {
+        try {
+          const overallIndex = i + index + 1
+          console.log(`Evaluating post ${overallIndex}/${posts.length}: ${post.title}`)
 
-        successCount++
-        console.log(`Successfully evaluated post ${successCount}/${posts.length}`)
+          const evaluation = await this.evaluatePost(post)
 
-        // Add delay to avoid rate limiting
-        await new Promise(resolve => setTimeout(resolve, 1000))
+          // Store evaluation
+          await supabaseAdmin
+            .from('post_ratings')
+            .insert([{
+              post_id: post.id,
+              interest_level: evaluation.interest_level,
+              local_relevance: evaluation.local_relevance,
+              community_impact: evaluation.community_impact,
+              ai_reasoning: evaluation.reasoning,
+            }])
 
-      } catch (error) {
-        errorCount++
-        console.error(`Error evaluating post ${post.id} (${errorCount} errors):`, error)
+          console.log(`Successfully evaluated post ${overallIndex}/${posts.length}`)
+          return { success: true, post: post }
 
-        // Log error to database
-        await this.logError(`Failed to evaluate post: ${post.title}`, {
-          postId: post.id,
-          error: error instanceof Error ? error.message : 'Unknown error'
-        })
+        } catch (error) {
+          console.error(`Error evaluating post ${post.id}:`, error)
 
-        // Continue processing other posts
+          // Log error to database
+          await this.logError(`Failed to evaluate post: ${post.title}`, {
+            postId: post.id,
+            error: error instanceof Error ? error.message : 'Unknown error'
+          })
+
+          return { success: false, post: post, error }
+        }
+      })
+
+      // Wait for batch to complete
+      const batchResults = await Promise.all(batchPromises)
+
+      // Count results
+      const batchSuccess = batchResults.filter(r => r.success).length
+      const batchErrors = batchResults.filter(r => !r.success).length
+
+      successCount += batchSuccess
+      errorCount += batchErrors
+
+      console.log(`Batch ${batchNum} complete: ${batchSuccess} successful, ${batchErrors} errors`)
+
+      // Add delay between batches to respect rate limits
+      if (i + BATCH_SIZE < posts.length) {
+        console.log('Waiting 2 seconds before next batch...')
+        await new Promise(resolve => setTimeout(resolve, 2000))
       }
     }
 

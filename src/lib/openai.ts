@@ -120,7 +120,7 @@ export async function callOpenAI(prompt: string, maxTokens = 1000) {
 
     try {
       const response = await openai.chat.completions.create({
-        model: 'gpt-4o-mini', // Use more reliable and faster model
+        model: 'gpt-4o', // Use higher quality model
         messages: [{ role: 'user', content: prompt }],
         max_tokens: maxTokens,
         temperature: 0.3,

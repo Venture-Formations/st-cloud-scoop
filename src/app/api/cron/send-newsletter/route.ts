@@ -10,14 +10,14 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    console.log('=== AUTOMATED NEWSLETTER SEND STARTED ===')
+    console.log('=== AUTOMATED FINAL NEWSLETTER SEND STARTED ===')
     console.log('Time:', new Date().toISOString())
 
     // Get today's campaign
     const today = new Date()
     const campaignDate = today.toISOString().split('T')[0]
 
-    console.log('Sending newsletter for campaign date:', campaignDate)
+    console.log('Sending final newsletter for campaign date:', campaignDate)
 
     // Find today's campaign with articles
     const { data: campaign, error: campaignError } = await supabaseAdmin
@@ -130,11 +130,11 @@ export async function POST(request: NextRequest) {
       // Continue anyway since MailerLite campaign was created
     }
 
-    console.log('=== NEWSLETTER SEND COMPLETED ===')
+    console.log('=== FINAL NEWSLETTER SEND COMPLETED ===')
 
     return NextResponse.json({
       success: true,
-      message: 'Newsletter sent successfully',
+      message: 'Final newsletter sent successfully to main group',
       campaignId: campaign.id,
       campaignDate: campaignDate,
       mailerliteCampaignId: result.campaignId,

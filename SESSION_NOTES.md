@@ -88,8 +88,8 @@ Current Campaign Articles (All Score 21):
 ### Schedule Configuration (Central Time)
 - **8:30 PM**: RSS Processing (`/api/cron/rss-processing`)
 - **8:45 PM**: AI Subject Line Generation (`/api/cron/generate-subject`)
-- **8:50 PM**: Campaign Creation & Review Send (`/api/cron/create-campaign`)
-- **9:00 PM**: Final Newsletter Send (`/api/cron/send-newsletter`)
+- **8:50 PM**: Create Campaign & Schedule Review for 9pm (`/api/cron/create-campaign`)
+- **9:00 PM**: Review emails sent by MailerLite (scheduled) + Final Newsletter to Main Group (`/api/cron/send-newsletter`)
 
 ### Settings Page Integration
 - Added "Email" tab with configurable scheduling times

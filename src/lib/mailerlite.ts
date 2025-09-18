@@ -49,7 +49,8 @@ export class MailerLiteService {
         }],
         groups: [process.env.MAILERLITE_REVIEW_GROUP_ID],
         delivery_schedule: {
-          type: 'instant'
+          type: 'scheduled',
+          delivery: this.getReviewDeliveryTime(campaign.date)
         }
       }
 
@@ -390,6 +391,17 @@ ${reviewHeaderTop}
     // Schedule for 4:55 AM CT on the campaign date
     const deliveryDate = new Date(date)
     deliveryDate.setHours(4, 55, 0, 0)
+
+    // Convert to UTC (CT is UTC-6 or UTC-5 depending on DST)
+    const utcTime = new Date(deliveryDate.getTime() + (6 * 60 * 60 * 1000))
+
+    return utcTime.toISOString()
+  }
+
+  private getReviewDeliveryTime(date: string): string {
+    // Schedule for 9:00 PM CT on the campaign date
+    const deliveryDate = new Date(date)
+    deliveryDate.setHours(21, 0, 0, 0) // 9:00 PM
 
     // Convert to UTC (CT is UTC-6 or UTC-5 depending on DST)
     const utcTime = new Date(deliveryDate.getTime() + (6 * 60 * 60 * 1000))

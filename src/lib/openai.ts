@@ -61,42 +61,51 @@ Respond with valid JSON in this exact format:
 }`,
 
   newsletterWriter: (post: { title: string; description: string; content?: string; source_url?: string }) => `
-Write a short news article (40–75 words) based on the selected Facebook post. This should be a summary and rewrite of the original posts — NOT exact duplicate.
+CRITICAL: You are writing a news article that MUST follow strict content rules. Violations will result in rejection.
 
-Original Article:
+Original Source Post:
 Title: ${post.title}
 Description: ${post.description || 'No description available'}
 Content: ${post.content ? post.content.substring(0, 1500) + '...' : 'No additional content'}
 
-WRITING GUIDELINES:
-- Length: ≥40 and ≤75 words per article
-- Structure: Write only one concise paragraph
+MANDATORY STRICT CONTENT RULES - FOLLOW EXACTLY:
+1. Articles must be COMPLETELY REWRITTEN and summarized — NEVER copy or slightly modify original text
+2. Use ONLY information contained in the source post above — DO NOT add any external information
+3. DO NOT add numbers, dates, quotes, or details not explicitly stated in the original
+4. NEVER use 'today,' 'tomorrow,' 'yesterday' — use actual day of week if date reference needed
+5. NO emojis anywhere in headlines or article content
+6. Stick to facts only — NO editorial commentary, opinions, or speculation
+
+HEADLINE REQUIREMENTS - MUST FOLLOW:
+- NEVER reuse or slightly reword the original title
+- Create completely new, engaging headline
+- Use powerful verbs and emotional adjectives
+- NO colons (:) in headlines
+- NO emojis
+
+ARTICLE REQUIREMENTS:
+- Length: EXACTLY 40-75 words
+- Structure: One concise paragraph only
 - Style: Informative, engaging, locally relevant
+- REWRITE completely — do not copy phrases from original
 
-STRICT CONTENT RULES:
-- Articles must be rewritten and summarized — no copying original text
-- Use ONLY information contained in the source Facebook post
-- Do not add numbers, dates, quotes, or details not in the original
-- Avoid 'today,' 'tomorrow,' 'yesterday' — use actual day of week based on published date
-- No emojis in headlines or article content
-- Stick to facts, avoid editorial commentary
-
-HEADLINE CREATION RULES:
-- Do NOT reuse or slightly reword the original title
-- Make emotionally engaging, curiosity-driven, or locally relevant
-- Use powerful verbs, emotional adjectives, or unexpected twists
-- Do NOT use colons (:) in headlines
-- No emojis in headlines or content
+BEFORE RESPONDING: Double-check that you have:
+✓ Completely rewritten the content (no copied phrases)
+✓ Used only information from the source post
+✓ Created a new headline (not modified original)
+✓ Stayed between 40-75 words
+✓ Avoided all prohibited words and phrases
+✓ Included no editorial commentary
 
 Respond with valid JSON in this exact format:
 {
-  "headline": "<engaging headline for newsletter>",
-  "content": "<40-75 word newsletter content>",
+  "headline": "<completely new engaging headline>",
+  "content": "<40-75 word completely rewritten article>",
   "word_count": <exact word count>
 }`,
 
   factChecker: (newsletterContent: string, originalContent: string) => `
-Rate article accuracy, timeliness, and intent alignment against the paired source post; preserve article text for HTML conversion.
+CRITICAL FACT-CHECK: Verify this newsletter article follows strict content rules and contains no violations.
 
 Newsletter Article:
 ${newsletterContent}
@@ -104,55 +113,46 @@ ${newsletterContent}
 Original Source Material:
 ${originalContent.substring(0, 2000)}
 
-VERIFICATION PROCESS - Check each article for:
-- Added facts not in source
-- Changed numbers, dates, or specifics
-- Invented quotes or statements
-- Misinterpreted or overstated source content
-- Added context or speculation not present in original
-- Timeliness: Article is current relative to the source post date
-- Intent alignment: Article preserves the source's purpose and emphasis
+STRICT CONTENT VIOLATIONS TO CHECK FOR:
+1. COPIED TEXT: Any phrases, sentences, or words directly copied from source
+2. ADDED INFORMATION: Any facts, numbers, dates, quotes not in original source
+3. PROHIBITED WORDS: Use of 'today,' 'tomorrow,' 'yesterday' instead of specific days
+4. EMOJIS: Any emojis in headline or content
+5. EDITORIAL CONTENT: Opinions, speculation, or commentary not in source
+6. MODIFIED ORIGINAL TITLE: Headlines that are just slightly reworded versions of original
 
-RULES:
-- Use only the provided article and source content; do not browse or assume external facts
-- If a claim cannot be verified from the source, mark it as "unverifiable" in notes
-- Do not modify any article text fields; preserve punctuation and spacing
-- Quote exact phrases from the source in "reasoning" when explaining mismatches
-- When uncertain, choose conservative section ratings
-
-SCORING (1–10 for each section, 10 = excellent, 1 = poor):
-
-ACCURACY RATING:
+ACCURACY SCORING (1-10, where 10 = perfect compliance):
 - Start at 10
-- Subtract 3–5 for any incorrect/contradictory fact, quote, number, date, place
-- Subtract 1–2 for unverifiable or ambiguous claims
-- Subtract 1 for overstated certainty without support
-- Minimum 1
+- Subtract 5 points for ANY copied text or phrases from original
+- Subtract 4 points for ANY added information not in source
+- Subtract 3 points for prohibited time words (today/tomorrow/yesterday)
+- Subtract 2 points for ANY emojis found
+- Subtract 3 points for editorial commentary or speculation
+- Subtract 4 points if headline is just modified version of original title
+- Minimum score: 1
 
-TIMELINESS RATING:
+TIMELINESS SCORING (1-10):
 - Start at 10
-- Subtract 3–5 if article presents outdated info as current or misstates timing
-- Subtract 1–3 if time-bound phrasing lacks a clear date (e.g., "today" without date)
-- Subtract 1 if it fails to note ongoing/uncertain status when relevant
-- Minimum 1
+- Subtract 5 points for outdated information presented as current
+- Subtract 3 points for vague time references without context
+- Subtract 2 points for missing temporal context when needed
+- Minimum score: 1
 
-INTENT ALIGNMENT RATING:
+INTENT ALIGNMENT SCORING (1-10):
 - Start at 10
-- Subtract 2–4 for drift from the source's purpose/emphasis
-- Subtract 1–2 for added spin/speculation not in source
-- Subtract 1–2 for scope creep (new claims beyond source)
-- Minimum 1
+- Subtract 4 points for changing the source's main message
+- Subtract 3 points for adding interpretation not in source
+- Subtract 2 points for emphasis shifts from original
+- Minimum score: 1
 
-TOTAL RATING: accuracy_rating + timeliness_rating + intent_alignment_rating (range 3–30)
+TOTAL SCORE = accuracy + timeliness + intent (3-30 range)
+PASSING THRESHOLD: 20/30 minimum
 
 Respond with valid JSON in this exact format:
 {
-  "accuracy_rating": <number 1-10>,
-  "timeliness_rating": <number 1-10>,
-  "intent_alignment_rating": <number 1-10>,
-  "total_rating": <number 3-30>,
-  "specific_issues_found": "<list of issues or 'none'>",
-  "reasoning": "<detailed explanation with exact quotes from source when explaining mismatches>"
+  "score": <number 3-30>,
+  "details": "<detailed list of all violations found or 'none'>",
+  "passed": <boolean true if score >= 20, false otherwise>
 }`,
 
   subjectLineGenerator: (articles: Array<{ headline: string; content: string }>) => `

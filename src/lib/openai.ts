@@ -90,11 +90,9 @@ HEADLINE CREATION RULES:
 
 Respond with valid JSON in this exact format:
 {
-  "compelling_headline": "<engaging headline for newsletter>",
-  "article_text_paragraph_1": "<40-75 word newsletter content>",
-  "word_count": <exact word count>,
-  "source_url": "${post.source_url || ''}",
-  "author": "<author from original post>"
+  "headline": "<engaging headline for newsletter>",
+  "content": "<40-75 word newsletter content>",
+  "word_count": <exact word count>
 }`,
 
   factChecker: (newsletterContent: string, originalContent: string) => `

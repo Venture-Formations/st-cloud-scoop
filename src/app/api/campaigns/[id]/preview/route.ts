@@ -20,7 +20,7 @@ export async function GET(
       .from('newsletter_campaigns')
       .select(`
         *,
-        articles:newsletter_articles!inner(
+        articles:newsletter_articles(
           id,
           headline,
           content,
@@ -35,7 +35,6 @@ export async function GET(
         )
       `)
       .eq('id', id)
-      .eq('articles.is_active', true)
       .single()
 
     if (campaignError) {
@@ -45,6 +44,11 @@ export async function GET(
 
     if (!campaign) {
       return NextResponse.json({ error: 'Campaign not found' }, { status: 404 })
+    }
+
+    // Filter to only active articles
+    if (campaign.articles) {
+      campaign.articles = campaign.articles.filter((article: any) => article.is_active)
     }
 
     // Generate HTML newsletter

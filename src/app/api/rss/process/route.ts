@@ -1,12 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { getServerSession } from 'next-auth'
+import { authOptions } from '@/lib/auth'
 import { RSSProcessor } from '@/lib/rss-processor'
 
 export async function POST(request: NextRequest) {
   try {
-    // Verify cron secret for security
+    // Check for cron secret OR authenticated session
     const cronSecret = request.headers.get('Authorization')
-    if (cronSecret !== `Bearer ${process.env.CRON_SECRET}`) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    const isCronRequest = cronSecret === `Bearer ${process.env.CRON_SECRET}`
+
+    if (!isCronRequest) {
+      // Check for authenticated user session
+      const session = await getServerSession(authOptions)
+      if (!session) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      }
     }
 
     const processor = new RSSProcessor()

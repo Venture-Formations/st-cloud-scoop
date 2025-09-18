@@ -397,38 +397,46 @@ export class RSSProcessor {
   private async generateNewsletterArticles(campaignId: string) {
     console.log('Starting newsletter article generation...')
 
-    // Get top-rated posts that aren't duplicates
+    // Get posts with ratings (simplified query first)
     const { data: topPosts, error: queryError } = await supabaseAdmin
       .from('rss_posts')
       .select(`
         *,
-        post_ratings(*),
-        duplicate_posts(id)
+        post_ratings(*)
       `)
       .eq('campaign_id', campaignId)
-      .is('duplicate_posts.id', null) // Exclude duplicates
-      .order('post_ratings.total_score', { ascending: false })
-      .limit(12) // Get top 12 for processing
+      .limit(20) // Get more posts to filter later
 
     if (queryError) {
       console.error('Error fetching top posts:', queryError)
+      await this.logError('Error fetching top posts for article generation', { campaignId, queryError: queryError.message })
       return
     }
 
     if (!topPosts || topPosts.length === 0) {
       console.log('No top posts found for article generation')
+      await this.logInfo('No top posts found for article generation', { campaignId })
       return
     }
 
     console.log(`Found ${topPosts.length} top posts for article generation`)
     await this.logInfo(`Found ${topPosts.length} top posts for article generation`, { campaignId, topPostsCount: topPosts.length })
 
-    const postsWithRatings = topPosts.filter(post => post.post_ratings?.[0])
+    const postsWithRatings = topPosts
+      .filter(post => post.post_ratings?.[0])
+      .sort((a, b) => {
+        const scoreA = a.post_ratings?.[0]?.total_score || 0
+        const scoreB = b.post_ratings?.[0]?.total_score || 0
+        return scoreB - scoreA
+      })
+      .slice(0, 12) // Take top 12 after sorting
+
     console.log(`${postsWithRatings.length} posts have ratings`)
     await this.logInfo(`${postsWithRatings.length} posts have ratings`, { campaignId, postsWithRatings: postsWithRatings.length })
 
     if (postsWithRatings.length === 0) {
       console.log('No posts with ratings found - checking all posts with ratings')
+      await this.logInfo('No posts with ratings found - checking alternative query', { campaignId })
 
       // Try a simpler query to get posts with ratings
       const { data: allRatedPosts } = await supabaseAdmin

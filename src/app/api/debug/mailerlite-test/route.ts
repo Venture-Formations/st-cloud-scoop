@@ -127,7 +127,7 @@ export async function GET(request: NextRequest) {
       emails: [{
         subject: 'Test Subject',
         from_name: 'St. Cloud Scoop',
-        from: 'newsletter@stcloudscoop.com',
+        from: process.env.MAILERLITE_FROM_EMAIL || 'newsletter@stcloudscoop.com',
         content: '<html><body><h1>Test Content</h1></body></html>',
       }],
       groups: [process.env.MAILERLITE_REVIEW_GROUP_ID]

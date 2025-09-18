@@ -36,7 +36,7 @@ export class MailerLiteService {
         emails: [{
           subject: subjectLine,
           from_name: 'St. Cloud Scoop',
-          from: 'newsletter@stcloudscoop.com',
+          from: process.env.MAILERLITE_FROM_EMAIL || 'newsletter@stcloudscoop.com',
           content: emailContent,
         }],
         groups: [process.env.MAILERLITE_REVIEW_GROUP_ID],
@@ -129,7 +129,7 @@ export class MailerLiteService {
         emails: [{
           subject: subjectLine,
           from_name: 'St. Cloud Scoop',
-          from: 'newsletter@stcloudscoop.com',
+          from: process.env.MAILERLITE_FROM_EMAIL || 'newsletter@stcloudscoop.com',
           content: emailContent,
         }],
         groups: [process.env.MAILERLITE_MAIN_GROUP_ID],

@@ -12,6 +12,7 @@ export default function CampaignDetailPage() {
   const [error, setError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
   const [processing, setProcessing] = useState(false)
+  const [processingStatus, setProcessingStatus] = useState('')
 
   useEffect(() => {
     if (params.id) {
@@ -80,8 +81,14 @@ export default function CampaignDetailPage() {
     if (!campaign) return
 
     setProcessing(true)
+    setProcessingStatus('Initializing RSS processing...')
+
     try {
-      const response = await fetch('/api/rss/process', {
+      // Start the processing
+      setProcessingStatus('Fetching RSS feeds...')
+
+      // Start processing in the background
+      const processPromise = fetch('/api/rss/process', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -91,14 +98,44 @@ export default function CampaignDetailPage() {
         })
       })
 
+      // Poll for status updates while processing
+      const statusInterval = setInterval(async () => {
+        try {
+          const statusResponse = await fetch(`/api/rss/status/${campaign.id}`)
+          if (statusResponse.ok) {
+            const statusData = await statusResponse.json()
+
+            if (statusData.counts.posts > 0) {
+              setProcessingStatus(`Found ${statusData.counts.posts} posts, evaluating with AI...`)
+            }
+
+            if (statusData.counts.articles > 0) {
+              setProcessingStatus(`Generated ${statusData.counts.articles} articles, finalizing...`)
+            }
+          }
+        } catch (error) {
+          // Silent fail for status updates
+        }
+      }, 2000)
+
+      // Wait for processing to complete
+      const response = await processPromise
+      clearInterval(statusInterval)
+
       if (!response.ok) {
         const data = await response.json()
         throw new Error(data.message || 'Failed to process RSS feeds')
       }
 
+      setProcessingStatus('Processing complete! Refreshing articles...')
+
       // Refresh the campaign data to show new articles
       await fetchCampaign(campaign.id)
+
+      setProcessingStatus('Done!')
+      setTimeout(() => setProcessingStatus(''), 2000)
     } catch (error) {
+      setProcessingStatus('')
       alert('Failed to process RSS feeds: ' + (error instanceof Error ? error.message : 'Unknown error'))
     } finally {
       setProcessing(false)
@@ -178,6 +215,11 @@ export default function CampaignDetailPage() {
               >
                 {processing ? 'Processing...' : 'Process RSS Feeds'}
               </button>
+              {processingStatus && (
+                <div className="text-sm text-blue-600 font-medium">
+                  {processingStatus}
+                </div>
+              )}
               <button
                 disabled={saving}
                 className="bg-gray-200 hover:bg-gray-300 disabled:opacity-50 text-gray-800 px-4 py-2 rounded text-sm font-medium"
@@ -219,10 +261,15 @@ export default function CampaignDetailPage() {
                 <button
                   onClick={processRSSFeeds}
                   disabled={processing}
-                  className="bg-green-600 hover:bg-green-700 disabled:opacity-50 text-white px-4 py-2 rounded text-sm font-medium"
+                  className="bg-green-600 hover:bg-green-700 disabled:opacity-50 text-white px-4 py-2 rounded text-sm font-medium mb-2"
                 >
                   {processing ? 'Processing...' : 'Process RSS Feeds'}
                 </button>
+                {processingStatus && (
+                  <div className="text-sm text-blue-600 font-medium">
+                    {processingStatus}
+                  </div>
+                )}
               </div>
             ) : (
               campaign.articles

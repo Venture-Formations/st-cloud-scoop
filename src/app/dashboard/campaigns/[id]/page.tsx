@@ -83,15 +83,23 @@ export default function CampaignDetailPage() {
     if (!campaign) return
 
     try {
+      console.log('Calling preview API for campaign:', campaign.id)
       const response = await fetch(`/api/campaigns/${campaign.id}/preview`)
+      console.log('Preview API response status:', response.status, response.statusText)
+
       if (!response.ok) {
-        throw new Error('Failed to generate preview')
+        const errorData = await response.json().catch(() => null)
+        const errorMessage = errorData?.error || `HTTP ${response.status}: ${response.statusText}`
+        console.error('Preview API error:', errorMessage)
+        throw new Error(errorMessage)
       }
 
       const data = await response.json()
+      console.log('Preview data received:', !!data.html, 'HTML length:', data.html?.length)
       setPreviewHtml(data.html)
       setShowPreview(true)
     } catch (error) {
+      console.error('Preview error:', error)
       alert('Failed to generate preview: ' + (error instanceof Error ? error.message : 'Unknown error'))
     }
   }

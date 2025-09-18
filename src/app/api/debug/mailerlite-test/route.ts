@@ -125,9 +125,9 @@ export async function GET(request: NextRequest) {
       name: `Test Campaign - ${new Date().toISOString()}`,
       type: 'regular',
       emails: [{
-        subject: 'Test Subject',
+        subject: '🍦 Test Subject',
         from_name: 'St. Cloud Scoop',
-        from: process.env.MAILERLITE_FROM_EMAIL || 'newsletter@stcloudscoop.com',
+        from: 'scoop@stcscoop.com',
         content: '<html><body><h1>Test Content</h1></body></html>',
       }],
       groups: [process.env.MAILERLITE_REVIEW_GROUP_ID]

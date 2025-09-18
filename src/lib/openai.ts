@@ -168,12 +168,12 @@ Articles in this newsletter:
 ${articles.map((article, i) => `${i + 1}. ${article.headline}\n   ${article.content.substring(0, 100)}...`).join('\n\n')}
 
 HARD RULES:
-- ≤ 39 characters (count every space and punctuation)
+- ≤ 35 characters (count every space and punctuation) - this allows room for ice cream emoji prefix
 - Title Case; avoid ALL-CAPS words
 - Omit the year
 - No em dashes (—)
 - No colons (:) or other punctuation that splits the headline into two parts
-- Return only the headline text—nothing else
+- Return only the headline text—nothing else (no emoji, that will be added automatically)
 
 IMPACT CHECKLIST:
 - Lead with a power verb

@@ -89,11 +89,12 @@ Current Campaign Articles (All Score 21):
 - **8:30 PM**: Create Tomorrow's Campaign + RSS Processing (`/api/cron/rss-processing`)
 - **8:45 PM**: AI Subject Line Generation - Fixed 15min after RSS (`/api/cron/generate-subject`)
 - **8:50 PM**: Create Review Campaign & Schedule for 9pm (`/api/cron/create-campaign`)
-- **9:00 PM**: MailerLite sends scheduled review + Final Newsletter to Main Group (`/api/cron/send-newsletter`)
+- **9:00 PM**: MailerLite sends scheduled review campaign to review group only
 
 ### Settings Page Integration
 - Added "Email" tab with configurable scheduling times
-- MailerLite settings (API Key, Group IDs, From Email, Sender Name)
+- MailerLite settings (Review Group ID, From Email, Sender Name)
+- API Key field removed from UI for security
 - All times configurable via web interface
 - Settings stored in `app_settings` table
 
@@ -106,9 +107,10 @@ Current Campaign Articles (All Score 21):
 ## 🚀 Next Steps
 
 1. **Deploy**: Push changes to activate automated scheduling
-2. **Configure**: Set up Email settings in dashboard
+2. **Configure**: Set up Email settings in dashboard (Review Group ID, From Email, Sender Name)
 3. **Test**: Use manual endpoints to verify each step works
 4. **Monitor**: Check Vercel cron logs for automated execution
+5. **Future**: Add main group newsletter sending after review testing is complete
 
 ## 📁 Key Files Modified
 
@@ -128,9 +130,8 @@ src/app/dashboard/settings/page.tsx                  # Email settings UI
 src/app/api/settings/email/route.ts                  # Settings API
 src/app/api/cron/rss-processing/route.ts             # RSS automation
 src/app/api/cron/generate-subject/route.ts           # Subject automation
-src/app/api/cron/create-campaign/route.ts            # Campaign automation
-src/app/api/cron/send-newsletter/route.ts            # Send automation
-vercel.json                                           # Cron schedule config
+src/app/api/cron/create-campaign/route.ts            # Campaign automation (review only)
+vercel.json                                           # Cron schedule config (main group sending removed)
 ```
 
 ## 🔄 Auto-Update Instructions

@@ -238,10 +238,16 @@ function EmailSettings() {
     fromEmail: 'scoop@stcscoop.com',
     senderName: 'St. Cloud Scoop',
 
-    // Scheduling Settings (Central Time)
+    // Review Schedule Settings (Central Time)
+    reviewScheduleEnabled: true,
     rssProcessingTime: '20:30',  // 8:30 PM
     campaignCreationTime: '20:50',  // 8:50 PM
-    scheduledSendTime: '21:00'  // 9:00 PM
+    scheduledSendTime: '21:00',  // 9:00 PM
+
+    // Daily Newsletter Settings (Central Time)
+    dailyScheduleEnabled: false,
+    dailyCampaignCreationTime: '04:30',  // 4:30 AM
+    dailyScheduledSendTime: '04:55'  // 4:55 AM
   })
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState('')
@@ -255,7 +261,13 @@ function EmailSettings() {
       const response = await fetch('/api/settings/email')
       if (response.ok) {
         const data = await response.json()
-        setSettings(prev => ({ ...prev, ...data }))
+        // Convert string boolean values back to actual booleans
+        const processedData = {
+          ...data,
+          reviewScheduleEnabled: data.reviewScheduleEnabled === 'true',
+          dailyScheduleEnabled: data.dailyScheduleEnabled === 'true'
+        }
+        setSettings(prev => ({ ...prev, ...processedData }))
       }
     } catch (error) {
       console.error('Failed to load email settings:', error)
@@ -287,7 +299,7 @@ function EmailSettings() {
     }
   }
 
-  const handleChange = (field: string, value: string) => {
+  const handleChange = (field: string, value: string | boolean) => {
     setSettings(prev => ({ ...prev, [field]: value }))
   }
 
@@ -336,7 +348,7 @@ function EmailSettings() {
             />
           </div>
 
-          <div className="md:col-span-2">
+          <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Sender Name
             </label>
@@ -350,11 +362,33 @@ function EmailSettings() {
         </div>
       </div>
 
-      {/* Automated Scheduling */}
+      {/* Automated Newsletter Review Schedule */}
       <div className="bg-white shadow rounded-lg p-6">
-        <h3 className="text-lg font-medium text-gray-900 mb-4">Automated Newsletter Schedule</h3>
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-medium text-gray-900">Automated Newsletter Review Schedule</h3>
+          <div className="flex items-center">
+            <label className="flex items-center cursor-pointer">
+              <input
+                type="checkbox"
+                checked={settings.reviewScheduleEnabled}
+                onChange={(e) => handleChange('reviewScheduleEnabled', e.target.checked)}
+                className="sr-only"
+              />
+              <div className={`relative w-11 h-6 rounded-full transition-colors ${
+                settings.reviewScheduleEnabled ? 'bg-brand-primary' : 'bg-gray-300'
+              }`}>
+                <div className={`absolute top-1 left-1 w-4 h-4 bg-white rounded-full transition-transform ${
+                  settings.reviewScheduleEnabled ? 'translate-x-5' : 'translate-x-0'
+                }`}></div>
+              </div>
+              <span className="ml-3 text-sm font-medium text-gray-700">
+                {settings.reviewScheduleEnabled ? 'Enabled' : 'Disabled'}
+              </span>
+            </label>
+          </div>
+        </div>
         <p className="text-sm text-gray-600 mb-4">
-          Configure the automated daily newsletter workflow times (Central Time Zone).
+          Configure the automated review workflow times (Central Time Zone).
         </p>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -366,11 +400,11 @@ function EmailSettings() {
               type="time"
               value={settings.rssProcessingTime}
               onChange={(e) => handleChange('rssProcessingTime', e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-brand-primary"
+              disabled={!settings.reviewScheduleEnabled}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-brand-primary disabled:bg-gray-100"
             />
             <p className="text-xs text-gray-500 mt-1">Daily RSS feed processing and article rating</p>
           </div>
-
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -380,7 +414,8 @@ function EmailSettings() {
               type="time"
               value={settings.campaignCreationTime}
               onChange={(e) => handleChange('campaignCreationTime', e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-brand-primary"
+              disabled={!settings.reviewScheduleEnabled}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-brand-primary disabled:bg-gray-100"
             />
             <p className="text-xs text-gray-500 mt-1">Newsletter campaign setup and review</p>
           </div>
@@ -393,19 +428,88 @@ function EmailSettings() {
               type="time"
               value={settings.scheduledSendTime}
               onChange={(e) => handleChange('scheduledSendTime', e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-brand-primary"
+              disabled={!settings.reviewScheduleEnabled}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-brand-primary disabled:bg-gray-100"
             />
-            <p className="text-xs text-gray-500 mt-1">Final newsletter delivery to subscribers</p>
+            <p className="text-xs text-gray-500 mt-1">Review newsletter delivery</p>
           </div>
         </div>
 
         <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-          <h4 className="font-medium text-blue-900 mb-2">Workflow Overview</h4>
+          <h4 className="font-medium text-blue-900 mb-2">Review Workflow Overview</h4>
           <div className="text-sm text-blue-800 space-y-1">
             <div>1. <strong>{settings.rssProcessingTime}</strong> - Create tomorrow's campaign and process RSS feeds</div>
             <div>2. <strong>+15 min</strong> - Generate AI subject line from top article (automatic)</div>
             <div>3. <strong>{settings.campaignCreationTime}</strong> - Create review campaign, schedule for 9pm</div>
-            <div>4. <strong>{settings.scheduledSendTime}</strong> - MailerLite sends review + final newsletter to main group</div>
+            <div>4. <strong>{settings.scheduledSendTime}</strong> - MailerLite sends review to review group only</div>
+          </div>
+        </div>
+      </div>
+
+      {/* Automated Daily Newsletter Schedule */}
+      <div className="bg-white shadow rounded-lg p-6">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-medium text-gray-900">Automated Daily Newsletter Schedule</h3>
+          <div className="flex items-center">
+            <label className="flex items-center cursor-pointer">
+              <input
+                type="checkbox"
+                checked={settings.dailyScheduleEnabled}
+                onChange={(e) => handleChange('dailyScheduleEnabled', e.target.checked)}
+                className="sr-only"
+              />
+              <div className={`relative w-11 h-6 rounded-full transition-colors ${
+                settings.dailyScheduleEnabled ? 'bg-brand-primary' : 'bg-gray-300'
+              }`}>
+                <div className={`absolute top-1 left-1 w-4 h-4 bg-white rounded-full transition-transform ${
+                  settings.dailyScheduleEnabled ? 'translate-x-5' : 'translate-x-0'
+                }`}></div>
+              </div>
+              <span className="ml-3 text-sm font-medium text-gray-700">
+                {settings.dailyScheduleEnabled ? 'Enabled' : 'Disabled'}
+              </span>
+            </label>
+          </div>
+        </div>
+        <p className="text-sm text-gray-600 mb-4">
+          Configure the automated daily newsletter delivery times (Central Time Zone).
+        </p>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Campaign Creation Time
+            </label>
+            <input
+              type="time"
+              value={settings.dailyCampaignCreationTime}
+              onChange={(e) => handleChange('dailyCampaignCreationTime', e.target.value)}
+              disabled={!settings.dailyScheduleEnabled}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-brand-primary disabled:bg-gray-100"
+            />
+            <p className="text-xs text-gray-500 mt-1">Final newsletter campaign creation with any review changes</p>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Scheduled Send Time
+            </label>
+            <input
+              type="time"
+              value={settings.dailyScheduledSendTime}
+              onChange={(e) => handleChange('dailyScheduledSendTime', e.target.value)}
+              disabled={!settings.dailyScheduleEnabled}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-brand-primary disabled:bg-gray-100"
+            />
+            <p className="text-xs text-gray-500 mt-1">Final newsletter delivery to main subscriber group</p>
+          </div>
+        </div>
+
+        <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-lg">
+          <h4 className="font-medium text-green-900 mb-2">Daily Newsletter Workflow</h4>
+          <div className="text-sm text-green-800 space-y-1">
+            <div>1. <strong>{settings.dailyCampaignCreationTime}</strong> - Create final newsletter with any changes made during review</div>
+            <div>2. <strong>{settings.dailyScheduledSendTime}</strong> - Send final newsletter to main subscriber group</div>
           </div>
         </div>
       </div>

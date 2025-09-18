@@ -33,9 +33,13 @@ export async function GET(request: NextRequest) {
       mainGroupId: process.env.MAILERLITE_MAIN_GROUP_ID || '',
       fromEmail: 'scoop@stcscoop.com',
       senderName: 'St. Cloud Scoop',
+      reviewScheduleEnabled: 'true',
       rssProcessingTime: '20:30',  // 8:30 PM CT
       campaignCreationTime: '20:50',  // 8:50 PM CT
-      scheduledSendTime: '21:00'  // 9:00 PM CT
+      scheduledSendTime: '21:00',  // 9:00 PM CT
+      dailyScheduleEnabled: 'false',
+      dailyCampaignCreationTime: '04:30',  // 4:30 AM CT
+      dailyScheduledSendTime: '04:55'  // 4:55 AM CT
     }
 
     return NextResponse.json({
@@ -69,7 +73,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Validate time formats (HH:MM)
-    const timeFields = ['rssProcessingTime', 'campaignCreationTime', 'scheduledSendTime']
+    const timeFields = ['rssProcessingTime', 'campaignCreationTime', 'scheduledSendTime', 'dailyCampaignCreationTime', 'dailyScheduledSendTime']
     for (const field of timeFields) {
       if (settings[field] && !/^([01]?[0-9]|2[0-3]):[0-5][0-9]$/.test(settings[field])) {
         return NextResponse.json({
@@ -84,9 +88,13 @@ export async function POST(request: NextRequest) {
       { key: 'email_mainGroupId', value: settings.mainGroupId || '' },
       { key: 'email_fromEmail', value: settings.fromEmail },
       { key: 'email_senderName', value: settings.senderName },
+      { key: 'email_reviewScheduleEnabled', value: settings.reviewScheduleEnabled ? 'true' : 'false' },
       { key: 'email_rssProcessingTime', value: settings.rssProcessingTime },
       { key: 'email_campaignCreationTime', value: settings.campaignCreationTime },
-      { key: 'email_scheduledSendTime', value: settings.scheduledSendTime }
+      { key: 'email_scheduledSendTime', value: settings.scheduledSendTime },
+      { key: 'email_dailyScheduleEnabled', value: settings.dailyScheduleEnabled ? 'true' : 'false' },
+      { key: 'email_dailyCampaignCreationTime', value: settings.dailyCampaignCreationTime },
+      { key: 'email_dailyScheduledSendTime', value: settings.dailyScheduledSendTime }
     ]
 
     // Upsert each setting

@@ -49,7 +49,7 @@ export async function GET(request: NextRequest) {
       },
       articles: {
         total: articles?.length || 0,
-        withImages: articles?.filter(a => a.rss_post?.image_url)?.length || 0,
+        withImages: articles?.filter((a: any) => a.rss_post?.image_url)?.length || 0,
         data: articles || []
       },
       postsError,

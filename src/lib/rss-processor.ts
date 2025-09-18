@@ -9,8 +9,6 @@ import type {
   NewsletterContent,
   FactCheckResult
 } from '@/types/database'
-import fs from 'fs'
-import path from 'path'
 import crypto from 'crypto'
 
 const parser = new Parser({
@@ -622,10 +620,8 @@ export class RSSProcessor {
       console.log('=== STARTING IMAGE PROCESSING ===')
       console.log('Campaign ID:', campaignId)
 
-      // Create test file to confirm function runs
-      const testFile = path.join(process.cwd(), 'public', 'images', 'articles', 'test-function-ran.txt')
-      fs.writeFileSync(testFile, `Image processing ran at: ${new Date().toISOString()}`)
-      console.log('Test file created:', testFile)
+      // Log that image processing function is running
+      console.log('Image processing function started at:', new Date().toISOString())
 
       // Get active articles with their RSS post image URLs
       const { data: articles, error } = await supabaseAdmin
@@ -677,31 +673,38 @@ export class RSSProcessor {
           const imageHash = crypto.createHash('md5').update(originalImageUrl).digest('hex')
           const fileExtension = this.getImageExtension(originalImageUrl)
           const fileName = `${imageHash}${fileExtension}`
-          const publicPath = `/images/articles/${fileName}`
-          const localPath = path.join(process.cwd(), 'public', 'images', 'articles', fileName)
 
-          // Check if image already exists
-          if (fs.existsSync(localPath)) {
-            console.log(`Image already exists: ${fileName}, updating database`)
+          // Check if image already exists in Supabase Storage
+          const { data: existingFile } = await supabaseAdmin.storage
+            .from('newsletter-images')
+            .list('articles', { search: imageHash })
+
+          if (existingFile && existingFile.length > 0) {
+            console.log(`Image already exists in Supabase Storage: ${fileName}`)
+
+            // Get the existing public URL
+            const { data: urlData } = supabaseAdmin.storage
+              .from('newsletter-images')
+              .getPublicUrl(`articles/${fileName}`)
 
             // Update the RSS post with hosted URL
             await supabaseAdmin
               .from('rss_posts')
-              .update({ image_url: publicPath })
+              .update({ image_url: urlData.publicUrl })
               .eq('id', rssPost.id)
 
             skipCount++
             continue
           }
 
-          // Download and save the image
-          const success = await this.downloadAndSaveImage(originalImageUrl, localPath, rssPost.title)
+          // Download and save the image to Supabase Storage
+          const hostedUrl = await this.downloadAndSaveImage(originalImageUrl, fileName, rssPost.title)
 
-          if (success) {
+          if (hostedUrl) {
             // Update the RSS post with hosted URL
             await supabaseAdmin
               .from('rss_posts')
-              .update({ image_url: publicPath })
+              .update({ image_url: hostedUrl })
               .eq('id', rssPost.id)
 
             console.log(`Successfully downloaded and stored image: ${fileName}`)
@@ -748,16 +751,9 @@ export class RSSProcessor {
     }
   }
 
-  private async downloadAndSaveImage(imageUrl: string, localPath: string, articleTitle: string): Promise<boolean> {
+  private async downloadAndSaveImage(imageUrl: string, fileName: string, articleTitle: string): Promise<string | null> {
     try {
       console.log(`Downloading image from: ${imageUrl}`)
-
-      // Ensure directory exists
-      const dir = path.dirname(localPath)
-      if (!fs.existsSync(dir)) {
-        fs.mkdirSync(dir, { recursive: true })
-        console.log(`Created directory: ${dir}`)
-      }
 
       // Download image with timeout
       const controller = new AbortController()
@@ -774,14 +770,14 @@ export class RSSProcessor {
 
       if (!response.ok) {
         console.error(`Failed to download image: HTTP ${response.status} ${response.statusText}`)
-        return false
+        return null
       }
 
       // Check content type
       const contentType = response.headers.get('content-type')
       if (!contentType || !contentType.startsWith('image/')) {
         console.error(`Invalid content type for image: ${contentType}`)
-        return false
+        return null
       }
 
       // Get image data
@@ -791,14 +787,29 @@ export class RSSProcessor {
       // Check file size (limit to 5MB)
       if (buffer.length > 5 * 1024 * 1024) {
         console.error(`Image too large: ${buffer.length} bytes (max 5MB)`)
-        return false
+        return null
       }
 
-      // Save to local file
-      fs.writeFileSync(localPath, buffer)
-      console.log(`Image saved to: ${localPath}`)
+      // Upload to Supabase Storage
+      const { data, error } = await supabaseAdmin.storage
+        .from('newsletter-images')
+        .upload(`articles/${fileName}`, buffer, {
+          contentType: contentType,
+          cacheControl: '3600'
+        })
 
-      return true
+      if (error) {
+        console.error(`Failed to upload to Supabase Storage:`, error)
+        return null
+      }
+
+      // Get public URL
+      const { data: urlData } = supabaseAdmin.storage
+        .from('newsletter-images')
+        .getPublicUrl(`articles/${fileName}`)
+
+      console.log(`Image saved to Supabase Storage: ${urlData.publicUrl}`)
+      return urlData.publicUrl
 
     } catch (error) {
       if (error instanceof Error && error.name === 'AbortError') {
@@ -810,7 +821,7 @@ export class RSSProcessor {
         imageUrl,
         error: error instanceof Error ? error.message : 'Unknown error'
       })
-      return false
+      return null
     }
   }
 

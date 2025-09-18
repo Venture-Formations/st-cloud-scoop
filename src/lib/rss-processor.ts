@@ -492,7 +492,64 @@ export class RSSProcessor {
     }
 
     console.log('Newsletter article generation complete')
+
+    // Auto-select top 5 articles based on ratings
+    await this.selectTop5Articles(campaignId)
   }
+
+  private async selectTop5Articles(campaignId: string) {
+    try {
+      console.log('Selecting top 5 articles for campaign:', campaignId)
+
+      // Get all articles for this campaign with their ratings
+      const { data: articles, error } = await supabaseAdmin
+        .from('articles')
+        .select(`
+          id,
+          rss_post:rss_posts(
+            post_ratings(total_score)
+          )
+        `)
+        .eq('campaign_id', campaignId)
+
+      if (error || !articles) {
+        console.error('Failed to fetch articles for top 5 selection:', error)
+        return
+      }
+
+      // Sort articles by rating (highest first) and take top 5
+      const sortedArticles = articles
+        .map(article => ({
+          id: article.id,
+          score: article.rss_post?.post_ratings?.[0]?.total_score || 0
+        }))
+        .sort((a, b) => b.score - a.score)
+
+      const top5ArticleIds = sortedArticles.slice(0, 5).map(a => a.id)
+      const remainingArticleIds = sortedArticles.slice(5).map(a => a.id)
+
+      console.log(`Setting ${top5ArticleIds.length} articles as active, ${remainingArticleIds.length} as inactive`)
+
+      // Set top 5 as active
+      if (top5ArticleIds.length > 0) {
+        await supabaseAdmin
+          .from('articles')
+          .update({ is_active: true })
+          .in('id', top5ArticleIds)
+      }
+
+      // Set remaining as inactive
+      if (remainingArticleIds.length > 0) {
+        await supabaseAdmin
+          .from('articles')
+          .update({ is_active: false })
+          .in('id', remainingArticleIds)
+      }
+
+      console.log('Top 5 article selection complete')
+    } catch (error) {
+      console.error('Error selecting top 5 articles:', error)
+    }
 
   private async processPostIntoArticle(post: any, campaignId: string) {
     try {
@@ -516,7 +573,7 @@ export class RSSProcessor {
             headline: content.headline,
             content: content.content,
             rank: null, // Will be set by ranking algorithm
-            is_active: true,
+            is_active: false, // Will be set to true for top 5 articles
             fact_check_score: factCheck.score,
             fact_check_details: factCheck.details,
             word_count: content.word_count

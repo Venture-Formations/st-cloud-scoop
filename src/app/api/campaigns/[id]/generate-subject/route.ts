@@ -55,11 +55,30 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       }, { status: 400 })
     }
 
-    console.log(`Generating subject line for ${activeArticles.length} articles`)
+    // Use only the highest scored article for subject line generation
+    const topArticle = activeArticles[0]
+    console.log(`Generating subject line based on top article: "${topArticle.headline}" (score: ${topArticle.rss_post?.post_rating?.[0]?.total_score || 0})`)
+    console.log('Top article full content:', {
+      headline: topArticle.headline,
+      content: topArticle.content,
+      content_length: topArticle.content?.length || 0
+    })
 
-    // Generate subject line using AI
-    const prompt = AI_PROMPTS.subjectLineGenerator(activeArticles)
-    const result = await callOpenAI(prompt)
+    // Generate subject line using AI with just the top article
+    // Add timestamp to prompt for variation each time
+    const variationPrompt = AI_PROMPTS.subjectLineGenerator([topArticle]) +
+      `\n\nGeneration timestamp: ${new Date().toISOString()} - Create a fresh, unique headline variation.`
+
+    console.log('=== FULL PROMPT BEING SENT TO AI ===')
+    console.log(variationPrompt)
+    console.log('=== END PROMPT ===')
+
+    // Use higher temperature for more creative variation
+    const result = await callOpenAI(variationPrompt, 1000, 0.8)
+
+    console.log('=== AI RESPONSE ===')
+    console.log(result)
+    console.log('=== END AI RESPONSE ===')
 
     if (!result.subject_line) {
       throw new Error('Invalid subject line response from AI')
@@ -98,7 +117,8 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
             details: {
               subject_line: result.subject_line,
               character_count: result.character_count,
-              articles_count: activeArticles.length
+              top_article_headline: topArticle.headline,
+              top_article_score: topArticle.rss_post?.post_rating?.[0]?.total_score || 0
             }
           }])
       }
@@ -108,7 +128,8 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       success: true,
       subject_line: result.subject_line,
       character_count: result.character_count,
-      articles_used: activeArticles.length
+      top_article_used: topArticle.headline,
+      top_article_score: topArticle.rss_post?.post_rating?.[0]?.total_score || 0
     })
 
   } catch (error) {

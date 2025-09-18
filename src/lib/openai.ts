@@ -184,6 +184,8 @@ IMPACT CHECKLIST:
 
 STYLE GUIDANCE: Write the headline as if the event just happened, not as a historical reflection or anniversary. Avoid words like 'Legacy,' 'Honors,' 'Remembers,' or 'Celebrates History.' Use an urgent, active voice suitable for a breaking news front page.
 
+CREATIVITY REQUIREMENT: Each generation should produce a unique headline variation. Explore different angles, power verbs, and emotional hooks. Consider multiple ways to frame the same story - focus on different aspects, beneficiaries, or impacts. Never repeat previous generations.
+
 Respond with valid JSON in this exact format:
 {
   "subject_line": "<subject line>",
@@ -191,7 +193,7 @@ Respond with valid JSON in this exact format:
 }`
 }
 
-export async function callOpenAI(prompt: string, maxTokens = 1000) {
+export async function callOpenAI(prompt: string, maxTokens = 1000, temperature = 0.3) {
   try {
     console.log('Calling OpenAI API...')
 
@@ -204,7 +206,7 @@ export async function callOpenAI(prompt: string, maxTokens = 1000) {
         model: 'gpt-4o', // Use higher quality model
         messages: [{ role: 'user', content: prompt }],
         max_tokens: maxTokens,
-        temperature: 0.3,
+        temperature: temperature,
       }, {
         signal: controller.signal
       })

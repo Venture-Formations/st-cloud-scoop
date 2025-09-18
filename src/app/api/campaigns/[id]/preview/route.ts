@@ -106,15 +106,40 @@ function generateNewsletterHeader(formattedDate: string): string {
 }
 
 function generateLocalScoopSection(articles: any[]): string {
-  const articlesHtml = articles.map((article: any) => `
+  const articlesHtml = articles.map((article: any) => {
+    // Debug logging for image URLs
+    console.log(`Article: "${article.headline}" - Image URL: ${article.rss_post?.image_url || 'None'}`)
+
+    // Check if article has any image URL (hosted or external)
+    const hasImage = article.rss_post?.image_url
+    const isHostedImage = hasImage && article.rss_post.image_url.startsWith('/images/')
+
+    console.log(`Has image: ${hasImage}, Is hosted: ${isHostedImage}`)
+
+    // Use hosted image if available, otherwise use external image for testing
+    const imageUrl = isHostedImage
+      ? `https://stcscoop.com${article.rss_post.image_url}`
+      : hasImage
+        ? article.rss_post.image_url
+        : null
+
+    const imageHtml = imageUrl
+      ? `<tr><td style='padding: 0 12px 12px;'><img src='${imageUrl}' alt='${article.headline}' style='width: 100%; max-width: 400px; height: auto; border-radius: 6px;'></td></tr>`
+      : ''
+
+    console.log(`Image HTML: ${imageHtml ? 'Generated' : 'None'}`)
+
+    return `
 <tr class='row'>
  <td class='column' style='padding:8px; vertical-align: top;'>
  <table width='100%' cellpadding='0' cellspacing='0' style='border: 1px solid #ddd; border-radius: 8px; background: #fff; font-family: Arial, sans-serif; font-size: 16px; line-height: 26px; box-shadow:0 4px 12px rgba(0,0,0,.15);'>
  <tr><td style='padding: 12px 12px 4px; font-size: 20px; font-weight: bold;'>${article.headline}</td></tr>
+ ${imageHtml}
  <tr><td style='padding: 0 12px 20px;'>${article.content} ${article.rss_post?.source_url ? `(<a href='${article.rss_post.source_url}' style='color: #0080FE; text-decoration: none;'>read more</a>)` : ''}</td></tr>
  </table>
  </td>
-</tr>`).join('');
+</tr>`
+  }).join('');
 
   return `
 <table width="100%" cellpadding="0" cellspacing="0" style="border: 1px solid #f7f7f7; border-radius: 10px; margin-top: 10px; max-width: 990px; margin: 0 auto; background-color: #f7f7f7; font-family: Arial, sans-serif;">

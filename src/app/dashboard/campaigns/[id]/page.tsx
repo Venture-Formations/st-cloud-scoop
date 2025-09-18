@@ -250,11 +250,6 @@ export default function CampaignDetailPage() {
               >
                 {processing ? 'Processing...' : 'Process RSS Feeds'}
               </button>
-              {processingStatus && (
-                <div className="text-sm text-blue-600 font-medium">
-                  {processingStatus}
-                </div>
-              )}
               <button
                 onClick={previewNewsletter}
                 disabled={saving}
@@ -270,6 +265,12 @@ export default function CampaignDetailPage() {
               </button>
             </div>
           </div>
+
+          {processingStatus && (
+            <div className="text-sm text-blue-600 font-medium mt-3 text-center">
+              {processingStatus}
+            </div>
+          )}
 
           {campaign.subject_line && (
             <div className="mt-4 p-3 bg-gray-50 rounded">
@@ -305,15 +306,10 @@ export default function CampaignDetailPage() {
                 <button
                   onClick={processRSSFeeds}
                   disabled={processing}
-                  className="bg-green-600 hover:bg-green-700 disabled:opacity-50 text-white px-4 py-2 rounded text-sm font-medium mb-2"
+                  className="bg-green-600 hover:bg-green-700 disabled:opacity-50 text-white px-4 py-2 rounded text-sm font-medium"
                 >
                   {processing ? 'Processing...' : 'Process RSS Feeds'}
                 </button>
-                {processingStatus && (
-                  <div className="text-sm text-blue-600 font-medium">
-                    {processingStatus}
-                  </div>
-                )}
               </div>
             ) : (
               campaign.articles

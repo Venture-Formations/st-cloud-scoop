@@ -9,6 +9,9 @@ import type {
   NewsletterContent,
   FactCheckResult
 } from '@/types/database'
+import fs from 'fs'
+import path from 'path'
+import crypto from 'crypto'
 
 const parser = new Parser({
   customFields: {
@@ -51,7 +54,7 @@ export class RSSProcessor {
 
       // Delete existing articles for this campaign
       const { error: articlesDeleteError } = await supabaseAdmin
-        .from('newsletter_articles')
+        .from('articles')
         .delete()
         .eq('campaign_id', campaignId)
 
@@ -159,7 +162,7 @@ export class RSSProcessor {
   }
 
   private async processFeed(feed: RssFeed, campaignId: string) {
-    console.log(`Processing feed: ${feed.name}`)
+    console.log(`=== PROCESSING FEED: ${feed.name} ===`)
 
     try {
       const rssFeed = await parser.parseURL(feed.url)
@@ -176,13 +179,68 @@ export class RSSProcessor {
 
       for (const item of recentPosts) {
         try {
-          // Extract image URL
+          console.log(`\n=== DEBUGGING ITEM: "${item.title}" ===`)
+          console.log('Raw item keys:', Object.keys(item))
+          console.log('media:content:', JSON.stringify(item['media:content'], null, 2))
+          console.log('Raw content preview:', (item.content || '').substring(0, 200))
+          console.log('Raw contentSnippet:', (item.contentSnippet || '').substring(0, 200))
+
+          // Extract image URL with comprehensive methods
           let imageUrl = null
+
+          // Method 1: media:content (multiple formats)
           if (item['media:content']) {
-            imageUrl = item['media:content'].url
-          } else if (item.enclosure && item.enclosure.type?.startsWith('image/')) {
-            imageUrl = item.enclosure.url
+            if (Array.isArray(item['media:content'])) {
+              // Sometimes it's an array, take the first image
+              const imageContent = item['media:content'].find((media: any) =>
+                media.type?.startsWith('image/') || media.medium === 'image'
+              )
+              imageUrl = imageContent?.url || imageContent?.$?.url
+            } else {
+              // Single media:content - try different access patterns
+              const mediaContent = item['media:content']
+              imageUrl = mediaContent.url ||
+                        mediaContent.$?.url ||
+                        (mediaContent.medium === 'image' ? mediaContent.url : null) ||
+                        (mediaContent.$?.medium === 'image' ? mediaContent.$?.url : null)
+            }
           }
+
+          // Method 1b: Try raw XML parsing for Facebook format
+          if (!imageUrl && (item.content || item.contentSnippet)) {
+            const content = item.content || item.contentSnippet || ''
+            const mediaMatch = content.match(/<media:content[^>]+medium=["']image["'][^>]+url=["']([^"']+)["']/i)
+            if (mediaMatch) {
+              imageUrl = mediaMatch[1]
+            }
+          }
+
+          // Method 2: enclosure with image type
+          if (!imageUrl && item.enclosure) {
+            if (Array.isArray(item.enclosure)) {
+              const imageEnclosure = item.enclosure.find((enc: any) => enc.type?.startsWith('image/'))
+              imageUrl = imageEnclosure?.url
+            } else if (item.enclosure.type?.startsWith('image/')) {
+              imageUrl = item.enclosure.url
+            }
+          }
+
+          // Method 3: Look for images in content HTML
+          if (!imageUrl && (item.content || item.contentSnippet)) {
+            const content = item.content || item.contentSnippet || ''
+            const imgMatch = content.match(/<img[^>]+src=["']([^"']+)["'][^>]*>/i)
+            if (imgMatch) {
+              imageUrl = imgMatch[1]
+            }
+          }
+
+          // Method 4: Look for thumbnail or image fields
+          if (!imageUrl) {
+            const itemAny = item as any
+            imageUrl = itemAny.thumbnail || itemAny.image || itemAny['media:thumbnail']?.url || null
+          }
+
+          console.log(`Post: "${item.title}" - Image URL: ${imageUrl || 'None found'}`)
 
           // Check if post already exists
           const { data: existingPost } = await supabaseAdmin
@@ -494,7 +552,14 @@ export class RSSProcessor {
     console.log('Newsletter article generation complete')
 
     // Auto-select top 5 articles based on ratings
+    console.log('=== ABOUT TO SELECT TOP 5 ARTICLES ===')
     await this.selectTop5Articles(campaignId)
+    console.log('=== TOP 5 ARTICLES SELECTION COMPLETE ===')
+
+    // Download and store images for selected articles
+    console.log('=== ABOUT TO PROCESS ARTICLE IMAGES ===')
+    await this.processArticleImages(campaignId)
+    console.log('=== ARTICLE IMAGE PROCESSING COMPLETE ===')
   }
 
   private async selectTop5Articles(campaignId: string) {
@@ -549,6 +614,203 @@ export class RSSProcessor {
       console.log('Top 5 article selection complete')
     } catch (error) {
       console.error('Error selecting top 5 articles:', error)
+    }
+  }
+
+  private async processArticleImages(campaignId: string) {
+    try {
+      console.log('=== STARTING IMAGE PROCESSING ===')
+      console.log('Campaign ID:', campaignId)
+
+      // Create test file to confirm function runs
+      const testFile = path.join(process.cwd(), 'public', 'images', 'articles', 'test-function-ran.txt')
+      fs.writeFileSync(testFile, `Image processing ran at: ${new Date().toISOString()}`)
+      console.log('Test file created:', testFile)
+
+      // Get active articles with their RSS post image URLs
+      const { data: articles, error } = await supabaseAdmin
+        .from('articles')
+        .select(`
+          id,
+          rss_post:rss_posts(
+            id,
+            image_url,
+            title
+          )
+        `)
+        .eq('campaign_id', campaignId)
+        .eq('is_active', true)
+
+      if (error || !articles) {
+        console.error('Failed to fetch active articles for image processing:', error)
+        await this.logError('Failed to fetch active articles for image processing', { campaignId, error: error?.message })
+        return
+      }
+
+      console.log(`Found ${articles.length} active articles to process images for`)
+
+      // Log details about each article
+      articles.forEach((article: any, index: number) => {
+        const rssPost = Array.isArray(article.rss_post) ? article.rss_post[0] : article.rss_post
+        console.log(`Article ${index + 1}: ID=${article.id}, RSS Post Image URL=${rssPost?.image_url || 'None'}, Title=${rssPost?.title || 'Unknown'}`)
+      })
+
+      // Process images for each article
+      let downloadCount = 0
+      let skipCount = 0
+      let errorCount = 0
+
+      for (const article of articles) {
+        try {
+          const rssPost = Array.isArray(article.rss_post) ? article.rss_post[0] : article.rss_post
+
+          if (!rssPost?.image_url) {
+            console.log(`No image URL for article ${article.id}, skipping`)
+            skipCount++
+            continue
+          }
+
+          const originalImageUrl = rssPost.image_url
+          console.log(`Processing image for article ${article.id}: ${originalImageUrl}`)
+
+          // Generate hash of the image URL for deduplication
+          const imageHash = crypto.createHash('md5').update(originalImageUrl).digest('hex')
+          const fileExtension = this.getImageExtension(originalImageUrl)
+          const fileName = `${imageHash}${fileExtension}`
+          const publicPath = `/images/articles/${fileName}`
+          const localPath = path.join(process.cwd(), 'public', 'images', 'articles', fileName)
+
+          // Check if image already exists
+          if (fs.existsSync(localPath)) {
+            console.log(`Image already exists: ${fileName}, updating database`)
+
+            // Update the RSS post with hosted URL
+            await supabaseAdmin
+              .from('rss_posts')
+              .update({ image_url: publicPath })
+              .eq('id', rssPost.id)
+
+            skipCount++
+            continue
+          }
+
+          // Download and save the image
+          const success = await this.downloadAndSaveImage(originalImageUrl, localPath, rssPost.title)
+
+          if (success) {
+            // Update the RSS post with hosted URL
+            await supabaseAdmin
+              .from('rss_posts')
+              .update({ image_url: publicPath })
+              .eq('id', rssPost.id)
+
+            console.log(`Successfully downloaded and stored image: ${fileName}`)
+            downloadCount++
+          } else {
+            errorCount++
+          }
+
+        } catch (error) {
+          console.error(`Error processing image for article ${article.id}:`, error)
+          errorCount++
+        }
+      }
+
+      console.log(`Image processing complete: ${downloadCount} downloaded, ${skipCount} skipped (already existed), ${errorCount} errors`)
+      await this.logInfo(`Image processing complete: ${downloadCount} downloaded, ${skipCount} skipped, ${errorCount} errors`, {
+        campaignId,
+        downloadCount,
+        skipCount,
+        errorCount
+      })
+
+    } catch (error) {
+      console.error('Error in processArticleImages:', error)
+      await this.logError('Error in processArticleImages', { campaignId, error: error instanceof Error ? error.message : 'Unknown error' })
+    }
+  }
+
+  private getImageExtension(url: string): string {
+    try {
+      const parsedUrl = new URL(url)
+      const pathname = parsedUrl.pathname.toLowerCase()
+
+      if (pathname.includes('.jpg') || pathname.includes('.jpeg')) return '.jpg'
+      if (pathname.includes('.png')) return '.png'
+      if (pathname.includes('.gif')) return '.gif'
+      if (pathname.includes('.webp')) return '.webp'
+      if (pathname.includes('.svg')) return '.svg'
+
+      // Default to .jpg if no extension found
+      return '.jpg'
+    } catch {
+      return '.jpg'
+    }
+  }
+
+  private async downloadAndSaveImage(imageUrl: string, localPath: string, articleTitle: string): Promise<boolean> {
+    try {
+      console.log(`Downloading image from: ${imageUrl}`)
+
+      // Ensure directory exists
+      const dir = path.dirname(localPath)
+      if (!fs.existsSync(dir)) {
+        fs.mkdirSync(dir, { recursive: true })
+        console.log(`Created directory: ${dir}`)
+      }
+
+      // Download image with timeout
+      const controller = new AbortController()
+      const timeoutId = setTimeout(() => controller.abort(), 15000) // 15 second timeout
+
+      const response = await fetch(imageUrl, {
+        signal: controller.signal,
+        headers: {
+          'User-Agent': 'StCloudScoop-Newsletter/1.0'
+        }
+      })
+
+      clearTimeout(timeoutId)
+
+      if (!response.ok) {
+        console.error(`Failed to download image: HTTP ${response.status} ${response.statusText}`)
+        return false
+      }
+
+      // Check content type
+      const contentType = response.headers.get('content-type')
+      if (!contentType || !contentType.startsWith('image/')) {
+        console.error(`Invalid content type for image: ${contentType}`)
+        return false
+      }
+
+      // Get image data
+      const arrayBuffer = await response.arrayBuffer()
+      const buffer = Buffer.from(arrayBuffer)
+
+      // Check file size (limit to 5MB)
+      if (buffer.length > 5 * 1024 * 1024) {
+        console.error(`Image too large: ${buffer.length} bytes (max 5MB)`)
+        return false
+      }
+
+      // Save to local file
+      fs.writeFileSync(localPath, buffer)
+      console.log(`Image saved to: ${localPath}`)
+
+      return true
+
+    } catch (error) {
+      if (error instanceof Error && error.name === 'AbortError') {
+        console.error(`Image download timeout for: ${imageUrl}`)
+      } else {
+        console.error(`Error downloading image from ${imageUrl}:`, error)
+      }
+      await this.logError(`Failed to download image for article: ${articleTitle}`, {
+        imageUrl,
+        error: error instanceof Error ? error.message : 'Unknown error'
+      })
+      return false
     }
   }
 

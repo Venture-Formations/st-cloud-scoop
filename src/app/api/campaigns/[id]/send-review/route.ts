@@ -58,7 +58,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       subject_line: campaign.subject_line,
       subject_line_type: typeof campaign.subject_line,
       subject_line_length: campaign.subject_line?.length || 0,
-      active_articles_count: campaign.articles.filter(a => a.is_active).length
+      active_articles_count: campaign.articles?.filter((a: any) => a.is_active).length || 0
     })
 
     console.log('Creating MailerLite service...')

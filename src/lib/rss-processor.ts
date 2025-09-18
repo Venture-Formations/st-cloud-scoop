@@ -507,7 +507,7 @@ export class RSSProcessor {
         .select(`
           id,
           rss_post:rss_posts(
-            post_ratings(total_score)
+            post_rating:post_ratings(total_score)
           )
         `)
         .eq('campaign_id', campaignId)
@@ -519,9 +519,9 @@ export class RSSProcessor {
 
       // Sort articles by rating (highest first) and take top 5
       const sortedArticles = articles
-        .map(article => ({
+        .map((article: any) => ({
           id: article.id,
-          score: article.rss_post?.post_ratings?.[0]?.total_score || 0
+          score: article.rss_post?.post_rating?.[0]?.total_score || 0
         }))
         .sort((a, b) => b.score - a.score)
 

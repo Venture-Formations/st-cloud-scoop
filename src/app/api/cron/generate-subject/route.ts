@@ -89,7 +89,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Use only the highest scored article
-    const topArticle = activeArticles[0]
+    const topArticle = activeArticles[0] as any
     console.log(`Generating subject line based on top article: "${topArticle.headline}" (score: ${topArticle.rss_post?.post_rating?.[0]?.total_score || 0})`)
 
     // Generate subject line using AI with just the top article

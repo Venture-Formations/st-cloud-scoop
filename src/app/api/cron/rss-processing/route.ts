@@ -67,9 +67,9 @@ export async function POST(request: NextRequest) {
       console.log('Created new campaign:', campaignId)
     }
 
-    // Process RSS feeds
+    // Process RSS feeds for the specific campaign
     console.log('Starting RSS processing...')
-    await rssProcessor.processAllFeeds(campaignId)
+    await rssProcessor.processAllFeedsForCampaign(campaignId)
 
     console.log('=== RSS PROCESSING COMPLETED ===')
 

@@ -124,75 +124,6 @@ export class MailerLiteService {
     }
   }
 
-  async createFinalCampaign(campaign: CampaignWithArticles) {
-    try {
-      console.log(`Creating final campaign for ${campaign.date}`)
-
-      const emailContent = this.generateEmailHTML(campaign, false)
-      const subjectLine = campaign.subject_line || `St. Cloud Scoop - ${new Date(campaign.date).toLocaleDateString()}`
-
-      const campaignData = {
-        name: `Newsletter: ${campaign.date}`,
-        type: 'regular',
-        emails: [{
-          subject: `🍦 ${subjectLine}`,
-          from_name: 'St. Cloud Scoop',
-          from: 'scoop@stcscoop.com',
-          content: emailContent,
-        }],
-        groups: [process.env.MAILERLITE_MAIN_GROUP_ID],
-        delivery_schedule: {
-          type: 'scheduled',
-          delivery: this.getScheduledDeliveryTime(campaign.date)
-        }
-      }
-
-      const response = await mailerliteClient.post('/campaigns', campaignData)
-
-      if (response.status === 201) {
-        const campaignId = response.data.data.id
-
-        // Update campaign status and record metrics
-        await supabaseAdmin
-          .from('newsletter_campaigns')
-          .update({
-            status: 'sent',
-            final_sent_at: new Date().toISOString()
-          })
-          .eq('id', campaign.id)
-
-        // Store initial metrics
-        await supabaseAdmin
-          .from('email_metrics')
-          .insert([{
-            campaign_id: campaign.id,
-            mailerlite_campaign_id: campaignId,
-            sent_count: 0,
-            delivered_count: 0,
-            opened_count: 0,
-            clicked_count: 0,
-            bounced_count: 0,
-            unsubscribed_count: 0,
-          }])
-
-        await this.logInfo('Final campaign created and scheduled', {
-          campaignId: campaign.id,
-          mailerliteCampaignId: campaignId
-        })
-
-        return { success: true, campaignId }
-      }
-
-      throw new Error('Failed to create final campaign')
-
-    } catch (error) {
-      await this.logError('Failed to create final campaign', {
-        campaignId: campaign.id,
-        error: error instanceof Error ? error.message : 'Unknown error'
-      })
-      throw error
-    }
-  }
 
   async importCampaignMetrics(campaignId: string) {
     try {
@@ -504,11 +435,11 @@ ${reviewHeaderTop}
 
         console.log('Final campaign created successfully:', campaignId)
 
-        await this.errorHandler.logInfo('Final campaign created successfully', {
+        await this.logInfo('Final campaign created successfully', {
           campaignId: campaign.id,
           mailerliteCampaignId: campaignId,
           mainGroupId: mainGroupId
-        }, 'mailerlite_service')
+        })
 
         await this.slack.sendEmailCampaignAlert('final', true, campaign.id)
 
@@ -521,11 +452,11 @@ ${reviewHeaderTop}
       console.error('Failed to create final campaign:', error)
 
       if (error instanceof Error) {
-        await this.errorHandler.logError('Failed to create final campaign', {
+        await this.logError('Failed to create final campaign', {
           error: error.message,
           campaignId: campaign.id,
           mainGroupId: mainGroupId
-        }, 'mailerlite_service')
+        })
 
         await this.slack.sendEmailCampaignAlert('final', false, campaign.id, error.message)
       }

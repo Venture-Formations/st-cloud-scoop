@@ -52,7 +52,15 @@ export async function POST(request: NextRequest) {
 
     // Send the final campaign
     const mailerLiteService = new MailerLiteService()
-    const result = await mailerLiteService.createFinalCampaign(campaign)
+
+    // Get main group ID from environment
+    const mainGroupId = process.env.MAILERLITE_MAIN_GROUP_ID
+
+    if (!mainGroupId) {
+      throw new Error('Main group ID not configured')
+    }
+
+    const result = await mailerLiteService.createFinalCampaign(campaign, mainGroupId)
 
     return NextResponse.json({
       success: true,

@@ -27,6 +27,7 @@ BLANK RATING CONDITIONS: Leave all fields blank if:
 - Description contains ≤10 words
 - Post is about weather happening today/tomorrow
 - Post is written before an event happening "today"/"tonight"/"this evening"
+- Post mentions events happening "today", "tonight", or "this evening" (we do not include same-day events)
 
 Article Title: ${post.title}
 Article Description: ${post.description || 'No description available'}
@@ -69,12 +70,13 @@ Description: ${post.description || 'No description available'}
 Content: ${post.content ? post.content.substring(0, 1500) + '...' : 'No additional content'}
 
 MANDATORY STRICT CONTENT RULES - FOLLOW EXACTLY:
-1. Articles must be COMPLETELY REWRITTEN and summarized — NEVER copy or slightly modify original text
+1. Articles must be COMPLETELY REWRITTEN and summarized — similar phrasing is acceptable but NO exact copying
 2. Use ONLY information contained in the source post above — DO NOT add any external information
 3. DO NOT add numbers, dates, quotes, or details not explicitly stated in the original
 4. NEVER use 'today,' 'tomorrow,' 'yesterday' — use actual day of week if date reference needed
-5. NO emojis anywhere in headlines or article content
+5. NO emojis, hashtags (#), or URLs anywhere in headlines or article content
 6. Stick to facts only — NO editorial commentary, opinions, or speculation
+7. Write from THIRD-PARTY PERSPECTIVE — never use "we," "our," or "us" unless referring to the community as a whole
 
 HEADLINE REQUIREMENTS - MUST FOLLOW:
 - NEVER reuse or slightly reword the original title
@@ -90,10 +92,12 @@ ARTICLE REQUIREMENTS:
 - REWRITE completely — do not copy phrases from original
 
 BEFORE RESPONDING: Double-check that you have:
-✓ Completely rewritten the content (no copied phrases)
+✓ Completely rewritten the content (similar phrasing OK, no exact copying)
 ✓ Used only information from the source post
 ✓ Created a new headline (not modified original)
 ✓ Stayed between 40-75 words
+✓ Removed all emojis, hashtags (#), and URLs
+✓ Used third-party perspective (no "we/our/us" unless community-wide)
 ✓ Avoided all prohibited words and phrases
 ✓ Included no editorial commentary
 
@@ -114,19 +118,21 @@ Original Source Material:
 ${originalContent.substring(0, 2000)}
 
 STRICT CONTENT VIOLATIONS TO CHECK FOR:
-1. COPIED TEXT: Any phrases, sentences, or words directly copied from source
+1. EXACT COPIED TEXT: Direct word-for-word copying from source (similar phrasing is acceptable)
 2. ADDED INFORMATION: Any facts, numbers, dates, quotes not in original source
 3. PROHIBITED WORDS: Use of 'today,' 'tomorrow,' 'yesterday' instead of specific days
-4. EMOJIS: Any emojis in headline or content
-5. EDITORIAL CONTENT: Opinions, speculation, or commentary not in source
-6. MODIFIED ORIGINAL TITLE: Headlines that are just slightly reworded versions of original
+4. FORMATTING VIOLATIONS: Any emojis, hashtags (#), or URLs in headline or content
+5. PERSPECTIVE VIOLATIONS: Use of "we," "our," "us" unless referring to community as whole
+6. EDITORIAL CONTENT: Opinions, speculation, or commentary not in source
+7. MODIFIED ORIGINAL TITLE: Headlines that are just slightly reworded versions of original
 
 ACCURACY SCORING (1-10, where 10 = perfect compliance):
 - Start at 10
-- Subtract 5 points for ANY copied text or phrases from original
+- Subtract 3 points for excessive exact word-for-word copying (similar phrasing is OK)
 - Subtract 4 points for ANY added information not in source
 - Subtract 3 points for prohibited time words (today/tomorrow/yesterday)
-- Subtract 2 points for ANY emojis found
+- Subtract 2 points for ANY emojis, hashtags, or URLs found
+- Subtract 2 points for inappropriate use of "we/our/us" perspective
 - Subtract 3 points for editorial commentary or speculation
 - Subtract 4 points if headline is just modified version of original title
 - Minimum score: 1

@@ -46,6 +46,33 @@ export class RSSProcessor {
     console.log(`Starting RSS processing for campaign: ${campaignId}`)
 
     try {
+      // Clear previous articles and posts for this campaign to allow fresh processing
+      console.log('Clearing previous articles and posts...')
+
+      // Delete existing articles for this campaign
+      const { error: articlesDeleteError } = await supabaseAdmin
+        .from('newsletter_articles')
+        .delete()
+        .eq('campaign_id', campaignId)
+
+      if (articlesDeleteError) {
+        console.warn('Warning: Failed to delete previous articles:', articlesDeleteError)
+      } else {
+        console.log('Previous articles cleared successfully')
+      }
+
+      // Delete existing posts for this campaign
+      const { error: postsDeleteError } = await supabaseAdmin
+        .from('rss_posts')
+        .delete()
+        .eq('campaign_id', campaignId)
+
+      if (postsDeleteError) {
+        console.warn('Warning: Failed to delete previous posts:', postsDeleteError)
+      } else {
+        console.log('Previous posts cleared successfully')
+      }
+
       // Get active RSS feeds
       const { data: feeds, error: feedsError } = await supabaseAdmin
         .from('rss_feeds')

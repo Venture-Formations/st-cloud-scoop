@@ -40,6 +40,15 @@ export default function CampaignDetailPage() {
   const toggleArticle = async (articleId: string, currentState: boolean) => {
     if (!campaign) return
 
+    // Check if we're trying to activate an article and already have 5 active
+    if (!currentState) { // currentState is false means we're trying to activate
+      const activeCount = campaign.articles.filter(article => article.is_active).length
+      if (activeCount >= 5) {
+        alert('Maximum 5 articles can be selected for the newsletter. Please deselect another article first.')
+        return
+      }
+    }
+
     setSaving(true)
     try {
       const response = await fetch(`/api/campaigns/${campaign.id}/articles`, {
@@ -277,9 +286,17 @@ export default function CampaignDetailPage() {
             <h2 className="text-lg font-medium text-gray-900">
               Articles ({campaign.articles.length})
             </h2>
-            <p className="text-sm text-gray-600">
-              Toggle articles on/off for the newsletter. Articles are ranked by AI evaluation.
-            </p>
+            <div className="flex items-center justify-between">
+              <p className="text-sm text-gray-600">
+                Toggle articles on/off for the newsletter. Articles are ranked by AI evaluation.
+              </p>
+              <div className="text-sm">
+                <span className={`font-medium ${campaign.articles.filter(a => a.is_active).length >= 5 ? 'text-red-600' : 'text-green-600'}`}>
+                  {campaign.articles.filter(a => a.is_active).length}/5 selected
+                </span>
+                <span className="text-gray-500 ml-1">for newsletter</span>
+              </div>
+            </div>
           </div>
 
           <div className="divide-y divide-gray-200">

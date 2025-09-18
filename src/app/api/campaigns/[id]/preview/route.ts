@@ -56,11 +56,13 @@ export async function GET(
 
     console.log('Campaign found, articles count:', campaign.articles?.length || 0)
 
-    // Filter to only active articles
+    // Filter to only active articles (max 5)
     if (campaign.articles) {
       const beforeFilter = campaign.articles.length
-      campaign.articles = campaign.articles.filter((article: any) => article.is_active)
-      console.log('Active articles after filter:', campaign.articles.length, 'from', beforeFilter)
+      campaign.articles = campaign.articles
+        .filter((article: any) => article.is_active)
+        .slice(0, 5) // Limit to 5 articles maximum
+      console.log('Active articles after filter:', campaign.articles.length, 'from', beforeFilter, '(max 5)')
     }
 
     console.log('Generating HTML newsletter')

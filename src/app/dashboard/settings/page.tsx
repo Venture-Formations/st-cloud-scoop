@@ -241,7 +241,6 @@ function EmailSettings() {
 
     // Scheduling Settings (Central Time)
     rssProcessingTime: '20:30',  // 8:30 PM
-    subjectGenerationTime: '20:45',  // 8:45 PM
     campaignCreationTime: '20:50',  // 8:50 PM
     scheduledSendTime: '21:00'  // 9:00 PM
   })
@@ -386,18 +385,6 @@ function EmailSettings() {
             <p className="text-xs text-gray-500 mt-1">Daily RSS feed processing and article rating</p>
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Subject Line Generation
-            </label>
-            <input
-              type="time"
-              value={settings.subjectGenerationTime}
-              onChange={(e) => handleChange('subjectGenerationTime', e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-brand-primary"
-            />
-            <p className="text-xs text-gray-500 mt-1">AI-generated subject line creation</p>
-          </div>
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -429,10 +416,10 @@ function EmailSettings() {
         <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
           <h4 className="font-medium text-blue-900 mb-2">Workflow Overview</h4>
           <div className="text-sm text-blue-800 space-y-1">
-            <div>1. <strong>{settings.rssProcessingTime}</strong> - Process RSS feeds and rate articles</div>
-            <div>2. <strong>{settings.subjectGenerationTime}</strong> - Generate AI subject line from top article</div>
-            <div>3. <strong>{settings.campaignCreationTime}</strong> - Create campaign and send for review</div>
-            <div>4. <strong>{settings.scheduledSendTime}</strong> - Send newsletter to all subscribers</div>
+            <div>1. <strong>{settings.rssProcessingTime}</strong> - Create tomorrow's campaign and process RSS feeds</div>
+            <div>2. <strong>+15 min</strong> - Generate AI subject line from top article (automatic)</div>
+            <div>3. <strong>{settings.campaignCreationTime}</strong> - Create review campaign, schedule for 9pm</div>
+            <div>4. <strong>{settings.scheduledSendTime}</strong> - MailerLite sends review + final newsletter to main group</div>
           </div>
         </div>
       </div>

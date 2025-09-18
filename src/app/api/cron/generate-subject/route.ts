@@ -13,13 +13,14 @@ export async function POST(request: NextRequest) {
     console.log('=== AUTOMATED SUBJECT LINE GENERATION STARTED ===')
     console.log('Time:', new Date().toISOString())
 
-    // Get today's campaign
-    const today = new Date()
-    const campaignDate = today.toISOString().split('T')[0]
+    // Get tomorrow's campaign (created by RSS processing 15 minutes ago)
+    const tomorrow = new Date()
+    tomorrow.setDate(tomorrow.getDate() + 1)
+    const campaignDate = tomorrow.toISOString().split('T')[0]
 
-    console.log('Generating subject line for campaign date:', campaignDate)
+    console.log('Generating subject line for tomorrow\'s campaign date:', campaignDate)
 
-    // Find today's campaign
+    // Find tomorrow's campaign
     const { data: campaign, error: campaignError } = await supabaseAdmin
       .from('newsletter_campaigns')
       .select(`
@@ -42,7 +43,7 @@ export async function POST(request: NextRequest) {
     if (campaignError || !campaign) {
       return NextResponse.json({
         success: false,
-        error: 'No campaign found for today',
+        error: 'No campaign found for tomorrow',
         campaignDate: campaignDate
       }, { status: 404 })
     }

@@ -13,13 +13,17 @@ export async function POST(request: NextRequest) {
     console.log('=== AUTOMATED RSS PROCESSING STARTED ===')
     console.log('Time:', new Date().toISOString())
 
-    // Get today's date for campaign creation
-    const today = new Date()
-    const campaignDate = today.toISOString().split('T')[0]
+    // Get tomorrow's date for campaign creation (RSS processing is for next day)
+    const tomorrow = new Date()
+    tomorrow.setDate(tomorrow.getDate() + 1)
+    const campaignDate = tomorrow.toISOString().split('T')[0]
 
-    console.log('Processing RSS for campaign date:', campaignDate)
+    console.log('Processing RSS for tomorrow\'s campaign date:', campaignDate)
 
-    // Check if campaign already exists for today
+    // STEP 1: Create tomorrow's campaign first
+    console.log('Creating campaign for tomorrow before processing RSS...')
+
+    // Check if campaign already exists for tomorrow
     const { data: existingCampaign } = await supabaseAdmin
       .from('newsletter_campaigns')
       .select('id, status')
@@ -27,7 +31,7 @@ export async function POST(request: NextRequest) {
       .single()
 
     if (existingCampaign) {
-      console.log('Campaign already exists:', existingCampaign.id, 'Status:', existingCampaign.status)
+      console.log('Campaign already exists for tomorrow:', existingCampaign.id, 'Status:', existingCampaign.status)
 
       // Only process if campaign is in draft status
       if (existingCampaign.status !== 'draft') {
@@ -49,7 +53,7 @@ export async function POST(request: NextRequest) {
       campaignId = existingCampaign.id
       console.log('Using existing campaign:', campaignId)
     } else {
-      // Create new campaign
+      // Create new campaign for tomorrow
       const { data: newCampaign, error: campaignError } = await supabaseAdmin
         .from('newsletter_campaigns')
         .insert([{
@@ -64,7 +68,7 @@ export async function POST(request: NextRequest) {
       }
 
       campaignId = newCampaign.id
-      console.log('Created new campaign:', campaignId)
+      console.log('Created new campaign for tomorrow:', campaignId)
     }
 
     // Process RSS feeds for the specific campaign
@@ -75,9 +79,10 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      message: 'RSS processing completed successfully',
+      message: 'RSS processing completed successfully for tomorrow\'s campaign',
       campaignId: campaignId,
       campaignDate: campaignDate,
+      note: 'Campaign created for next day delivery',
       timestamp: new Date().toISOString()
     })
 

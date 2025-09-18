@@ -35,7 +35,6 @@ export async function GET(request: NextRequest) {
       fromEmail: 'scoop@stcscoop.com',
       senderName: 'St. Cloud Scoop',
       rssProcessingTime: '20:30',  // 8:30 PM CT
-      subjectGenerationTime: '20:45',  // 8:45 PM CT
       campaignCreationTime: '20:50',  // 8:50 PM CT
       scheduledSendTime: '21:00'  // 9:00 PM CT
     }
@@ -71,7 +70,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Validate time formats (HH:MM)
-    const timeFields = ['rssProcessingTime', 'subjectGenerationTime', 'campaignCreationTime', 'scheduledSendTime']
+    const timeFields = ['rssProcessingTime', 'campaignCreationTime', 'scheduledSendTime']
     for (const field of timeFields) {
       if (settings[field] && !/^([01]?[0-9]|2[0-3]):[0-5][0-9]$/.test(settings[field])) {
         return NextResponse.json({
@@ -88,7 +87,6 @@ export async function POST(request: NextRequest) {
       { key: 'email_fromEmail', value: settings.fromEmail },
       { key: 'email_senderName', value: settings.senderName },
       { key: 'email_rssProcessingTime', value: settings.rssProcessingTime },
-      { key: 'email_subjectGenerationTime', value: settings.subjectGenerationTime },
       { key: 'email_campaignCreationTime', value: settings.campaignCreationTime },
       { key: 'email_scheduledSendTime', value: settings.scheduledSendTime }
     ]
@@ -130,10 +128,10 @@ export async function POST(request: NextRequest) {
               scheduling_updated: true,
               times: {
                 rss: settings.rssProcessingTime,
-                subject: settings.subjectGenerationTime,
                 campaign: settings.campaignCreationTime,
                 send: settings.scheduledSendTime
-              }
+              },
+              note: 'Subject line generation fixed at RSS+15min'
             }
           }])
       }

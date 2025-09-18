@@ -13,13 +13,14 @@ export async function POST(request: NextRequest) {
     console.log('=== AUTOMATED CAMPAIGN CREATION STARTED ===')
     console.log('Time:', new Date().toISOString())
 
-    // Get today's campaign
-    const today = new Date()
-    const campaignDate = today.toISOString().split('T')[0]
+    // Get tomorrow's campaign (already processed with RSS and subject line)
+    const tomorrow = new Date()
+    tomorrow.setDate(tomorrow.getDate() + 1)
+    const campaignDate = tomorrow.toISOString().split('T')[0]
 
-    console.log('Creating review campaign for date:', campaignDate)
+    console.log('Creating review campaign for tomorrow\'s date:', campaignDate)
 
-    // Find today's campaign with articles
+    // Find tomorrow's campaign with articles
     const { data: campaign, error: campaignError } = await supabaseAdmin
       .from('newsletter_campaigns')
       .select(`
@@ -39,7 +40,7 @@ export async function POST(request: NextRequest) {
     if (campaignError || !campaign) {
       return NextResponse.json({
         success: false,
-        error: 'No campaign found for today',
+        error: 'No campaign found for tomorrow',
         campaignDate: campaignDate
       }, { status: 404 })
     }

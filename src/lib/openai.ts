@@ -17,11 +17,12 @@ Article Title: ${post.title}
 Article Description: ${post.description || 'No description available'}
 Article Content: ${post.content ? post.content.substring(0, 1000) + '...' : 'No content available'}
 
-Respond with valid JSON in this exact format:
+IMPORTANT: You must respond with ONLY valid JSON. Do not include any text before or after the JSON.
+
 {
-  "interest_level": <number>,
-  "local_relevance": <number>,
-  "community_impact": <number>,
+  "interest_level": <number 1-10>,
+  "local_relevance": <number 1-10>,
+  "community_impact": <number 1-10>,
   "reasoning": "<detailed explanation of your scoring>"
 }`,
 
@@ -139,9 +140,16 @@ export async function callOpenAI(prompt: string, maxTokens = 1000) {
 
       // Try to parse as JSON, fallback to raw content
       try {
-        return JSON.parse(content)
+        // Clean the content - remove any text before/after JSON
+        const jsonMatch = content.match(/\{[\s\S]*\}/)
+        if (jsonMatch) {
+          return JSON.parse(jsonMatch[0])
+        } else {
+          return JSON.parse(content)
+        }
       } catch (parseError) {
         console.warn('Failed to parse OpenAI response as JSON:', content)
+        console.warn('Parse error:', parseError)
         return { raw: content }
       }
     } catch (error) {

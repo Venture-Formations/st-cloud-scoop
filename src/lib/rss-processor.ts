@@ -316,7 +316,28 @@ export class RSSProcessor {
 
     const result = await callOpenAI(prompt)
 
+    // Log the actual response for debugging
+    console.log('AI evaluation response:', JSON.stringify(result, null, 2))
+
+    // Check if we got a raw response that needs parsing
+    if (result.raw && typeof result.raw === 'string') {
+      try {
+        const parsed = JSON.parse(result.raw)
+        if (parsed.interest_level && parsed.local_relevance && parsed.community_impact) {
+          return parsed as ContentEvaluation
+        }
+      } catch (parseError) {
+        console.error('Failed to parse raw AI response:', result.raw)
+      }
+    }
+
+    // Check for direct response format
     if (!result.interest_level || !result.local_relevance || !result.community_impact) {
+      await this.logError(`Invalid AI evaluation response for post: ${post.title}`, {
+        postId: post.id,
+        aiResponse: result,
+        error: 'Missing required fields: interest_level, local_relevance, community_impact'
+      })
       throw new Error('Invalid AI evaluation response')
     }
 

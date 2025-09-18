@@ -28,7 +28,13 @@ export class MailerLiteService {
       console.log(`Creating review campaign for ${campaign.date}`)
 
       const emailContent = this.generateEmailHTML(campaign, true)
+
+      // Log subject line status
+      console.log('Campaign subject line:', campaign.subject_line)
+
       const subjectLine = campaign.subject_line || `Newsletter Review - ${new Date(campaign.date).toLocaleDateString()}`
+
+      console.log('Using subject line for MailerLite:', subjectLine)
 
       const campaignData = {
         name: `Review: ${campaign.date}`,

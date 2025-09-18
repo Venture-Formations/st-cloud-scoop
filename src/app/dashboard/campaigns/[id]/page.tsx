@@ -206,6 +206,8 @@ export default function CampaignDetailPage() {
           const subjectData = await subjectResponse.json()
           subjectLine = subjectData.subject_line
 
+          console.log('AI generated subject line:', subjectLine)
+
           // Update campaign locally with new subject line
           setCampaign(prev => {
             if (!prev) return prev
@@ -215,7 +217,9 @@ export default function CampaignDetailPage() {
             }
           })
         } else {
-          console.warn('Failed to generate subject line, proceeding without it')
+          const errorData = await subjectResponse.json().catch(() => null)
+          console.error('Failed to generate subject line:', subjectResponse.status, errorData)
+          alert(`Warning: Could not generate AI subject line. Error: ${errorData?.error || 'Unknown error'}. Proceeding with default subject.`)
         }
       }
 

@@ -372,8 +372,10 @@ export class RSSProcessor {
   }
 
   private async generateNewsletterArticles(campaignId: string) {
+    console.log('Starting newsletter article generation...')
+
     // Get top-rated posts that aren't duplicates
-    const { data: topPosts } = await supabaseAdmin
+    const { data: topPosts, error: queryError } = await supabaseAdmin
       .from('rss_posts')
       .select(`
         *,
@@ -385,38 +387,91 @@ export class RSSProcessor {
       .order('post_ratings.total_score', { ascending: false })
       .limit(12) // Get top 12 for processing
 
-    if (!topPosts) return
+    if (queryError) {
+      console.error('Error fetching top posts:', queryError)
+      return
+    }
 
-    for (const post of topPosts) {
-      if (!post.post_ratings?.[0]) continue
+    if (!topPosts || topPosts.length === 0) {
+      console.log('No top posts found for article generation')
+      return
+    }
 
-      try {
-        // Generate newsletter content
-        const content = await this.generateNewsletterContent(post)
+    console.log(`Found ${topPosts.length} top posts for article generation`)
 
-        // Fact-check the content
-        const factCheck = await this.factCheckContent(content.content, post.content || post.description || '')
+    const postsWithRatings = topPosts.filter(post => post.post_ratings?.[0])
+    console.log(`${postsWithRatings.length} posts have ratings`)
 
-        if (factCheck.passed) {
-          // Create article
-          await supabaseAdmin
-            .from('articles')
-            .insert([{
-              post_id: post.id,
-              campaign_id: campaignId,
-              headline: content.headline,
-              content: content.content,
-              rank: null, // Will be set by ranking algorithm
-              is_active: true,
-              fact_check_score: factCheck.score,
-              fact_check_details: factCheck.details,
-              word_count: content.word_count
-            }])
+    if (postsWithRatings.length === 0) {
+      console.log('No posts with ratings found - checking all posts with ratings')
+
+      // Try a simpler query to get posts with ratings
+      const { data: allRatedPosts } = await supabaseAdmin
+        .from('rss_posts')
+        .select(`
+          *,
+          post_ratings(*)
+        `)
+        .eq('campaign_id', campaignId)
+        .not('post_ratings', 'is', null)
+
+      console.log(`Alternative query found ${allRatedPosts?.length || 0} posts with ratings`)
+
+      if (allRatedPosts && allRatedPosts.length > 0) {
+        // Use these posts instead
+        for (const post of allRatedPosts.slice(0, 12)) {
+          await this.processPostIntoArticle(post, campaignId)
         }
-
-      } catch (error) {
-        console.error(`Error generating article for post ${post.id}:`, error)
       }
+      return
+    }
+
+    for (const post of postsWithRatings) {
+      await this.processPostIntoArticle(post, campaignId)
+    }
+
+    console.log('Newsletter article generation complete')
+  }
+
+  private async processPostIntoArticle(post: any, campaignId: string) {
+    try {
+      console.log(`Generating article for: ${post.title}`)
+
+      // Generate newsletter content
+      const content = await this.generateNewsletterContent(post)
+
+      // Fact-check the content
+      const factCheck = await this.factCheckContent(content.content, post.content || post.description || '')
+
+      console.log(`Fact-check result for "${post.title}": ${factCheck.passed ? 'PASSED' : 'FAILED'} (score: ${factCheck.score})`)
+
+      if (factCheck.passed) {
+        // Create article
+        const { data, error } = await supabaseAdmin
+          .from('articles')
+          .insert([{
+            post_id: post.id,
+            campaign_id: campaignId,
+            headline: content.headline,
+            content: content.content,
+            rank: null, // Will be set by ranking algorithm
+            is_active: true,
+            fact_check_score: factCheck.score,
+            fact_check_details: factCheck.details,
+            word_count: content.word_count
+          }])
+
+        if (error) {
+          console.error(`Error inserting article for post ${post.id}:`, error)
+        } else {
+          console.log(`Successfully created article: "${content.headline}"`)
+        }
+      } else {
+        console.log(`Article rejected due to fact-check failure: "${post.title}"`)
+      }
+
+    } catch (error) {
+      console.error(`Error generating article for post ${post.id}:`, error)
     }
   }
 

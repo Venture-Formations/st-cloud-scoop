@@ -230,8 +230,13 @@ export class RSSProcessor {
     console.log(`Processing ${posts.length} posts with AI`)
 
     // Step 1: Evaluate posts
+    let successCount = 0
+    let errorCount = 0
+
     for (const post of posts) {
       try {
+        console.log(`Evaluating post ${successCount + errorCount + 1}/${posts.length}: ${post.title}`)
+
         const evaluation = await this.evaluatePost(post)
 
         // Store evaluation
@@ -245,10 +250,27 @@ export class RSSProcessor {
             ai_reasoning: evaluation.reasoning,
           }])
 
+        successCount++
+        console.log(`Successfully evaluated post ${successCount}/${posts.length}`)
+
+        // Add delay to avoid rate limiting
+        await new Promise(resolve => setTimeout(resolve, 1000))
+
       } catch (error) {
-        console.error(`Error evaluating post ${post.id}:`, error)
+        errorCount++
+        console.error(`Error evaluating post ${post.id} (${errorCount} errors):`, error)
+
+        // Log error to database
+        await this.logError(`Failed to evaluate post: ${post.title}`, {
+          postId: post.id,
+          error: error instanceof Error ? error.message : 'Unknown error'
+        })
+
+        // Continue processing other posts
       }
     }
+
+    console.log(`AI evaluation complete: ${successCount} successful, ${errorCount} errors`)
 
     // Step 2: Detect and handle duplicates
     await this.handleDuplicates(posts, campaignId)

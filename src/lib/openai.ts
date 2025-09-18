@@ -112,26 +112,47 @@ Respond with valid JSON in this exact format:
 
 export async function callOpenAI(prompt: string, maxTokens = 1000) {
   try {
-    const response = await openai.chat.completions.create({
-      model: 'gpt-4',
-      messages: [{ role: 'user', content: prompt }],
-      max_tokens: maxTokens,
-      temperature: 0.3,
-    })
+    console.log('Calling OpenAI API...')
 
-    const content = response.choices[0]?.message?.content
-    if (!content) {
-      throw new Error('No response from OpenAI')
-    }
+    // Add timeout to prevent hanging
+    const controller = new AbortController()
+    const timeoutId = setTimeout(() => controller.abort(), 30000) // 30 second timeout
 
-    // Try to parse as JSON, fallback to raw content
     try {
-      return JSON.parse(content)
-    } catch {
-      return { raw: content }
+      const response = await openai.chat.completions.create({
+        model: 'gpt-4o-mini', // Use more reliable and faster model
+        messages: [{ role: 'user', content: prompt }],
+        max_tokens: maxTokens,
+        temperature: 0.3,
+      }, {
+        signal: controller.signal
+      })
+
+      clearTimeout(timeoutId)
+
+      const content = response.choices[0]?.message?.content
+      if (!content) {
+        throw new Error('No response from OpenAI')
+      }
+
+      console.log('OpenAI response received')
+
+      // Try to parse as JSON, fallback to raw content
+      try {
+        return JSON.parse(content)
+      } catch (parseError) {
+        console.warn('Failed to parse OpenAI response as JSON:', content)
+        return { raw: content }
+      }
+    } catch (error) {
+      clearTimeout(timeoutId)
+      throw error
     }
   } catch (error) {
     console.error('OpenAI API error:', error)
+    if (error instanceof Error) {
+      console.error('Error details:', error.message)
+    }
     throw error
   }
 }

@@ -31,7 +31,21 @@ export class RSSProcessor {
     try {
       // Get today's campaign or create one
       const campaignId = await this.getOrCreateTodaysCampaign()
+      await this.processAllFeedsForCampaign(campaignId)
+    } catch (error) {
+      await this.errorHandler.handleError(error, {
+        source: 'rss_processor',
+        operation: 'processAllFeeds'
+      })
+      await this.slack.sendRSSProcessingAlert(false, undefined, error instanceof Error ? error.message : 'Unknown error')
+      throw error
+    }
+  }
 
+  async processAllFeedsForCampaign(campaignId: string) {
+    console.log(`Starting RSS processing for campaign: ${campaignId}`)
+
+    try {
       // Get active RSS feeds
       const { data: feeds, error: feedsError } = await supabaseAdmin
         .from('rss_feeds')
@@ -82,7 +96,7 @@ export class RSSProcessor {
     } catch (error) {
       await this.errorHandler.handleError(error, {
         source: 'rss_processor',
-        operation: 'processAllFeeds'
+        operation: 'processAllFeedsForCampaign'
       })
       await this.slack.sendRSSProcessingAlert(false, undefined, error instanceof Error ? error.message : 'Unknown error')
       throw error
@@ -123,12 +137,12 @@ export class RSSProcessor {
     try {
       const rssFeed = await parser.parseURL(feed.url)
       const now = new Date()
-      const timeRange = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000) // Last 7 days for testing
+      const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000)
 
       const recentPosts = rssFeed.items.filter(item => {
         if (!item.pubDate) return false
         const pubDate = new Date(item.pubDate)
-        return pubDate >= timeRange && pubDate <= now
+        return pubDate >= yesterday && pubDate <= now
       })
 
       console.log(`Found ${recentPosts.length} recent posts from ${feed.name}`)

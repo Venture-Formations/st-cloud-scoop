@@ -17,8 +17,16 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Check if specific campaign ID was provided
+    const body = await request.json().catch(() => ({}))
+    const { campaign_id } = body
+
     const processor = new RSSProcessor()
-    await processor.processAllFeeds()
+    if (campaign_id) {
+      await processor.processAllFeedsForCampaign(campaign_id)
+    } else {
+      await processor.processAllFeeds()
+    }
 
     return NextResponse.json({
       success: true,

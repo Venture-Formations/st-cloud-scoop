@@ -85,7 +85,10 @@ export default function CampaignDetailPage() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-        }
+        },
+        body: JSON.stringify({
+          campaign_id: campaign.id
+        })
       })
 
       if (!response.ok) {

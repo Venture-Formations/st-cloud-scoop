@@ -237,86 +237,102 @@ export class MailerLiteService {
 
   private generateEmailHTML(campaign: CampaignWithArticles, isReview: boolean): string {
     const activeArticles = campaign.articles.filter(article => article.is_active)
-    const sortedArticles = activeArticles.sort((a, b) => (a.rank || 999) - (b.rank || 999))
 
+    // Use the same format as the preview template
+    const formattedDate = new Date(campaign.date).toLocaleDateString('en-US', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    })
+
+    // Review header for review campaigns
     const reviewHeader = isReview ? `
-      <div style="background-color: #FEF3C7; padding: 16px; margin-bottom: 24px; border-radius: 8px; border-left: 4px solid #F59E0B;">
-        <h3 style="margin: 0; color: #92400E; font-size: 16px;">📝 Newsletter Review</h3>
-        <p style="margin: 8px 0 0 0; color: #92400E; font-size: 14px;">
-          This is a preview of tomorrow's newsletter. Please review and make any necessary changes in the dashboard.
-        </p>
-      </div>
-    ` : ''
+<table width="100%" cellpadding="0" cellspacing="0" style="border: 1px solid #f7f7f7; border-radius: 10px; margin-top: 10px; max-width: 990px; margin: 0 auto; background-color: #FEF3C7; font-family: Arial, sans-serif;">
+  <tr>
+    <td style="padding: 12px;">
+      <h3 style="margin: 0; color: #92400E; font-size: 16px;">📝 Newsletter Review</h3>
+      <p style="margin: 8px 0 0 0; color: #92400E; font-size: 14px;">
+        This is a preview of tomorrow's newsletter. Please review and make any necessary changes in the dashboard.
+      </p>
+    </td>
+  </tr>
+</table>
+<br>` : ''
 
-    const articlesHTML = sortedArticles.map((article, index) => `
-      <div style="margin-bottom: 32px; padding-bottom: 24px; ${index < sortedArticles.length - 1 ? 'border-bottom: 1px solid #E5E7EB;' : ''}">
-        <h2 style="margin: 0 0 12px 0; font-size: 20px; font-weight: 600; color: #1F2937; line-height: 1.3;">
-          ${article.headline}
-        </h2>
-        <p style="margin: 0 0 12px 0; font-size: 16px; line-height: 1.6; color: #374151;">
-          ${article.content}
-        </p>
-        ${article.rss_post?.source_url ? `
-          <a href="${article.rss_post.source_url}" style="color: #1877F2; text-decoration: none; font-size: 14px; font-weight: 500;">
-            Read more →
-          </a>
-        ` : ''}
-      </div>
-    `).join('')
+    // Generate articles using the same template as preview
+    const articlesHtml = activeArticles.map((article: any) => {
+      // Handle image URLs same as preview
+      const hasImage = article.rss_post?.image_url
+      const isLegacyHostedImage = hasImage && article.rss_post.image_url.startsWith('/images/')
+      const isGithubImage = hasImage && (article.rss_post.image_url.includes('github.com') || article.rss_post.image_url.includes('githubusercontent.com'))
 
-    return `
-      <!DOCTYPE html>
-      <html lang="en">
-      <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>St. Cloud Scoop Newsletter</title>
-      </head>
-      <body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #F9FAFB;">
-        <div style="max-width: 600px; margin: 0 auto; background-color: #FFFFFF;">
-          <!-- Header -->
-          <div style="background-color: #1877F2; color: white; padding: 24px; text-align: center;">
-            <h1 style="margin: 0; font-size: 28px; font-weight: 700;">
-              St. Cloud Scoop
-            </h1>
-            <p style="margin: 8px 0 0 0; font-size: 16px; opacity: 0.9;">
-              ${new Date(campaign.date).toLocaleDateString('en-US', {
-                weekday: 'long',
-                year: 'numeric',
-                month: 'long',
-                day: 'numeric'
-              })}
-            </p>
-          </div>
+      const imageUrl = isGithubImage
+        ? article.rss_post.image_url
+        : isLegacyHostedImage
+          ? `https://stcscoop.com${article.rss_post.image_url}`
+          : hasImage
+            ? article.rss_post.image_url
+            : null
 
-          <!-- Content -->
-          <div style="padding: 32px 24px;">
-            ${reviewHeader}
+      const imageHtml = imageUrl
+        ? `<tr><td style='padding: 0 12px; text-align: center;'><img src='${imageUrl}' alt='${article.headline}' style='max-width: 100%; max-height: 500px; border-radius: 4px;'></td></tr>
+<tr><td style='padding: 0 12px 12px; text-align: center; font-size: 12px; color: #555; font-style: italic;'>Photo by ${article.rss_post?.rss_feed?.name || 'Unknown Source'}</td></tr>`
+        : ''
 
-            ${articlesHTML}
+      return `
+<tr class='row'>
+ <td class='column' style='padding:8px; vertical-align: top;'>
+ <table width='100%' cellpadding='0' cellspacing='0' style='border: 1px solid #ddd; border-radius: 8px; background: #fff; font-family: Arial, sans-serif; font-size: 16px; line-height: 26px; box-shadow:0 4px 12px rgba(0,0,0,.15);'>
+ <tr><td style='padding: 12px 12px 4px; font-size: 20px; font-weight: bold;'>${article.headline}</td></tr>
+ ${imageHtml}
+ <tr><td style='padding: 0 12px 20px;'>${article.content} ${article.rss_post?.source_url ? `(<a href='${article.rss_post.source_url}' style='color: #0080FE; text-decoration: none;'>read more</a>)` : ''}</td></tr>
+ </table>
+ </td>
+</tr>`
+    }).join('')
 
-            ${sortedArticles.length === 0 ? `
-              <div style="text-align: center; padding: 48px 0; color: #6B7280;">
-                <p>No articles selected for this newsletter.</p>
-              </div>
-            ` : ''}
-          </div>
-
-          <!-- Footer -->
-          <div style="background-color: #F3F4F6; padding: 24px; text-align: center; color: #6B7280; font-size: 14px;">
-            <p style="margin: 0 0 8px 0;">
-              St. Cloud Scoop - Your Local News Source
-            </p>
-            <p style="margin: 0;">
-              <a href="{{unsubscribe}}" style="color: #6B7280; text-decoration: underline;">
-                Unsubscribe
-              </a>
-            </p>
-          </div>
-        </div>
-      </body>
-      </html>
-    `
+    // Use exact same template as preview
+    return `<html>
+<body style='margin:0!important;padding:0!important;background-color:#f7f7f7;'>
+   <div style='width:100%;margin:0 auto;padding:10px;background-color:#f7f7f7;box-sizing:border-box;overflow-x:auto;'>
+     <div style='width:100%;max-width:990px;margin:0 auto;padding:5px;text-align:right;font-weight:bold;'>
+       <a href='{$url}' style='color:#000;text-decoration:underline;'>View Online</a>&nbsp;|&nbsp;
+       <a href='https://stcscoop.com/' style='color:#000;text-decoration:underline;'>Sign Up</a>&nbsp;|&nbsp;
+       <a href='{$forward}' style='color:#000;text-decoration:underline;'>Share</a>
+     </div>
+     <div style='width:100%;max-width:990px;margin:0 auto;padding:0px;'>
+       <div style='font-family:Arial,sans-serif;background-color:#1877F2;text-align:center;border-radius:12px;border:1px solid #333;'>
+         <img alt='St. Cloud Scoop' src='https://raw.githubusercontent.com/VFDavid/STCScoop/refs/heads/main/STCSCOOP_Logo_824X148_clear.png' style='width:100%;max-width:500px;height:auto;margin-bottom:2px;'/>
+         <div style='color:#fff;font-size:16px;font-weight:bold;padding:0 0 5px;'>${formattedDate}</div>
+       </div>
+     </div>
+   </div>
+<br>
+${reviewHeader}
+<table width="100%" cellpadding="0" cellspacing="0" style="border: 1px solid #f7f7f7; border-radius: 10px; margin-top: 10px; max-width: 990px; margin: 0 auto; background-color: #f7f7f7; font-family: Arial, sans-serif;">
+  <tr>
+    <td style="padding: 5px;">
+      <h2 style="font-size: 1.625em; line-height: 1.16em; font-family: Arial, sans-serif; color: #1877F2; margin: 0; padding: 0;">The Local Scoop</h2>
+    </td>
+  </tr>
+  ${articlesHtml}
+</table>
+<br>
+<div style="max-width: 990px; margin: 0 auto; background-color: #1877F2; padding: 8px 0; text-align: center;">
+  <a href="https://www.facebook.com/61578947310955/" target="_blank">
+    <img src="https://raw.githubusercontent.com/VFDavid/STCScoop/refs/heads/main/facebook_light.png" alt="Facebook" width="24" height="24" style="border: none; display: inline-block;">
+  </a>
+</div>
+<div style="font-family: Arial, sans-serif; font-size: 12px; color: #777; text-align: center; padding: 20px 10px; border-top: 1px solid #ccc; background-color: #ffffff; max-width: 990px; margin: 0 auto ;">
+  <p style="margin: 0;text-align: center;">You're receiving this email because you subscribed to <strong>St. Cloud Scoop</strong>.</p>
+  <p style="margin: 5px 0 0;text-align: center;">
+    <a href="{$unsubscribe}" style='text-decoration: underline;'>Unsubscribe</a>
+  </p>
+  <p style="margin: 5px;text-align: center;">©2025 Venture Formations LLC, all rights reserved</p>
+</div>
+</body>
+</html>`
   }
 
   private getScheduledDeliveryTime(date: string): string {

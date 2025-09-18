@@ -29,7 +29,6 @@ export async function GET(request: NextRequest) {
 
     // Return current settings or defaults
     const defaultSettings = {
-      apiKey: process.env.MAILERLITE_API_KEY || '',
       reviewGroupId: process.env.MAILERLITE_REVIEW_GROUP_ID || '',
       mainGroupId: process.env.MAILERLITE_MAIN_GROUP_ID || '',
       fromEmail: 'scoop@stcscoop.com',
@@ -81,7 +80,6 @@ export async function POST(request: NextRequest) {
 
     // Save settings as individual key-value pairs
     const settingsToSave = [
-      { key: 'email_apiKey', value: settings.apiKey || '' },
       { key: 'email_reviewGroupId', value: settings.reviewGroupId || '' },
       { key: 'email_mainGroupId', value: settings.mainGroupId || '' },
       { key: 'email_fromEmail', value: settings.fromEmail },
@@ -124,7 +122,6 @@ export async function POST(request: NextRequest) {
             user_id: user.id,
             action: 'email_settings_updated',
             details: {
-              hasApiKey: !!settings.apiKey,
               scheduling_updated: true,
               times: {
                 rss: settings.rssProcessingTime,

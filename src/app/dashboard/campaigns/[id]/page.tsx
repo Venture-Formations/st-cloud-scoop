@@ -15,6 +15,7 @@ export default function CampaignDetailPage() {
   const [processingStatus, setProcessingStatus] = useState('')
   const [previewHtml, setPreviewHtml] = useState<string | null>(null)
   const [showPreview, setShowPreview] = useState(false)
+  const [sendingReview, setSendingReview] = useState(false)
 
   useEffect(() => {
     if (params.id) {
@@ -177,6 +178,50 @@ export default function CampaignDetailPage() {
     }
   }
 
+  const sendForReview = async () => {
+    if (!campaign) return
+
+    // Check if there are any active articles
+    const activeArticles = campaign.articles.filter(article => article.is_active)
+    if (activeArticles.length === 0) {
+      alert('Please select at least one article before sending for review.')
+      return
+    }
+
+    setSendingReview(true)
+    try {
+      const response = await fetch(`/api/campaigns/${campaign.id}/send-review`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Failed to send review')
+      }
+
+      const data = await response.json()
+
+      // Update campaign status locally
+      setCampaign(prev => {
+        if (!prev) return prev
+        return {
+          ...prev,
+          status: 'in_review'
+        }
+      })
+
+      alert('Newsletter sent for review successfully!')
+
+    } catch (error) {
+      alert('Failed to send for review: ' + (error instanceof Error ? error.message : 'Unknown error'))
+    } finally {
+      setSendingReview(false)
+    }
+  }
+
   const getScoreColor = (score: number) => {
     if (score >= 25) return 'text-green-600'
     if (score >= 20) return 'text-yellow-600'
@@ -245,23 +290,24 @@ export default function CampaignDetailPage() {
             <div className="flex space-x-2">
               <button
                 onClick={processRSSFeeds}
-                disabled={processing || saving}
+                disabled={processing || saving || sendingReview}
                 className="bg-green-600 hover:bg-green-700 disabled:opacity-50 text-white px-4 py-2 rounded text-sm font-medium"
               >
                 {processing ? 'Processing...' : 'Process RSS Feeds'}
               </button>
               <button
                 onClick={previewNewsletter}
-                disabled={saving}
+                disabled={saving || sendingReview}
                 className="bg-gray-200 hover:bg-gray-300 disabled:opacity-50 text-gray-800 px-4 py-2 rounded text-sm font-medium"
               >
                 Preview Newsletter
               </button>
               <button
-                disabled={saving}
+                onClick={sendForReview}
+                disabled={saving || sendingReview || campaign.status === 'sent' || campaign.status === 'approved'}
                 className="bg-brand-primary hover:bg-blue-700 disabled:opacity-50 text-white px-4 py-2 rounded text-sm font-medium"
               >
-                Send for Review
+                {sendingReview ? 'Sending...' : 'Send for Review'}
               </button>
             </div>
           </div>

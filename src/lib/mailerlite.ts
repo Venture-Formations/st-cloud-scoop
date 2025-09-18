@@ -252,12 +252,12 @@ export class MailerLiteService {
       day: 'numeric'
     })
 
-    // Review header for review campaigns
-    const reviewHeader = isReview ? `
-<table width="100%" cellpadding="0" cellspacing="0" style="border: 1px solid #f7f7f7; border-radius: 10px; margin-top: 10px; max-width: 990px; margin: 0 auto; background-color: #FEF3C7; font-family: Arial, sans-serif;">
+    // Review header for review campaigns - now at very top
+    const reviewHeaderTop = isReview ? `
+<table width="100%" cellpadding="0" cellspacing="0" style="border: 1px solid #f7f7f7; border-radius: 10px; margin: 10px auto; max-width: 990px; background-color: #FEF3C7; font-family: Arial, sans-serif;">
   <tr>
-    <td style="padding: 12px;">
-      <h3 style="margin: 0; color: #92400E; font-size: 16px;">📝 Newsletter Review</h3>
+    <td style="padding: 12px; text-align: center;">
+      <h3 style="margin: 0; color: #92400E; font-size: 18px; font-weight: bold;">📝 Newsletter Review</h3>
       <p style="margin: 8px 0 0 0; color: #92400E; font-size: 14px;">
         This is a preview of tomorrow's newsletter. Please review and make any necessary changes in the dashboard.
       </p>
@@ -298,9 +298,10 @@ export class MailerLiteService {
 </tr>`
     }).join('')
 
-    // Use exact same template as preview
+    // Use exact same template as preview with review banner at top
     return `<html>
 <body style='margin:0!important;padding:0!important;background-color:#f7f7f7;'>
+${reviewHeaderTop}
    <div style='width:100%;margin:0 auto;padding:10px;background-color:#f7f7f7;box-sizing:border-box;overflow-x:auto;'>
      <div style='width:100%;max-width:990px;margin:0 auto;padding:5px;text-align:right;font-weight:bold;'>
        <a href='{$url}' style='color:#000;text-decoration:underline;'>View Online</a>&nbsp;|&nbsp;
@@ -315,7 +316,6 @@ export class MailerLiteService {
      </div>
    </div>
 <br>
-${reviewHeader}
 <table width="100%" cellpadding="0" cellspacing="0" style="border: 1px solid #f7f7f7; border-radius: 10px; margin-top: 10px; max-width: 990px; margin: 0 auto; background-color: #f7f7f7; font-family: Arial, sans-serif;">
   <tr>
     <td style="padding: 5px;">

@@ -195,8 +195,7 @@ export default function CampaignDetailPage() {
       let subjectLine = campaign.subject_line
       console.log('Current campaign subject line:', subjectLine)
 
-      // Force AI generation for debugging
-      if (true) { // Changed from: if (!subjectLine || subjectLine.trim() === '') {
+      if (!subjectLine || subjectLine.trim() === '') {
         console.log('Generating AI subject line...')
         const subjectResponse = await fetch(`/api/campaigns/${campaign.id}/generate-subject`, {
           method: 'POST',

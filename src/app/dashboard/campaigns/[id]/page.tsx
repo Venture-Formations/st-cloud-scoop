@@ -193,7 +193,10 @@ export default function CampaignDetailPage() {
     try {
       // First, generate subject line with AI if not already set
       let subjectLine = campaign.subject_line
-      if (!subjectLine) {
+      console.log('Current campaign subject line:', subjectLine)
+
+      // Force AI generation for debugging
+      if (true) { // Changed from: if (!subjectLine || subjectLine.trim() === '') {
         console.log('Generating AI subject line...')
         const subjectResponse = await fetch(`/api/campaigns/${campaign.id}/generate-subject`, {
           method: 'POST',
@@ -221,6 +224,8 @@ export default function CampaignDetailPage() {
           console.error('Failed to generate subject line:', subjectResponse.status, errorData)
           alert(`Warning: Could not generate AI subject line. Error: ${errorData?.error || 'Unknown error'}. Proceeding with default subject.`)
         }
+      } else {
+        console.log('Skipping AI generation - subject line already exists:', subjectLine)
       }
 
       // Now send for review

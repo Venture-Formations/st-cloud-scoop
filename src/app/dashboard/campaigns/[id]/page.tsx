@@ -13,6 +13,8 @@ export default function CampaignDetailPage() {
   const [saving, setSaving] = useState(false)
   const [processing, setProcessing] = useState(false)
   const [processingStatus, setProcessingStatus] = useState('')
+  const [previewHtml, setPreviewHtml] = useState<string | null>(null)
+  const [showPreview, setShowPreview] = useState(false)
 
   useEffect(() => {
     if (params.id) {
@@ -74,6 +76,23 @@ export default function CampaignDetailPage() {
       alert('Failed to update article: ' + (error instanceof Error ? error.message : 'Unknown error'))
     } finally {
       setSaving(false)
+    }
+  }
+
+  const previewNewsletter = async () => {
+    if (!campaign) return
+
+    try {
+      const response = await fetch(`/api/campaigns/${campaign.id}/preview`)
+      if (!response.ok) {
+        throw new Error('Failed to generate preview')
+      }
+
+      const data = await response.json()
+      setPreviewHtml(data.html)
+      setShowPreview(true)
+    } catch (error) {
+      alert('Failed to generate preview: ' + (error instanceof Error ? error.message : 'Unknown error'))
     }
   }
 
@@ -221,6 +240,7 @@ export default function CampaignDetailPage() {
                 </div>
               )}
               <button
+                onClick={previewNewsletter}
                 disabled={saving}
                 className="bg-gray-200 hover:bg-gray-300 disabled:opacity-50 text-gray-800 px-4 py-2 rounded text-sm font-medium"
               >
@@ -355,6 +375,52 @@ export default function CampaignDetailPage() {
             )}
           </div>
         </div>
+
+        {/* Preview Modal */}
+        {showPreview && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+            <div className="bg-white rounded-lg max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
+              <div className="flex justify-between items-center p-4 border-b">
+                <h3 className="text-lg font-medium text-gray-900">
+                  Newsletter Preview
+                </h3>
+                <div className="flex space-x-2">
+                  <button
+                    onClick={() => {
+                      if (previewHtml) {
+                        const blob = new Blob([previewHtml], { type: 'text/html' })
+                        const url = URL.createObjectURL(blob)
+                        const a = document.createElement('a')
+                        a.href = url
+                        a.download = `newsletter-${campaign?.date}.html`
+                        a.click()
+                        URL.revokeObjectURL(url)
+                      }
+                    }}
+                    className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded text-sm"
+                  >
+                    Download HTML
+                  </button>
+                  <button
+                    onClick={() => setShowPreview(false)}
+                    className="bg-gray-500 hover:bg-gray-600 text-white px-3 py-1 rounded text-sm"
+                  >
+                    Close
+                  </button>
+                </div>
+              </div>
+              <div className="flex-1 overflow-auto">
+                {previewHtml && (
+                  <iframe
+                    srcDoc={previewHtml}
+                    className="w-full h-full min-h-[600px]"
+                    title="Newsletter Preview"
+                  />
+                )}
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </Layout>
   )

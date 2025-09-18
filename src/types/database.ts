@@ -163,7 +163,7 @@ export interface AppSetting {
 // Combined types for API responses
 export interface ArticleWithPost extends Article {
   rss_post: RssPost & {
-    post_rating: PostRating | null
+    post_rating: PostRating[]
     rss_feed: RssFeed
   }
 }

@@ -7,11 +7,26 @@ export const openai = new OpenAI({
 // AI Prompts as specified in PRD
 export const AI_PROMPTS = {
   contentEvaluator: (post: { title: string; description: string; content?: string }) => `
-You are evaluating a news article for inclusion in a local St. Cloud, Minnesota newsletter. Rate the article on three dimensions using a 1-10 scale:
+You are evaluating a news article for inclusion in a local St. Cloud, Minnesota newsletter. Rate on three dimensions using a 1-10 scale:
 
-1. INTEREST LEVEL (1-10): How compelling and engaging is this story for general readers?
-2. LOCAL RELEVANCE (1-10): How relevant is this to St. Cloud, Minnesota residents specifically?
-3. COMMUNITY IMPACT (1-10): How significant is the potential impact on the local community?
+INTEREST LEVEL (1-10): How intriguing, surprising, or engaging is this story?
+HIGH SCORING: Unexpected developments, human interest stories, breaking news, unique events, broad appeal, fun/entertaining
+LOW SCORING: Routine announcements, technical/administrative content, repetitive topics, purely promotional, very short content (subtract points for lack of substance)
+
+LOCAL RELEVANCE (1-10): How directly relevant is this to St. Cloud area residents?
+HIGH SCORING: Events/news in St. Cloud and surrounding areas (Waite Park, Sartell, Sauk Rapids, Cold Spring), Stearns County government decisions, local business changes, school district news, local infrastructure/development, community events
+LOW SCORING: State/national news without local angle, events far from St. Cloud area, generic content not location-specific
+
+COMMUNITY IMPACT (1-10): How much does this affect local residents' daily lives or community?
+HIGH SCORING: New services or amenities, policy changes affecting residents, public safety information, economic development/job creation, community services and resources
+LOW SCORING: Individual achievements with limited community effect, internal organizational matters, entertainment without broader impact
+
+BONUS: Add 2 extra points to total_score for stories mentioning multiple local communities or regional impact.
+
+BLANK RATING CONDITIONS: Leave all fields blank if:
+- Description contains ≤10 words
+- Post is about weather happening today/tomorrow
+- Post is written before an event happening "today"/"tonight"/"this evening"
 
 Article Title: ${post.title}
 Article Description: ${post.description || 'No description available'}
@@ -46,63 +61,123 @@ Respond with valid JSON in this exact format:
 }`,
 
   newsletterWriter: (post: { title: string; description: string; content?: string; source_url?: string }) => `
-Convert this news article into a concise, engaging newsletter item. Write between 40-75 words in a conversational tone suitable for local newsletter readers.
+Write a short news article (40–75 words) based on the selected Facebook post. This should be a summary and rewrite of the original posts — NOT exact duplicate.
 
 Original Article:
 Title: ${post.title}
 Description: ${post.description || 'No description available'}
 Content: ${post.content ? post.content.substring(0, 1500) + '...' : 'No additional content'}
 
-Requirements:
-- 40-75 words exactly
-- Engaging, conversational tone
-- Include key facts and local relevance
-- End with call-to-action if appropriate
+WRITING GUIDELINES:
+- Length: ≥40 and ≤75 words per article
+- Structure: Write only one concise paragraph
+- Style: Informative, engaging, locally relevant
+
+STRICT CONTENT RULES:
+- Articles must be rewritten and summarized — no copying original text
+- Use ONLY information contained in the source Facebook post
+- Do not add numbers, dates, quotes, or details not in the original
+- Avoid 'today,' 'tomorrow,' 'yesterday' — use actual day of week based on published date
+- No emojis in headlines or article content
+- Stick to facts, avoid editorial commentary
+
+HEADLINE CREATION RULES:
+- Do NOT reuse or slightly reword the original title
+- Make emotionally engaging, curiosity-driven, or locally relevant
+- Use powerful verbs, emotional adjectives, or unexpected twists
+- Do NOT use colons (:) in headlines
+- No emojis in headlines or content
 
 Respond with valid JSON in this exact format:
 {
-  "headline": "<engaging headline for newsletter>",
-  "content": "<40-75 word newsletter content>",
-  "word_count": <exact word count>
+  "compelling_headline": "<engaging headline for newsletter>",
+  "article_text_paragraph_1": "<40-75 word newsletter content>",
+  "word_count": <exact word count>,
+  "source_url": "${post.source_url || ''}",
+  "author": "<author from original post>"
 }`,
 
   factChecker: (newsletterContent: string, originalContent: string) => `
-Fact-check this newsletter content against the original source material. Score accuracy on a scale of 0-30 (30 being perfectly accurate).
+Rate article accuracy, timeliness, and intent alignment against the paired source post; preserve article text for HTML conversion.
 
-Newsletter Content:
+Newsletter Article:
 ${newsletterContent}
 
 Original Source Material:
 ${originalContent.substring(0, 2000)}
 
-Check for:
-- Factual accuracy (0-10 points)
-- Context preservation (0-10 points)
-- No misleading claims (0-10 points)
+VERIFICATION PROCESS - Check each article for:
+- Added facts not in source
+- Changed numbers, dates, or specifics
+- Invented quotes or statements
+- Misinterpreted or overstated source content
+- Added context or speculation not present in original
+- Timeliness: Article is current relative to the source post date
+- Intent alignment: Article preserves the source's purpose and emphasis
 
-Minimum passing score: 20/30
+RULES:
+- Use only the provided article and source content; do not browse or assume external facts
+- If a claim cannot be verified from the source, mark it as "unverifiable" in notes
+- Do not modify any article text fields; preserve punctuation and spacing
+- Quote exact phrases from the source in "reasoning" when explaining mismatches
+- When uncertain, choose conservative section ratings
+
+SCORING (1–10 for each section, 10 = excellent, 1 = poor):
+
+ACCURACY RATING:
+- Start at 10
+- Subtract 3–5 for any incorrect/contradictory fact, quote, number, date, place
+- Subtract 1–2 for unverifiable or ambiguous claims
+- Subtract 1 for overstated certainty without support
+- Minimum 1
+
+TIMELINESS RATING:
+- Start at 10
+- Subtract 3–5 if article presents outdated info as current or misstates timing
+- Subtract 1–3 if time-bound phrasing lacks a clear date (e.g., "today" without date)
+- Subtract 1 if it fails to note ongoing/uncertain status when relevant
+- Minimum 1
+
+INTENT ALIGNMENT RATING:
+- Start at 10
+- Subtract 2–4 for drift from the source's purpose/emphasis
+- Subtract 1–2 for added spin/speculation not in source
+- Subtract 1–2 for scope creep (new claims beyond source)
+- Minimum 1
+
+TOTAL RATING: accuracy_rating + timeliness_rating + intent_alignment_rating (range 3–30)
 
 Respond with valid JSON in this exact format:
 {
-  "score": <number 0-30>,
-  "factual_accuracy": <number 0-10>,
-  "context_preservation": <number 0-10>,
-  "no_misleading_claims": <number 0-10>,
-  "details": "<specific issues found or confirmation of accuracy>",
-  "passed": <boolean>
+  "accuracy_rating": <number 1-10>,
+  "timeliness_rating": <number 1-10>,
+  "intent_alignment_rating": <number 1-10>,
+  "total_rating": <number 3-30>,
+  "specific_issues_found": "<list of issues or 'none'>",
+  "reasoning": "<detailed explanation with exact quotes from source when explaining mismatches>"
 }`,
 
   subjectLineGenerator: (articles: Array<{ headline: string; content: string }>) => `
-Generate a compelling email subject line for this newsletter containing these articles. The subject line must be 39 characters or less.
+Craft a front-page newspaper headline for the next-day edition based on the most interesting article.
 
 Articles in this newsletter:
 ${articles.map((article, i) => `${i + 1}. ${article.headline}\n   ${article.content.substring(0, 100)}...`).join('\n\n')}
 
-Requirements:
-- Maximum 39 characters
-- Engaging and clickable
-- Reflects main news themes
-- Appropriate for St. Cloud, MN audience
+HARD RULES:
+- ≤ 39 characters (count every space and punctuation)
+- Title Case; avoid ALL-CAPS words
+- Omit the year
+- No em dashes (—)
+- No colons (:) or other punctuation that splits the headline into two parts
+- Return only the headline text—nothing else
+
+IMPACT CHECKLIST:
+- Lead with a power verb
+- Local pride—include place name if it adds punch
+- Trim fluff—every word earns its spot
+- Character audit—recount after final trim
+
+STYLE GUIDANCE: Write the headline as if the event just happened, not as a historical reflection or anniversary. Avoid words like 'Legacy,' 'Honors,' 'Remembers,' or 'Celebrates History.' Use an urgent, active voice suitable for a breaking news front page.
 
 Respond with valid JSON in this exact format:
 {

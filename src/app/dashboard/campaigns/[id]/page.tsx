@@ -273,7 +273,7 @@ export default function CampaignDetailPage() {
               </div>
             ) : (
               campaign.articles
-                .sort((a, b) => (b.rss_post?.post_rating?.total_score || 0) - (a.rss_post?.post_rating?.total_score || 0))
+                .sort((a, b) => (b.rss_post?.post_rating?.[0]?.total_score || 0) - (a.rss_post?.post_rating?.[0]?.total_score || 0))
                 .map((article) => (
                   <div key={article.id} className="p-6">
                     <div className="flex items-start justify-between">
@@ -297,10 +297,10 @@ export default function CampaignDetailPage() {
                           <h3 className="text-lg font-medium text-gray-900">
                             {article.headline}
                           </h3>
-                          {article.rss_post?.post_rating && (
+                          {article.rss_post?.post_rating?.[0] && (
                             <div className="flex space-x-1 text-xs">
-                              <span className={`font-medium ${getScoreColor(article.rss_post.post_rating.total_score)}`}>
-                                Score: {article.rss_post.post_rating.total_score}/30
+                              <span className={`font-medium ${getScoreColor(article.rss_post.post_rating[0].total_score)}`}>
+                                Score: {article.rss_post.post_rating[0].total_score}/30
                               </span>
                             </div>
                           )}
@@ -332,19 +332,19 @@ export default function CampaignDetailPage() {
                           )}
                         </div>
 
-                        {article.rss_post?.post_rating && (
+                        {article.rss_post?.post_rating?.[0] && (
                           <div className="mt-3 grid grid-cols-3 gap-4 text-xs">
                             <div>
                               <span className="text-gray-600">Interest:</span>
-                              <span className="ml-1 font-medium">{article.rss_post.post_rating.interest_level}/10</span>
+                              <span className="ml-1 font-medium">{article.rss_post.post_rating[0].interest_level}/10</span>
                             </div>
                             <div>
                               <span className="text-gray-600">Relevance:</span>
-                              <span className="ml-1 font-medium">{article.rss_post.post_rating.local_relevance}/10</span>
+                              <span className="ml-1 font-medium">{article.rss_post.post_rating[0].local_relevance}/10</span>
                             </div>
                             <div>
                               <span className="text-gray-600">Impact:</span>
-                              <span className="ml-1 font-medium">{article.rss_post.post_rating.community_impact}/10</span>
+                              <span className="ml-1 font-medium">{article.rss_post.post_rating[0].community_impact}/10</span>
                             </div>
                           </div>
                         )}

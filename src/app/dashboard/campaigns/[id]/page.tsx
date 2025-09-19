@@ -409,7 +409,7 @@ export default function CampaignDetailPage() {
   const [loadingEvents, setLoadingEvents] = useState(false)
   const [eventsExpanded, setEventsExpanded] = useState(false)
   const [updatingEvents, setUpdatingEvents] = useState(false)
-  const [articlesExpanded, setArticlesExpanded] = useState(true)
+  const [articlesExpanded, setArticlesExpanded] = useState(false)
 
   // Drag and drop sensors
   const sensors = useSensors(
@@ -774,6 +774,42 @@ export default function CampaignDetailPage() {
     }
   }
 
+  // Helper function to get events count by date with color coding
+  const getEventCountsByDate = () => {
+    if (!campaign) return []
+
+    const campaignCreated = new Date(campaign.created_at)
+    const centralTimeOffset = -5 * 60 * 60 * 1000 // -5 hours in milliseconds
+    const campaignCreatedCentral = new Date(campaignCreated.getTime() + centralTimeOffset)
+    const startDateTime = new Date(campaignCreatedCentral.getTime() + (12 * 60 * 60 * 1000))
+
+    const dates = []
+    for (let i = 0; i < 3; i++) {
+      const date = new Date(startDateTime.getTime() + (i * 24 * 60 * 60 * 1000))
+      const dateStr = date.toISOString().split('T')[0]
+
+      // Count selected events for this date
+      const eventCount = campaignEvents.filter(ce =>
+        ce.event_date === dateStr && ce.is_selected
+      ).length
+
+      // Determine color based on count
+      let colorClass = 'text-red-600' // 0 events
+      if (eventCount === 8) colorClass = 'text-green-600'
+      else if (eventCount > 0) colorClass = 'text-yellow-600'
+
+      dates.push({
+        date: dateStr,
+        dayName: date.toLocaleDateString('en-US', { weekday: 'short' }),
+        monthDay: date.toLocaleDateString('en-US', { month: 'numeric', day: 'numeric' }),
+        count: eventCount,
+        colorClass
+      })
+    }
+
+    return dates
+  }
+
   const handleEventsExpand = () => {
     if (!eventsExpanded && campaign) {
       // Use the same date calculation logic as EventsManager component
@@ -1071,7 +1107,7 @@ export default function CampaignDetailPage() {
                 onClick={() => setArticlesExpanded(!articlesExpanded)}
                 className="flex items-center space-x-2 text-sm text-brand-primary hover:text-blue-700"
               >
-                <span>{articlesExpanded ? 'Minimize' : 'Expand'}</span>
+                <span>{articlesExpanded ? 'Minimize' : 'Manage Articles'}</span>
                 <svg
                   className={`w-4 h-4 transform transition-transform ${articlesExpanded ? 'rotate-180' : ''}`}
                   fill="none"
@@ -1178,7 +1214,7 @@ export default function CampaignDetailPage() {
           {!articlesExpanded && (
             <div className="px-6 pb-4">
               <div className="text-sm text-gray-600">
-                The Local Scoop articles configured for this newsletter. Click "Expand" to modify selections.
+                The Local Scoop articles configured for this newsletter. Click "Manage Articles" to modify selections.
               </div>
             </div>
           )}
@@ -1195,7 +1231,7 @@ export default function CampaignDetailPage() {
                 onClick={handleEventsExpand}
                 className="flex items-center space-x-2 text-sm text-brand-primary hover:text-blue-700"
               >
-                <span>{eventsExpanded ? 'Collapse' : 'Manage Events'}</span>
+                <span>{eventsExpanded ? 'Minimize' : 'Manage Events'}</span>
                 <svg
                   className={`w-4 h-4 transform transition-transform ${eventsExpanded ? 'rotate-180' : ''}`}
                   fill="none"
@@ -1232,11 +1268,25 @@ export default function CampaignDetailPage() {
             </div>
           )}
 
-          {!eventsExpanded && campaignEvents.length > 0 && (
+          {!eventsExpanded && (
             <div className="px-6 pb-4">
-              <div className="text-sm text-gray-600">
+              <div className="text-sm text-gray-600 mb-3">
                 Events configured for this newsletter. Click "Manage Events" to modify selections.
               </div>
+              {campaignEvents.length > 0 && (
+                <div className="flex space-x-4">
+                  {getEventCountsByDate().map((dateInfo) => (
+                    <div key={dateInfo.date} className="flex flex-col items-center">
+                      <div className="text-xs text-gray-500 mb-1">
+                        {dateInfo.dayName} {dateInfo.monthDay}
+                      </div>
+                      <div className={`text-sm font-semibold ${dateInfo.colorClass}`}>
+                        {dateInfo.count}/8
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
         </div>

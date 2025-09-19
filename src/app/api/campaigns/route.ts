@@ -55,7 +55,7 @@ async function initializeRandomEventSelection(campaignId: string, campaignDate: 
       const shuffledEvents = nonFeaturedEvents.sort(() => Math.random() - 0.5)
 
       // Select events: all featured events + random non-featured up to 8 total
-      const selectedEvents = []
+      const selectedEvents: any[] = []
 
       // Add featured events first (they should always be selected if they exist)
       featuredEvents.forEach(event => {

@@ -83,8 +83,8 @@ export default function EventsDatabasePage() {
     })
 
     filtered.sort((a, b) => {
-      let aValue = a[sortField]
-      let bValue = b[sortField]
+      let aValue: any = a[sortField]
+      let bValue: any = b[sortField]
 
       if (sortField === 'start_date' || sortField === 'created_at') {
         aValue = new Date(aValue as string).getTime()

@@ -175,7 +175,7 @@ export class MailerLiteService {
     }
   }
 
-  private shouldIncludeEventsSection(sections: any[]): boolean {
+  private shouldIncludeEventsSection(sections: any[] | null): boolean {
     if (!sections || sections.length === 0) {
       return true // Include by default if no section config
     }
@@ -503,7 +503,7 @@ ${reviewHeaderTop}
   ${articlesHtml}
 </table>
 <br>
-${this.shouldIncludeEventsSection(sections) ? eventsHtml : ''}
+${this.shouldIncludeEventsSection(sections) ? (eventsHtml || '') : ''}
 <div style="max-width: 990px; margin: 0 auto; background-color: #1877F2; padding: 8px 0; text-align: center;">
   <a href="https://www.facebook.com/61578947310955/" target="_blank">
     <img src="https://raw.githubusercontent.com/VFDavid/STCScoop/refs/heads/main/facebook_light.png" alt="Facebook" width="24" height="24" style="border: none; display: inline-block;">

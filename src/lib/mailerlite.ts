@@ -189,8 +189,9 @@ export class MailerLiteService {
       .filter(article => article.is_active)
       .sort((a, b) => (a.rank || 999) - (b.rank || 999))
 
-    console.log('MailerLite - Active articles to render:', activeArticles.length)
-    console.log('MailerLite - Article order:', activeArticles.map(a => `${a.headline} (rank: ${a.rank})`).join(', '))
+    console.log('MAILERLITE - Active articles to render:', activeArticles.length)
+    console.log('MAILERLITE - Article order:', activeArticles.map(a => `${a.headline} (rank: ${a.rank})`).join(', '))
+    console.log('MAILERLITE - Raw article data:', activeArticles.map(a => `ID: ${a.id}, Rank: ${a.rank}, Active: ${a.is_active}`).join(' | '))
 
     // Filter selected events
     const eventsData = (campaign.campaign_events || [])

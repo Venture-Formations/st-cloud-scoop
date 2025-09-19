@@ -22,6 +22,8 @@ export async function POST(
     }
 
     // Update each article's rank
+    console.log('Updating article ranks:', articleOrders.map(o => `Article ${o.articleId} -> rank ${o.rank}`).join(', '))
+
     const updatePromises = articleOrders.map(({ articleId, rank }) =>
       supabaseAdmin
         .from('articles')
@@ -30,7 +32,8 @@ export async function POST(
         .eq('campaign_id', campaignId)
     )
 
-    await Promise.all(updatePromises)
+    const results = await Promise.all(updatePromises)
+    console.log('Rank update results:', results.map((r, i) => `Article ${articleOrders[i].articleId}: ${r.error ? 'ERROR' : 'SUCCESS'}`).join(', '))
 
     return NextResponse.json({ success: true })
 

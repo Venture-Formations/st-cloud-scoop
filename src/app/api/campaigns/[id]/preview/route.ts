@@ -415,8 +415,9 @@ async function generateNewsletterHtml(campaign: any): Promise<string> {
       .filter((article: any) => article.is_active)
       .sort((a: any, b: any) => (a.rank || 999) - (b.rank || 999))
 
-    console.log('Active articles to render:', activeArticles.length)
-    console.log('Article order:', activeArticles.map((a: any) => `${a.headline} (rank: ${a.rank})`).join(', '))
+    console.log('PREVIEW - Active articles to render:', activeArticles.length)
+    console.log('PREVIEW - Article order:', activeArticles.map((a: any) => `${a.headline} (rank: ${a.rank})`).join(', '))
+    console.log('PREVIEW - Raw article data:', activeArticles.map((a: any) => `ID: ${a.id}, Rank: ${a.rank}, Active: ${a.is_active}`).join(' | '))
 
     console.log('Generating events section using calculated dates...')
 

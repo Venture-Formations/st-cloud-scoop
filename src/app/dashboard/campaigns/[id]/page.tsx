@@ -579,10 +579,10 @@ export default function CampaignDetailPage() {
                           </button>
 
                           {/* Article image thumbnail */}
-                          {(article.rss_post?.image_url || article.image_url) && (
+                          {article.rss_post?.image_url && (
                             <div className="flex-shrink-0">
                               <img
-                                src={article.rss_post?.image_url || article.image_url || ''}
+                                src={article.rss_post.image_url}
                                 alt=""
                                 className="w-16 h-16 object-cover rounded-md border border-gray-200"
                                 onError={(e) => {

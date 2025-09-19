@@ -502,6 +502,7 @@ export default function CampaignDetailPage() {
   )
 
   useEffect(() => {
+    console.log('📄 Campaign page loaded, params:', params.id)
     if (params.id) {
       fetchCampaign(params.id as string)
       fetchCampaignEvents(params.id as string)
@@ -978,9 +979,11 @@ export default function CampaignDetailPage() {
   }
 
   const handleDragEnd = async (event: DragEndEvent) => {
+    console.log('🎯 handleDragEnd called with event:', event)
     const { active, over } = event
 
     if (!over || active.id === over.id || !campaign) {
+      console.log('⚠️ Early return from handleDragEnd:', { over: !!over, sameId: active.id === over?.id, campaign: !!campaign })
       return
     }
 
@@ -1256,6 +1259,12 @@ export default function CampaignDetailPage() {
               <DndContext
                 sensors={sensors}
                 collisionDetection={pointerWithin}
+                onDragStart={(event) => {
+                  console.log('🚀 Drag started:', event.active.id)
+                }}
+                onDragOver={(event) => {
+                  console.log('👆 Drag over:', { active: event.active.id, over: event.over?.id })
+                }}
                 onDragEnd={handleDragEnd}
               >
                 {/* Active articles section - sortable */}

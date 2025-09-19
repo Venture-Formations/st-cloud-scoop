@@ -37,7 +37,6 @@ export async function POST(request: NextRequest) {
     console.log('Starting events sync from Visit St. Cloud API...')
 
     // For testing/manual sync, allow date override from query params
-    const { searchParams } = new URL(request.url)
     const overrideStartDate = searchParams.get('start_date')
     const overrideEndDate = searchParams.get('end_date')
 

@@ -3,6 +3,27 @@ import { getServerSession } from 'next-auth'
 import { supabaseAdmin } from '@/lib/supabase'
 import { authOptions } from '@/lib/auth'
 
+// Helper function to decode HTML entities
+function decodeHtmlEntities(text: string | null | undefined): string | null {
+  if (!text) return null
+
+  return text
+    .replace(/&#8217;/g, "'")  // Right single quotation mark
+    .replace(/&#8216;/g, "'")  // Left single quotation mark
+    .replace(/&#8220;/g, '"')  // Left double quotation mark
+    .replace(/&#8221;/g, '"')  // Right double quotation mark
+    .replace(/&#8230;/g, '…')  // Horizontal ellipsis
+    .replace(/&#8211;/g, '–')  // En dash
+    .replace(/&#8212;/g, '—')  // Em dash
+    .replace(/&#038;/g, '&')   // Ampersand
+    .replace(/&amp;/g, '&')    // Ampersand
+    .replace(/&lt;/g, '<')     // Less than
+    .replace(/&gt;/g, '>')     // Greater than
+    .replace(/&quot;/g, '"')   // Quotation mark
+    .replace(/&apos;/g, "'")   // Apostrophe
+    .replace(/&nbsp;/g, ' ')   // Non-breaking space
+}
+
 interface VisitStCloudEvent {
   id: string
   title: string
@@ -116,12 +137,12 @@ export async function POST(request: NextRequest) {
       try {
         const eventData = {
           external_id: `visitstcloud_${apiEvent.id}`,
-          title: apiEvent.title || 'Untitled Event',
-          description: apiEvent.description || null,
+          title: decodeHtmlEntities(apiEvent.title) || 'Untitled Event',
+          description: decodeHtmlEntities(apiEvent.description),
           start_date: new Date(apiEvent.start_date).toISOString(),
           end_date: apiEvent.end_date ? new Date(apiEvent.end_date).toISOString() : null,
-          venue: apiEvent.venue?.venue || null,
-          address: apiEvent.venue?.address || null,
+          venue: decodeHtmlEntities(apiEvent.venue?.venue),
+          address: decodeHtmlEntities(apiEvent.venue?.address),
           url: apiEvent.url || null,
           image_url: apiEvent.image?.url || null,
           featured: false, // Will be set manually

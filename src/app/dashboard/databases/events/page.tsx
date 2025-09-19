@@ -33,6 +33,10 @@ export default function EventsDatabasePage() {
   })
   const [showAddForm, setShowAddForm] = useState(false)
   const [submitting, setSubmitting] = useState(false)
+  const [editingEvent, setEditingEvent] = useState<string | null>(null)
+  const [editData, setEditData] = useState<Partial<Event>>({})
+  const [updating, setUpdating] = useState(false)
+  const [deleting, setDeleting] = useState<string | null>(null)
 
   const [columns, setColumns] = useState<ColumnConfig[]>([
     { key: 'title', label: 'Title', visible: true, sortable: true },
@@ -60,6 +64,75 @@ export default function EventsDatabasePage() {
       console.error('Failed to fetch events:', error)
     } finally {
       setLoading(false)
+    }
+  }
+
+  const handleEdit = (event: Event) => {
+    setEditingEvent(event.id)
+    setEditData({
+      title: event.title,
+      venue: event.venue,
+      address: event.address,
+      featured: event.featured
+    })
+  }
+
+  const handleCancelEdit = () => {
+    setEditingEvent(null)
+    setEditData({})
+  }
+
+  const handleSaveEdit = async (eventId: string) => {
+    setUpdating(true)
+    try {
+      const response = await fetch(`/api/events/${eventId}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(editData)
+      })
+
+      if (response.ok) {
+        // Update the event in local state
+        setEvents(events.map(event =>
+          event.id === eventId ? { ...event, ...editData } : event
+        ))
+        setEditingEvent(null)
+        setEditData({})
+      } else {
+        const errorData = await response.json()
+        alert(`Failed to update event: ${errorData.error || 'Unknown error'}`)
+      }
+    } catch (error) {
+      alert(`Failed to update event: ${error instanceof Error ? error.message : 'Unknown error'}`)
+    } finally {
+      setUpdating(false)
+    }
+  }
+
+  const handleDelete = async (eventId: string) => {
+    if (!confirm('Are you sure you want to delete this event? This action cannot be undone.')) {
+      return
+    }
+
+    setDeleting(eventId)
+    try {
+      const response = await fetch(`/api/events/${eventId}`, {
+        method: 'DELETE'
+      })
+
+      if (response.ok) {
+        // Remove the event from local state
+        setEvents(events.filter(event => event.id !== eventId))
+      } else {
+        const errorData = await response.json()
+        alert(`Failed to delete event: ${errorData.error || 'Unknown error'}`)
+      }
+    } catch (error) {
+      alert(`Failed to delete event: ${error instanceof Error ? error.message : 'Unknown error'}`)
+    } finally {
+      setDeleting(null)
     }
   }
 
@@ -300,36 +373,89 @@ export default function EventsDatabasePage() {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {filteredAndSortedEvents.map(event => (
-                  <tr key={event.id} className="hover:bg-gray-50">
-                    {visibleColumns.map(col => (
-                      <td key={col.key} className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {col.key === 'featured' ? (
-                          <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                            event.featured ? 'bg-yellow-100 text-yellow-800' : 'bg-gray-100 text-gray-800'
-                          }`}>
-                            {event.featured ? 'Featured' : 'Standard'}
-                          </span>
-                        ) : col.key === 'start_date' || col.key === 'end_date' || col.key === 'created_at' ? (
-                          event[col.key] ? formatDate(event[col.key] as string) : '-'
-                        ) : col.key === 'url' ? (
-                          event.url ? (
-                            <a href={event.url} target="_blank" rel="noopener noreferrer" className="text-brand-primary hover:underline">
-                              View
-                            </a>
-                          ) : '-'
+                {filteredAndSortedEvents.map(event => {
+                  const isEditing = editingEvent === event.id
+
+                  return (
+                    <tr key={event.id} className={`hover:bg-gray-50 ${isEditing ? 'bg-blue-50' : ''}`}>
+                      {visibleColumns.map(col => (
+                        <td key={col.key} className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          {isEditing && (col.key === 'title' || col.key === 'venue' || col.key === 'address') ? (
+                            <input
+                              type="text"
+                              value={(editData[col.key] as string) || ''}
+                              onChange={(e) => setEditData({ ...editData, [col.key]: e.target.value })}
+                              className="w-full px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-brand-primary focus:border-transparent"
+                            />
+                          ) : isEditing && col.key === 'featured' ? (
+                            <select
+                              value={editData.featured ? 'true' : 'false'}
+                              onChange={(e) => setEditData({ ...editData, featured: e.target.value === 'true' })}
+                              className="px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-brand-primary focus:border-transparent"
+                            >
+                              <option value="false">Standard</option>
+                              <option value="true">Featured</option>
+                            </select>
+                          ) : col.key === 'featured' ? (
+                            <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                              event.featured ? 'bg-yellow-100 text-yellow-800' : 'bg-gray-100 text-gray-800'
+                            }`}>
+                              {event.featured ? 'Featured' : 'Standard'}
+                            </span>
+                          ) : col.key === 'start_date' || col.key === 'end_date' || col.key === 'created_at' ? (
+                            event[col.key] ? formatDate(event[col.key] as string) : '-'
+                          ) : col.key === 'url' ? (
+                            event.url ? (
+                              <a href={event.url} target="_blank" rel="noopener noreferrer" className="text-brand-primary hover:underline">
+                                View
+                              </a>
+                            ) : '-'
+                          ) : (
+                            event[col.key] || '-'
+                          )}
+                        </td>
+                      ))}
+                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                        {isEditing ? (
+                          <div className="flex justify-end space-x-2">
+                            <button
+                              onClick={() => handleSaveEdit(event.id)}
+                              disabled={updating}
+                              className="text-green-600 hover:text-green-800 disabled:opacity-50"
+                            >
+                              {updating ? 'Saving...' : 'Save'}
+                            </button>
+                            <button
+                              onClick={handleCancelEdit}
+                              disabled={updating}
+                              className="text-gray-600 hover:text-gray-800 disabled:opacity-50"
+                            >
+                              Cancel
+                            </button>
+                          </div>
                         ) : (
-                          event[col.key] || '-'
+                          <div className="relative inline-block text-left">
+                            <div className="flex space-x-2">
+                              <button
+                                onClick={() => handleEdit(event)}
+                                className="text-brand-primary hover:text-brand-primary/80"
+                              >
+                                Edit
+                              </button>
+                              <button
+                                onClick={() => handleDelete(event.id)}
+                                disabled={deleting === event.id}
+                                className="text-red-600 hover:text-red-800 disabled:opacity-50"
+                              >
+                                {deleting === event.id ? 'Deleting...' : 'Delete'}
+                              </button>
+                            </div>
+                          </div>
                         )}
                       </td>
-                    ))}
-                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                      <button className="text-brand-primary hover:text-brand-primary/80">
-                        Edit
-                      </button>
-                    </td>
-                  </tr>
-                ))}
+                    </tr>
+                  )
+                })}
               </tbody>
             </table>
           </div>

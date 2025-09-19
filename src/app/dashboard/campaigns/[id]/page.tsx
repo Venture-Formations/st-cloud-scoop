@@ -204,19 +204,6 @@ function EventsManager({
                             )}
                           </div>
 
-                          {/* Event Image */}
-                          {event.image_url && (
-                            <div className="mb-3">
-                              <img
-                                src={event.image_url}
-                                alt=""
-                                className="w-full h-32 object-cover rounded border border-gray-200"
-                                onError={(e) => {
-                                  e.currentTarget.style.display = 'none'
-                                }}
-                              />
-                            </div>
-                          )}
 
                           {/* Event Details */}
                           <div>

@@ -22,9 +22,16 @@ interface VisitStCloudEvent {
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions)
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    // Check if this is called from GET with secret (bypass session check)
+    const { searchParams } = new URL(request.url)
+    const secret = searchParams.get('secret')
+    const bypassAuth = secret === process.env.CRON_SECRET
+
+    if (!bypassAuth) {
+      const session = await getServerSession(authOptions)
+      if (!session) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      }
     }
 
     console.log('Starting events sync from Visit St. Cloud API...')

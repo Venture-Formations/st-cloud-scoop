@@ -4,6 +4,176 @@ import { useEffect, useState } from 'react'
 import { useParams } from 'next/navigation'
 import Layout from '@/components/Layout'
 import type { CampaignWithArticles, ArticleWithPost } from '@/types/database'
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent
+} from '@dnd-kit/core'
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy
+} from '@dnd-kit/sortable'
+import {
+  useSortable
+} from '@dnd-kit/sortable'
+import { CSS } from '@dnd-kit/utilities'
+
+// Sortable Article Component
+function SortableArticle({
+  article,
+  toggleArticle,
+  saving,
+  getScoreColor
+}: {
+  article: ArticleWithPost
+  toggleArticle: (id: string, currentState: boolean) => void
+  saving: boolean
+  getScoreColor: (score: number) => string
+}) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: article.id })
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  }
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={`p-6 ${isDragging ? 'bg-gray-50' : ''} ${article.is_active ? 'border-l-4 border-blue-500' : ''}`}
+    >
+      <div className="flex items-start justify-between">
+        <div className="flex-1">
+          <div className="flex items-start space-x-3 mb-2">
+            <button
+              onClick={() => toggleArticle(article.id, article.is_active)}
+              disabled={saving}
+              className={`w-5 h-5 rounded border-2 flex items-center justify-center flex-shrink-0 mt-1 ${
+                article.is_active
+                  ? 'bg-brand-primary border-brand-primary text-white'
+                  : 'border-gray-300 hover:border-gray-400'
+              } ${saving ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+            >
+              {article.is_active && (
+                <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                </svg>
+              )}
+            </button>
+
+            {/* Drag handle for active articles only */}
+            {article.is_active && (
+              <div
+                {...attributes}
+                {...listeners}
+                className="flex-shrink-0 cursor-move mt-1 p-1 text-gray-400 hover:text-gray-600"
+                title="Drag to reorder"
+              >
+                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                  <path d="M7 2a2 2 0 00-2 2v12a2 2 0 002 2h6a2 2 0 002-2V4a2 2 0 00-2-2H7zM6 6h8v2H6V6zm0 4h8v2H6v-2zm0 4h8v2H6v-2z"/>
+                </svg>
+              </div>
+            )}
+
+            {/* Article image thumbnail */}
+            {article.rss_post?.image_url && (
+              <div className="flex-shrink-0">
+                <img
+                  src={article.rss_post.image_url}
+                  alt=""
+                  className="w-16 h-16 object-cover rounded-md border border-gray-200"
+                  onError={(e) => {
+                    e.currentTarget.style.display = 'none'
+                  }}
+                />
+              </div>
+            )}
+
+            <div className="flex-1 min-w-0">
+              <div className="flex items-start justify-between">
+                <div className="flex items-center space-x-2">
+                  {article.is_active && article.rank && (
+                    <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                      #{article.rank}
+                    </span>
+                  )}
+                  <h3 className="text-lg font-medium text-gray-900 pr-2">
+                    {article.headline}
+                  </h3>
+                </div>
+                {article.rss_post?.post_rating?.[0] && (
+                  <div className="flex space-x-1 text-xs flex-shrink-0">
+                    <span className={`font-medium ${getScoreColor(article.rss_post.post_rating[0].total_score)}`}>
+                      Score: {article.rss_post.post_rating[0].total_score}/30
+                    </span>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          <p className="text-gray-700 mb-3">
+            {article.content}
+          </p>
+
+          <div className="flex items-center justify-between text-sm text-gray-500">
+            <div className="flex items-center space-x-4">
+              <span>Source: {article.rss_post?.rss_feed?.name}</span>
+              <span>{article.word_count} words</span>
+              {article.fact_check_score && (
+                <span className={getScoreColor(article.fact_check_score)}>
+                  Fact-check: {article.fact_check_score}/30
+                </span>
+              )}
+            </div>
+            {article.rss_post?.source_url && (
+              <a
+                href={article.rss_post.source_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-brand-primary hover:text-blue-700"
+              >
+                View Original
+              </a>
+            )}
+          </div>
+
+          {article.rss_post?.post_rating?.[0] && (
+            <div className="mt-3 grid grid-cols-3 gap-4 text-xs">
+              <div>
+                <span className="text-gray-600">Interest:</span>
+                <span className="ml-1 font-medium">{article.rss_post.post_rating[0].interest_level}/10</span>
+              </div>
+              <div>
+                <span className="text-gray-600">Relevance:</span>
+                <span className="ml-1 font-medium">{article.rss_post.post_rating[0].local_relevance}/10</span>
+              </div>
+              <div>
+                <span className="text-gray-600">Impact:</span>
+                <span className="ml-1 font-medium">{article.rss_post.post_rating[0].community_impact}/10</span>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
 
 export default function CampaignDetailPage() {
   const params = useParams()
@@ -18,6 +188,14 @@ export default function CampaignDetailPage() {
   const [sendingReview, setSendingReview] = useState(false)
   const [generatingSubject, setGeneratingSubject] = useState(false)
   const [updatingStatus, setUpdatingStatus] = useState(false)
+
+  // Drag and drop sensors
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  )
 
   useEffect(() => {
     if (params.id) {
@@ -373,6 +551,54 @@ export default function CampaignDetailPage() {
     }
   }
 
+  const handleDragEnd = async (event: DragEndEvent) => {
+    const { active, over } = event
+
+    if (active.id !== over?.id && campaign) {
+      const activeArticles = campaign.articles.filter(article => article.is_active)
+      const oldIndex = activeArticles.findIndex(article => article.id === active.id)
+      const newIndex = activeArticles.findIndex(article => article.id === over?.id)
+
+      if (oldIndex !== -1 && newIndex !== -1) {
+        const newOrder = arrayMove(activeArticles, oldIndex, newIndex)
+
+        // Update local state immediately for UI responsiveness
+        setCampaign(prev => {
+          if (!prev) return prev
+          const updatedArticles = [...prev.articles]
+          const activeIds = newOrder.map(article => article.id)
+
+          // Update ranks for active articles based on new order
+          updatedArticles.forEach(article => {
+            if (article.is_active) {
+              const newRank = activeIds.indexOf(article.id) + 1
+              article.rank = newRank
+            }
+          })
+
+          return { ...prev, articles: updatedArticles }
+        })
+
+        // Send update to server
+        try {
+          const articleOrders = newOrder.map((article, index) => ({
+            articleId: article.id,
+            rank: index + 1
+          }))
+
+          await fetch(`/api/campaigns/${campaign.id}/articles/reorder`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ articleOrders })
+          })
+        } catch (error) {
+          console.error('Failed to update article order:', error)
+          // Optionally refresh the campaign to revert changes
+        }
+      }
+    }
+  }
+
   const formatDate = (dateString: string) => {
     // Parse date as local date to avoid timezone offset issues
     const [year, month, day] = dateString.split('-').map(Number)
@@ -558,105 +784,69 @@ export default function CampaignDetailPage() {
                 </button>
               </div>
             ) : (
-              campaign.articles
-                .sort((a, b) => (b.rss_post?.post_rating?.[0]?.total_score || 0) - (a.rss_post?.post_rating?.[0]?.total_score || 0))
-                .map((article) => (
-                  <div key={article.id} className="p-6">
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <div className="flex items-start space-x-3 mb-2">
-                          <button
-                            onClick={() => toggleArticle(article.id, article.is_active)}
-                            disabled={saving}
-                            className={`w-5 h-5 rounded border-2 flex items-center justify-center flex-shrink-0 mt-1 ${
-                              article.is_active
-                                ? 'bg-brand-primary border-brand-primary text-white'
-                                : 'border-gray-300 hover:border-gray-400'
-                            } ${saving ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+              <DndContext
+                sensors={sensors}
+                collisionDetection={closestCenter}
+                onDragEnd={handleDragEnd}
+              >
+                {/* Active articles section - sortable */}
+                {(() => {
+                  const activeArticles = campaign.articles
+                    .filter(article => article.is_active)
+                    .sort((a, b) => (a.rank || 999) - (b.rank || 999))
+
+                  const inactiveArticles = campaign.articles
+                    .filter(article => !article.is_active)
+                    .sort((a, b) => (b.rss_post?.post_rating?.[0]?.total_score || 0) - (a.rss_post?.post_rating?.[0]?.total_score || 0))
+
+                  return (
+                    <>
+                      {activeArticles.length > 0 && (
+                        <>
+                          <div className="px-6 py-3 bg-blue-50 border-b">
+                            <h3 className="text-sm font-medium text-blue-900">
+                              Selected Articles (Drag to reorder)
+                            </h3>
+                          </div>
+                          <SortableContext
+                            items={activeArticles.map(article => article.id)}
+                            strategy={verticalListSortingStrategy}
                           >
-                            {article.is_active && (
-                              <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
-                                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                              </svg>
-                            )}
-                          </button>
-
-                          {/* Article image thumbnail */}
-                          {article.rss_post?.image_url && (
-                            <div className="flex-shrink-0">
-                              <img
-                                src={article.rss_post.image_url}
-                                alt=""
-                                className="w-16 h-16 object-cover rounded-md border border-gray-200"
-                                onError={(e) => {
-                                  e.currentTarget.style.display = 'none'
-                                }}
+                            {activeArticles.map((article) => (
+                              <SortableArticle
+                                key={article.id}
+                                article={article}
+                                toggleArticle={toggleArticle}
+                                saving={saving}
+                                getScoreColor={getScoreColor}
                               />
-                            </div>
-                          )}
+                            ))}
+                          </SortableContext>
+                        </>
+                      )}
 
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-start justify-between">
-                              <h3 className="text-lg font-medium text-gray-900 pr-2">
-                                {article.headline}
-                              </h3>
-                              {article.rss_post?.post_rating?.[0] && (
-                                <div className="flex space-x-1 text-xs flex-shrink-0">
-                                  <span className={`font-medium ${getScoreColor(article.rss_post.post_rating[0].total_score)}`}>
-                                    Score: {article.rss_post.post_rating[0].total_score}/30
-                                  </span>
-                                </div>
-                              )}
-                            </div>
+                      {inactiveArticles.length > 0 && (
+                        <>
+                          <div className="px-6 py-3 bg-gray-50 border-b">
+                            <h3 className="text-sm font-medium text-gray-700">
+                              Available Articles (Click to add)
+                            </h3>
                           </div>
-                        </div>
-
-                        <p className="text-gray-700 mb-3">
-                          {article.content}
-                        </p>
-
-                        <div className="flex items-center justify-between text-sm text-gray-500">
-                          <div className="flex items-center space-x-4">
-                            <span>Source: {article.rss_post?.rss_feed?.name}</span>
-                            <span>{article.word_count} words</span>
-                            {article.fact_check_score && (
-                              <span className={getScoreColor(article.fact_check_score)}>
-                                Fact-check: {article.fact_check_score}/30
-                              </span>
-                            )}
-                          </div>
-                          {article.rss_post?.source_url && (
-                            <a
-                              href={article.rss_post.source_url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-brand-primary hover:text-blue-700"
-                            >
-                              View Original
-                            </a>
-                          )}
-                        </div>
-
-                        {article.rss_post?.post_rating?.[0] && (
-                          <div className="mt-3 grid grid-cols-3 gap-4 text-xs">
-                            <div>
-                              <span className="text-gray-600">Interest:</span>
-                              <span className="ml-1 font-medium">{article.rss_post.post_rating[0].interest_level}/10</span>
-                            </div>
-                            <div>
-                              <span className="text-gray-600">Relevance:</span>
-                              <span className="ml-1 font-medium">{article.rss_post.post_rating[0].local_relevance}/10</span>
-                            </div>
-                            <div>
-                              <span className="text-gray-600">Impact:</span>
-                              <span className="ml-1 font-medium">{article.rss_post.post_rating[0].community_impact}/10</span>
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                ))
+                          {inactiveArticles.map((article) => (
+                            <SortableArticle
+                              key={article.id}
+                              article={article}
+                              toggleArticle={toggleArticle}
+                              saving={saving}
+                              getScoreColor={getScoreColor}
+                            />
+                          ))}
+                        </>
+                      )}
+                    </>
+                  )
+                })()}
+              </DndContext>
             )}
           </div>
         </div>

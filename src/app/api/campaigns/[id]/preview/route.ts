@@ -180,8 +180,14 @@ function generateNewsletterFooter(): string {
 function generateNewsletterHtml(campaign: any): string {
   try {
     console.log('Generating HTML for campaign:', campaign?.id)
-    const articles = campaign.articles || []
-    console.log('Articles to render:', articles.length)
+
+    // Filter active articles and sort by rank (custom order)
+    const activeArticles = (campaign.articles || [])
+      .filter((article: any) => article.is_active)
+      .sort((a: any, b: any) => (a.rank || 999) - (b.rank || 999))
+
+    console.log('Active articles to render:', activeArticles.length)
+    console.log('Article order:', activeArticles.map((a: any) => `${a.headline} (rank: ${a.rank})`).join(', '))
 
     const formatDate = (dateString: string) => {
       try {
@@ -205,7 +211,7 @@ function generateNewsletterHtml(campaign: any): string {
 
     // Generate modular HTML sections
     const header = generateNewsletterHeader(formattedDate)
-    const localScoopSection = generateLocalScoopSection(articles)
+    const localScoopSection = generateLocalScoopSection(activeArticles)
     const footer = generateNewsletterFooter()
 
     // Combine all sections

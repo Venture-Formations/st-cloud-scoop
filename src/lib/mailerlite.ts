@@ -176,12 +176,18 @@ export class MailerLiteService {
   }
 
   private generateEmailHTML(campaign: CampaignWithArticles, isReview: boolean): string {
+    // Filter active articles and sort by rank (custom order)
     const activeArticles = campaign.articles
       .filter(article => article.is_active)
-      .sort((a, b) => (b.rss_post?.post_rating?.[0]?.total_score || 0) - (a.rss_post?.post_rating?.[0]?.total_score || 0))
+      .sort((a, b) => (a.rank || 999) - (b.rank || 999))
 
-    // Use the same format as the preview template
-    const formattedDate = new Date(campaign.date).toLocaleDateString('en-US', {
+    console.log('MailerLite - Active articles to render:', activeArticles.length)
+    console.log('MailerLite - Article order:', activeArticles.map(a => `${a.headline} (rank: ${a.rank})`).join(', '))
+
+    // Use the same format as the preview template with local date parsing
+    const [year, month, day] = campaign.date.split('-').map(Number)
+    const date = new Date(year, month - 1, day) // month is 0-indexed
+    const formattedDate = date.toLocaleDateString('en-US', {
       weekday: 'long',
       year: 'numeric',
       month: 'long',

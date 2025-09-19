@@ -1211,13 +1211,6 @@ export default function CampaignDetailPage() {
             )}
             </div>
           )}
-          {!articlesExpanded && (
-            <div className="px-6 pb-4">
-              <div className="text-sm text-gray-600">
-                The Local Scoop articles configured for this newsletter. Click "Manage Articles" to modify selections.
-              </div>
-            </div>
-          )}
         </div>
 
         {/* Local Events Section */}
@@ -1242,11 +1235,6 @@ export default function CampaignDetailPage() {
                 </svg>
               </button>
             </div>
-            {campaignEvents.length > 0 && (
-              <p className="text-sm text-gray-600 mt-1">
-                {campaignEvents.length} events selected across dates
-              </p>
-            )}
           </div>
 
           {eventsExpanded && (
@@ -1268,25 +1256,20 @@ export default function CampaignDetailPage() {
             </div>
           )}
 
-          {!eventsExpanded && (
+          {!eventsExpanded && campaignEvents.length > 0 && (
             <div className="px-6 pb-4">
-              <div className="text-sm text-gray-600 mb-3">
-                Events configured for this newsletter. Click "Manage Events" to modify selections.
-              </div>
-              {campaignEvents.length > 0 && (
-                <div className="flex space-x-4">
-                  {getEventCountsByDate().map((dateInfo) => (
-                    <div key={dateInfo.date} className="flex flex-col items-center">
-                      <div className="text-xs text-gray-500 mb-1">
-                        {dateInfo.dayName} {dateInfo.monthDay}
-                      </div>
-                      <div className={`text-sm font-semibold ${dateInfo.colorClass}`}>
-                        {dateInfo.count}/8
-                      </div>
+              <div className="flex space-x-4">
+                {getEventCountsByDate().map((dateInfo) => (
+                  <div key={dateInfo.date} className="flex flex-col items-center">
+                    <div className="text-xs text-gray-500 mb-1">
+                      {dateInfo.dayName} {dateInfo.monthDay}
                     </div>
-                  ))}
-                </div>
-              )}
+                    <div className={`text-sm font-semibold ${dateInfo.colorClass}`}>
+                      {dateInfo.count}/8
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           )}
         </div>

@@ -40,6 +40,17 @@ export default function Dashboard() {
     }
   }
 
+  const formatStatus = (status: string) => {
+    switch (status) {
+      case 'draft': return 'Draft'
+      case 'in_review': return 'In Review'
+      case 'ready_to_send': return 'Ready to Send'
+      case 'sent': return 'Sent'
+      case 'failed': return 'Failed'
+      default: return status
+    }
+  }
+
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
       weekday: 'long',
@@ -63,7 +74,7 @@ export default function Dashboard() {
           </div>
 
           {/* Quick Stats */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-8">
             <div className="bg-white p-6 rounded-lg shadow">
               <div className="text-2xl font-bold text-brand-primary mb-1">
                 {campaigns.filter(c => c.status === 'sent').length}
@@ -75,6 +86,12 @@ export default function Dashboard() {
                 {campaigns.filter(c => c.status === 'in_review').length}
               </div>
               <div className="text-sm text-gray-600">In Review</div>
+            </div>
+            <div className="bg-white p-6 rounded-lg shadow">
+              <div className="text-2xl font-bold text-blue-600 mb-1">
+                {campaigns.filter(c => c.status === 'ready_to_send').length}
+              </div>
+              <div className="text-sm text-gray-600">Ready to Send</div>
             </div>
             <div className="bg-white p-6 rounded-lg shadow">
               <div className="text-2xl font-bold text-gray-600 mb-1">
@@ -135,7 +152,7 @@ export default function Dashboard() {
                         </div>
                       </div>
                       <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(campaign.status)}`}>
-                        {campaign.status.replace('_', ' ')}
+                        {formatStatus(campaign.status)}
                       </span>
                     </div>
                   </Link>

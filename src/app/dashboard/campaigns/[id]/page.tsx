@@ -320,6 +320,17 @@ export default function CampaignDetailPage() {
     return 'text-red-600'
   }
 
+  const formatStatus = (status: string) => {
+    switch (status) {
+      case 'draft': return 'Draft'
+      case 'in_review': return 'In Review'
+      case 'ready_to_send': return 'Ready to Send'
+      case 'sent': return 'Sent'
+      case 'failed': return 'Failed'
+      default: return status
+    }
+  }
+
   const updateCampaignStatus = async (action: 'changes_made' | 'approved') => {
     if (!campaign) return
 
@@ -414,7 +425,7 @@ export default function CampaignDetailPage() {
                   campaign.status === 'sent' ? 'bg-green-100 text-green-800' :
                   'bg-red-100 text-red-800'
                 }`}>
-                  {campaign.status.replace('_', ' ')}
+                  {formatStatus(campaign.status)}
                 </span>
                 <span className="text-sm text-gray-500">
                   {campaign.articles.length} articles selected

@@ -42,6 +42,17 @@ export default function CampaignsPage() {
     }
   }
 
+  const formatStatus = (status: string) => {
+    switch (status) {
+      case 'draft': return 'Draft'
+      case 'in_review': return 'In Review'
+      case 'ready_to_send': return 'Ready to Send'
+      case 'sent': return 'Sent'
+      case 'failed': return 'Failed'
+      default: return status
+    }
+  }
+
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
       weekday: 'short',
@@ -79,7 +90,7 @@ export default function CampaignsPage() {
                     : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
                 }`}
               >
-                {status === 'all' ? 'All' : status.replace('_', ' ')}
+                {status === 'all' ? 'All' : formatStatus(status)}
               </button>
             ))}
           </div>
@@ -133,7 +144,7 @@ export default function CampaignsPage() {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(campaign.status)}`}>
-                          {campaign.status.replace('_', ' ')}
+                          {formatStatus(campaign.status)}
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">

@@ -345,7 +345,7 @@ export default function CampaignDetailPage() {
         if (!prev) return prev
         return {
           ...prev,
-          status: 'draft',
+          status: 'ready_to_send',
           last_action: action,
           last_action_at: data.campaign.last_action_at,
           last_action_by: data.campaign.last_action_by
@@ -353,7 +353,7 @@ export default function CampaignDetailPage() {
       })
 
       const actionText = action === 'changes_made' ? 'Changes Made' : 'Approved'
-      alert(`Campaign marked as "${actionText}" and moved to Draft status.${action === 'changes_made' ? ' Slack notification sent.' : ''}`)
+      alert(`Campaign marked as "${actionText}" and moved to Ready to Send status.${action === 'changes_made' ? ' Slack notification sent.' : ''}`)
 
     } catch (error) {
       alert('Failed to update campaign status: ' + (error instanceof Error ? error.message : 'Unknown error'))

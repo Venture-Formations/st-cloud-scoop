@@ -1,4 +1,4 @@
-export type CampaignStatus = 'draft' | 'in_review' | 'approved' | 'sent' | 'failed'
+export type CampaignStatus = 'draft' | 'in_review' | 'ready_to_send' | 'sent' | 'failed'
 export type UserRole = 'admin' | 'reviewer'
 export type LogLevel = 'info' | 'warn' | 'error' | 'debug'
 

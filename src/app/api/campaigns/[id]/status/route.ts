@@ -37,11 +37,11 @@ export async function POST(
       }, { status: 404 })
     }
 
-    // Update campaign status to draft and record the action
+    // Update campaign status to ready_to_send and record the action
     const { error: updateError } = await supabaseAdmin
       .from('newsletter_campaigns')
       .update({
-        status: 'draft',
+        status: 'ready_to_send',
         last_action: action,
         last_action_at: new Date().toISOString(),
         last_action_by: session.user?.email || 'unknown'
@@ -108,11 +108,11 @@ export async function POST(
     return NextResponse.json({
       success: true,
       message: action === 'changes_made'
-        ? 'Campaign marked as having changes and moved to draft status'
-        : 'Campaign approved and moved to draft status',
+        ? 'Campaign marked as having changes and moved to ready to send status'
+        : 'Campaign approved and moved to ready to send status',
       campaign: {
         id: campaignId,
-        status: 'draft',
+        status: 'ready_to_send',
         last_action: action,
         last_action_at: new Date().toISOString(),
         last_action_by: session.user?.email

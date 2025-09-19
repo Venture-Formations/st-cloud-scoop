@@ -19,7 +19,8 @@
       "WebFetch(domain:st-cloud-scoop.vercel.app)",
       "Bash(npm uninstall:*)",
       "Bash(git tag:*)",
-      "WebFetch(domain:www.visitstcloud.com)"
+      "WebFetch(domain:www.visitstcloud.com)",
+      "Bash(git checkout:*)"
     ],
     "deny": [],
     "ask": []

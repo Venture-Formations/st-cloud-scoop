@@ -17,6 +17,7 @@ export default function CampaignDetailPage() {
   const [showPreview, setShowPreview] = useState(false)
   const [sendingReview, setSendingReview] = useState(false)
   const [generatingSubject, setGeneratingSubject] = useState(false)
+  const [updatingStatus, setUpdatingStatus] = useState(false)
 
   useEffect(() => {
     if (params.id) {
@@ -319,6 +320,48 @@ export default function CampaignDetailPage() {
     return 'text-red-600'
   }
 
+  const updateCampaignStatus = async (action: 'changes_made' | 'approved') => {
+    if (!campaign) return
+
+    setUpdatingStatus(true)
+    try {
+      const response = await fetch(`/api/campaigns/${campaign.id}/status`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ action })
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Failed to update campaign status')
+      }
+
+      const data = await response.json()
+
+      // Update local campaign state
+      setCampaign(prev => {
+        if (!prev) return prev
+        return {
+          ...prev,
+          status: 'draft',
+          last_action: action,
+          last_action_at: data.campaign.last_action_at,
+          last_action_by: data.campaign.last_action_by
+        }
+      })
+
+      const actionText = action === 'changes_made' ? 'Changes Made' : 'Approved'
+      alert(`Campaign marked as "${actionText}" and moved to Draft status.${action === 'changes_made' ? ' Slack notification sent.' : ''}`)
+
+    } catch (error) {
+      alert('Failed to update campaign status: ' + (error instanceof Error ? error.message : 'Unknown error'))
+    } finally {
+      setUpdatingStatus(false)
+    }
+  }
+
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
       weekday: 'long',
@@ -428,6 +471,44 @@ export default function CampaignDetailPage() {
                 {generatingSubject ? 'Generating...' : campaign.subject_line ? 'Regenerate' : 'Generate'}
               </button>
             </div>
+          </div>
+
+          {/* Campaign Approval Buttons */}
+          <div className="mt-4 flex justify-end space-x-3">
+            <button
+              onClick={() => updateCampaignStatus('changes_made')}
+              disabled={updatingStatus}
+              className="bg-yellow-500 hover:bg-yellow-600 disabled:opacity-50 text-white px-4 py-2 rounded-md font-medium text-sm flex items-center"
+            >
+              {updatingStatus ? (
+                <>
+                  <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  Updating...
+                </>
+              ) : (
+                'Changes Made'
+              )}
+            </button>
+            <button
+              onClick={() => updateCampaignStatus('approved')}
+              disabled={updatingStatus}
+              className="bg-green-600 hover:bg-green-700 disabled:opacity-50 text-white px-4 py-2 rounded-md font-medium text-sm flex items-center"
+            >
+              {updatingStatus ? (
+                <>
+                  <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  Updating...
+                </>
+              ) : (
+                'Approved'
+              )}
+            </button>
           </div>
         </div>
 

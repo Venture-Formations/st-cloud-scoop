@@ -9,6 +9,9 @@ export interface NewsletterCampaign {
   subject_line: string | null
   review_sent_at: string | null
   final_sent_at: string | null
+  last_action: 'changes_made' | 'approved' | null
+  last_action_at: string | null
+  last_action_by: string | null
   metrics: Record<string, any>
   created_at: string
   updated_at: string

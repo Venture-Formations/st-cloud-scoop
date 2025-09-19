@@ -162,6 +162,27 @@ Respond with valid JSON in this exact format:
   "passed": <boolean true if score >= 20, false otherwise>
 }`,
 
+  eventSummarizer: (event: { title: string; description: string | null; venue?: string }) => `
+Rewrite the description field into a concise, natural-language highlight of 50 words or fewer. Do not copy or truncate the first words; paraphrase so it reads well.
+
+Event Title: ${event.title}
+Event Description: ${event.description || 'No description available'}
+Event Venue: ${event.venue || 'No venue specified'}
+
+REQUIREMENTS:
+- Maximum 50 words
+- Natural, engaging language
+- Paraphrase completely - don't copy original wording
+- Capture the essence and appeal of the event
+- Write in third person
+- Include key details that make it interesting
+
+Respond with valid JSON in this exact format:
+{
+  "event_summary": "<concise 50-word summary>",
+  "word_count": <exact word count>
+}`,
+
   subjectLineGenerator: (articles: Array<{ headline: string; content: string }>) => `
 Craft a front-page newspaper headline for the next-day edition based on the most interesting article.
 

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
+import { callOpenAI, AI_PROMPTS } from '@/lib/openai'
 
 // Helper function to decode HTML entities
 function decodeHtmlEntities(text: string | null | undefined): string | null {
@@ -20,6 +21,35 @@ function decodeHtmlEntities(text: string | null | undefined): string | null {
     .replace(/&quot;/g, '"')   // Quotation mark
     .replace(/&apos;/g, "'")   // Apostrophe
     .replace(/&nbsp;/g, ' ')   // Non-breaking space
+}
+
+// Helper function to generate AI event summary
+async function generateEventSummary(event: { title: string; description: string | null; venue?: string | null }): Promise<string | null> {
+  try {
+    if (!event.description || event.description.trim().length < 20) {
+      return null // Skip very short descriptions
+    }
+
+    console.log(`Generating AI summary for event: ${event.title}`)
+
+    const prompt = AI_PROMPTS.eventSummarizer({
+      title: event.title,
+      description: event.description,
+      venue: event.venue
+    })
+
+    const response = await callOpenAI(prompt, 200, 0.7)
+
+    if (response && response.event_summary) {
+      console.log(`Generated summary (${response.word_count} words): ${response.event_summary}`)
+      return response.event_summary
+    }
+
+    return null
+  } catch (error) {
+    console.error('Error generating event summary:', error)
+    return null
+  }
 }
 
 interface VisitStCloudEvent {
@@ -93,15 +123,32 @@ export async function GET(request: NextRequest) {
           updated_at: new Date().toISOString()
         }
 
-        // Check if event already exists
+        // Check if event already exists and get its event_summary status
         const { data: existingEvent } = await supabaseAdmin
           .from('events')
-          .select('id, updated_at')
+          .select('id, updated_at, event_summary')
           .eq('external_id', eventData.external_id)
           .single()
 
+        // Generate event summary if needed (for new events or existing events without summaries)
+        let eventSummary = null
+        const shouldGenerateSummary = !existingEvent || !existingEvent.event_summary
+
+        if (shouldGenerateSummary && eventData.description) {
+          eventSummary = await generateEventSummary({
+            title: eventData.title,
+            description: eventData.description,
+            venue: eventData.venue
+          })
+        }
+
+        // Add event_summary to eventData if generated
+        if (eventSummary) {
+          (eventData as any).event_summary = eventSummary
+        }
+
         if (existingEvent) {
-          // Update existing event
+          // Update existing event (including new summary if generated)
           const { error: updateError } = await supabaseAdmin
             .from('events')
             .update(eventData)

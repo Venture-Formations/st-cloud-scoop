@@ -177,6 +177,7 @@ export interface Event {
   external_id: string
   title: string
   description: string | null
+  event_summary: string | null
   start_date: string
   end_date: string | null
   venue: string | null

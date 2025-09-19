@@ -58,8 +58,9 @@ function EventsManager({
   }
 
   const getEventsForDate = (date: string) => {
-    const dateStart = new Date(date + 'T00:00:00')
-    const dateEnd = new Date(date + 'T23:59:59')
+    // Create date range in Central Time (UTC-5)
+    const dateStart = new Date(date + 'T00:00:00-05:00')
+    const dateEnd = new Date(date + 'T23:59:59-05:00')
 
     return availableEvents.filter(event => {
       const eventStart = new Date(event.start_date)

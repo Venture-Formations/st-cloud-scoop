@@ -40,12 +40,13 @@ function EventsManager({
 }) {
   if (!campaign) return null
 
-  // Calculate 3-day range around campaign date
-  const campaignDate = new Date(campaign.date)
+  // Calculate 3-day range starting 12 hours from campaign creation
+  const campaignCreated = new Date(campaign.created_at)
+  const startDateTime = new Date(campaignCreated.getTime() + (12 * 60 * 60 * 1000)) // Add 12 hours
   const dates = []
-  for (let i = -1; i <= 1; i++) {
-    const date = new Date(campaignDate)
-    date.setDate(campaignDate.getDate() + i)
+  for (let i = 0; i <= 2; i++) {
+    const date = new Date(startDateTime)
+    date.setDate(startDateTime.getDate() + i)
     dates.push(date.toISOString().split('T')[0])
   }
 
@@ -780,12 +781,12 @@ export default function CampaignDetailPage() {
 
   const handleEventsExpand = () => {
     if (!eventsExpanded && campaign) {
-      // Calculate 3-day range around campaign date
-      const campaignDate = new Date(campaign.date)
-      const startDate = new Date(campaignDate)
-      startDate.setDate(campaignDate.getDate() - 1)
-      const endDate = new Date(campaignDate)
-      endDate.setDate(campaignDate.getDate() + 1)
+      // Calculate 3-day range starting 12 hours from campaign creation
+      const campaignCreated = new Date(campaign.created_at)
+      const startDateTime = new Date(campaignCreated.getTime() + (12 * 60 * 60 * 1000)) // Add 12 hours
+      const startDate = new Date(startDateTime)
+      const endDate = new Date(startDateTime)
+      endDate.setDate(startDateTime.getDate() + 2)
 
       const startDateStr = startDate.toISOString().split('T')[0]
       const endDateStr = endDate.toISOString().split('T')[0]

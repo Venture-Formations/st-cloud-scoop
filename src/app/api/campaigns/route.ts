@@ -4,13 +4,26 @@ import { supabaseAdmin } from '@/lib/supabase'
 import { authOptions } from '@/lib/auth'
 
 // Helper function to initialize random event selection for a new campaign
-async function initializeRandomEventSelection(campaignId: string, campaignDate: string) {
+async function initializeRandomEventSelection(campaignId: string) {
   try {
-    console.log(`Initializing random event selection for campaign ${campaignId} on ${campaignDate}`)
+    console.log(`Initializing random event selection for campaign ${campaignId}`)
 
-    // Calculate 3-day range: 12 hours after campaign creation timestamp (which is campaign date)
-    const baseDate = new Date(campaignDate + 'T00:00:00')
-    baseDate.setHours(baseDate.getHours() + 12) // Add 12 hours as specified
+    // Get the campaign's created_at timestamp
+    const { data: campaign, error: campaignError } = await supabaseAdmin
+      .from('newsletter_campaigns')
+      .select('created_at')
+      .eq('id', campaignId)
+      .single()
+
+    if (campaignError || !campaign) {
+      console.error('Could not fetch campaign for event selection:', campaignError)
+      return
+    }
+
+    // Calculate 3-day range: 12 hours after campaign creation timestamp
+    const createdAt = new Date(campaign.created_at)
+    const baseDate = new Date(createdAt.getTime() + (12 * 60 * 60 * 1000)) // Add 12 hours
+    console.log(`Campaign created at: ${createdAt.toISOString()}, Base date for events: ${baseDate.toISOString()}`)
 
     const dates = []
     for (let i = 0; i < 3; i++) {
@@ -194,7 +207,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Initialize random event selection for the new campaign
-    await initializeRandomEventSelection(campaign.id, date)
+    await initializeRandomEventSelection(campaign.id)
 
     return NextResponse.json({ campaign }, { status: 201 })
 

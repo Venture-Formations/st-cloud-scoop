@@ -57,26 +57,55 @@ export async function POST(request: NextRequest) {
       endDateString = endDate.toISOString().split('T')[0]
     }
 
-    // Fetch events from Visit St. Cloud API
-    const apiUrl = `https://www.visitstcloud.com/wp-json/tribe/events/v1/events?start_date=${startDateString}&end_date=${endDateString}&per_page=100&status=publish`
+    // Fetch events from Visit St. Cloud API with pagination
+    let allEvents: VisitStCloudEvent[] = []
+    let page = 1
+    let hasMorePages = true
+    const perPage = 100
 
-    console.log('Fetching from:', apiUrl)
+    while (hasMorePages) {
+      const apiUrl = `https://www.visitstcloud.com/wp-json/tribe/events/v1/events?start_date=${startDateString}&end_date=${endDateString}&per_page=${perPage}&page=${page}&status=publish`
 
-    const response = await fetch(apiUrl, {
-      headers: {
-        'User-Agent': 'St. Cloud Scoop Newsletter (stcscoop.com)',
-        'Accept': 'application/json'
+      console.log(`Fetching page ${page} from:`, apiUrl)
+
+      const response = await fetch(apiUrl, {
+        headers: {
+          'User-Agent': 'St. Cloud Scoop Newsletter (stcscoop.com)',
+          'Accept': 'application/json'
+        }
+      })
+
+      if (!response.ok) {
+        throw new Error(`Visit St. Cloud API error: ${response.status} ${response.statusText}`)
       }
-    })
 
-    if (!response.ok) {
-      throw new Error(`Visit St. Cloud API error: ${response.status} ${response.statusText}`)
+      const data = await response.json()
+      const pageEvents: VisitStCloudEvent[] = data.events || []
+
+      if (pageEvents.length === 0) {
+        // No more events, stop pagination
+        hasMorePages = false
+      } else {
+        allEvents = allEvents.concat(pageEvents)
+        console.log(`Page ${page}: fetched ${pageEvents.length} events (total so far: ${allEvents.length})`)
+
+        // If we got fewer events than requested per page, we've reached the end
+        if (pageEvents.length < perPage) {
+          hasMorePages = false
+        } else {
+          page++
+        }
+      }
+
+      // Safety check to prevent infinite loops
+      if (page > 50) {
+        console.warn('Reached maximum pagination safety limit (50 pages)')
+        hasMorePages = false
+      }
     }
 
-    const data = await response.json()
-    const events: VisitStCloudEvent[] = data.events || []
-
-    console.log(`Fetched ${events.length} events from API`)
+    const events = allEvents
+    console.log(`Fetched total ${events.length} events from API across ${page} pages`)
 
     let newEvents = 0
     let updatedEvents = 0

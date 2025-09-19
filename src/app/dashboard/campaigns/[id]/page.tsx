@@ -123,106 +123,121 @@ function EventsManager({
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <div className="text-sm text-gray-600">
         Select up to 8 events per day. Mark one event as "featured" to highlight it in the newsletter.
       </div>
 
-      {dates.map(date => {
-        const dateEvents = getEventsForDate(date)
-        const selectedEvents = getSelectedEventsForDate(date)
-        const featuredEventId = getFeaturedEventForDate(date)
+      {/* 3-Column Layout */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {dates.map(date => {
+          const dateEvents = getEventsForDate(date)
+          const selectedEvents = getSelectedEventsForDate(date)
+          const featuredEventId = getFeaturedEventForDate(date)
 
-        return (
-          <div key={date} className="border border-gray-200 rounded-lg p-4">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-medium text-gray-900">
-                {formatDate(date)}
-              </h3>
-              <div className="text-sm text-gray-600">
-                {selectedEvents.length}/8 events selected
+          return (
+            <div key={date} className="border border-gray-200 rounded-lg overflow-hidden">
+              {/* Date Header */}
+              <div className="bg-blue-600 text-white px-4 py-3">
+                <h3 className="text-lg font-semibold text-center">
+                  {formatDate(date)}
+                </h3>
+                <div className="text-sm text-blue-100 text-center mt-1">
+                  {selectedEvents.length}/8 events selected
+                </div>
               </div>
-            </div>
 
-            {dateEvents.length === 0 ? (
-              <div className="text-gray-500 text-sm py-4">
-                No events available for this date
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {dateEvents.map(event => {
-                  const isSelected = selectedEvents.some(ce => ce.event_id === event.id)
-                  const isFeatured = featuredEventId === event.id
+              {/* Events List */}
+              <div className="p-4 bg-white min-h-[400px]">
+                {dateEvents.length === 0 ? (
+                  <div className="text-gray-500 text-sm py-8 text-center">
+                    No events available for this date
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {dateEvents.map(event => {
+                      const isSelected = selectedEvents.some(ce => ce.event_id === event.id)
+                      const isFeatured = featuredEventId === event.id
 
-                  return (
-                    <div
-                      key={event.id}
-                      className={`flex items-start space-x-3 p-3 rounded border ${
-                        isSelected ? 'border-blue-300 bg-blue-50' : 'border-gray-200'
-                      }`}
-                    >
-                      <button
-                        onClick={() => handleEventToggle(date, event.id, !isSelected)}
-                        disabled={updating || (!isSelected && selectedEvents.length >= 8)}
-                        className={`w-5 h-5 rounded border-2 flex items-center justify-center flex-shrink-0 mt-1 ${
-                          isSelected
-                            ? 'bg-brand-primary border-brand-primary text-white'
-                            : 'border-gray-300 hover:border-gray-400'
-                        } ${updating || (!isSelected && selectedEvents.length >= 8) ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
-                      >
-                        {isSelected && (
-                          <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
-                            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                          </svg>
-                        )}
-                      </button>
+                      return (
+                        <div
+                          key={event.id}
+                          className={`p-3 rounded-lg border-2 transition-all ${
+                            isFeatured
+                              ? 'border-blue-500 bg-blue-50 shadow-md'
+                              : isSelected
+                                ? 'border-green-300 bg-green-50'
+                                : 'border-gray-200 hover:border-gray-300'
+                          }`}
+                        >
+                          {/* Event Header with Checkbox */}
+                          <div className="flex items-start justify-between mb-2">
+                            <button
+                              onClick={() => handleEventToggle(date, event.id, !isSelected)}
+                              disabled={updating || (!isSelected && selectedEvents.length >= 8)}
+                              className={`w-5 h-5 rounded border-2 flex items-center justify-center flex-shrink-0 ${
+                                isSelected
+                                  ? 'bg-brand-primary border-brand-primary text-white'
+                                  : 'border-gray-300 hover:border-gray-400'
+                              } ${updating || (!isSelected && selectedEvents.length >= 8) ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+                            >
+                              {isSelected && (
+                                <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                                  <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                                </svg>
+                              )}
+                            </button>
 
-                      {event.image_url && (
-                        <img
-                          src={event.image_url}
-                          alt=""
-                          className="w-16 h-16 object-cover rounded border border-gray-200 flex-shrink-0"
-                          onError={(e) => {
-                            e.currentTarget.style.display = 'none'
-                          }}
-                        />
-                      )}
+                            {isSelected && (
+                              <button
+                                onClick={() => handleFeaturedToggle(date, event.id)}
+                                disabled={updating}
+                                className={`px-2 py-1 text-xs rounded border ${
+                                  isFeatured
+                                    ? 'bg-blue-500 text-white border-blue-500'
+                                    : 'bg-gray-100 text-gray-700 border-gray-300 hover:bg-gray-200'
+                                } ${updating ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+                              >
+                                {isFeatured ? '⭐ Featured' : 'Feature'}
+                              </button>
+                            )}
+                          </div>
 
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-start justify-between">
+                          {/* Event Image */}
+                          {event.image_url && (
+                            <div className="mb-3">
+                              <img
+                                src={event.image_url}
+                                alt=""
+                                className="w-full h-32 object-cover rounded border border-gray-200"
+                                onError={(e) => {
+                                  e.currentTarget.style.display = 'none'
+                                }}
+                              />
+                            </div>
+                          )}
+
+                          {/* Event Details */}
                           <div>
-                            <h4 className="text-sm font-medium text-gray-900 pr-2">
+                            <h4 className="text-sm font-semibold text-gray-900 mb-2 leading-tight">
                               {event.title}
                             </h4>
-                            <div className="text-sm text-gray-600 space-y-1">
-                              <div>{formatEventTime(event.start_date)}</div>
+                            <div className="text-xs text-gray-600 space-y-1">
+                              <div className="font-medium">{formatEventTime(event.start_date)}</div>
                               {event.venue && <div>{event.venue}</div>}
-                              {event.address && <div className="text-xs">{event.address}</div>}
+                              {event.address && <div className="text-gray-500">{event.address}</div>}
                             </div>
                           </div>
-                          {isSelected && (
-                            <button
-                              onClick={() => handleFeaturedToggle(date, event.id)}
-                              disabled={updating}
-                              className={`px-2 py-1 text-xs rounded border ${
-                                isFeatured
-                                  ? 'bg-yellow-100 text-yellow-800 border-yellow-300'
-                                  : 'bg-gray-100 text-gray-700 border-gray-300 hover:bg-gray-200'
-                              } ${updating ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
-                            >
-                              {isFeatured ? 'Featured' : 'Feature'}
-                            </button>
-                          )}
                         </div>
-                      </div>
-                    </div>
-                  )
-                })}
+                      )
+                    })}
+                  </div>
+                )}
               </div>
-            )}
-          </div>
-        )
-      })}
+            </div>
+          )
+        })}
+      </div>
     </div>
   )
 }

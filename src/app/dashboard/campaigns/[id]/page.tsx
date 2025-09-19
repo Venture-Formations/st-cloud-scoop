@@ -7,6 +7,7 @@ import type { CampaignWithArticles, ArticleWithPost, CampaignEvent, Event } from
 import {
   DndContext,
   closestCenter,
+  pointerWithin,
   KeyboardSensor,
   PointerSensor,
   useSensor,
@@ -979,46 +980,72 @@ export default function CampaignDetailPage() {
   const handleDragEnd = async (event: DragEndEvent) => {
     const { active, over } = event
 
-    if (active.id !== over?.id && campaign) {
-      const activeArticles = campaign.articles.filter(article => article.is_active)
-      const oldIndex = activeArticles.findIndex(article => article.id === active.id)
-      const newIndex = activeArticles.findIndex(article => article.id === over?.id)
+    if (!over || active.id === over.id || !campaign) {
+      return
+    }
 
-      if (oldIndex !== -1 && newIndex !== -1) {
-        const newOrder = arrayMove(activeArticles, oldIndex, newIndex)
+    console.log('Drag ended:', { activeId: active.id, overId: over.id })
 
-        // Update local state immediately for UI responsiveness
-        setCampaign(prev => {
-          if (!prev) return prev
-          const updatedArticles = [...prev.articles]
-          const activeIds = newOrder.map(article => article.id)
+    // Get current active articles sorted by rank
+    const activeArticles = campaign.articles
+      .filter(article => article.is_active)
+      .sort((a, b) => (a.rank || 999) - (b.rank || 999))
 
-          // Update ranks for active articles based on new order
-          updatedArticles.forEach(article => {
-            if (article.is_active) {
-              const newRank = activeIds.indexOf(article.id) + 1
-              article.rank = newRank
+    const oldIndex = activeArticles.findIndex(article => article.id === active.id)
+    const newIndex = activeArticles.findIndex(article => article.id === over.id)
+
+    console.log('Indexes:', { oldIndex, newIndex, totalActive: activeArticles.length })
+
+    if (oldIndex !== -1 && newIndex !== -1 && oldIndex !== newIndex) {
+      // Create new order using arrayMove
+      const newOrder = arrayMove(activeArticles, oldIndex, newIndex)
+
+      console.log('New order:', newOrder.map((a, i) => `${i + 1}. ${a.headline} (was rank ${a.rank})`))
+
+      // Update local state immediately for UI responsiveness
+      setCampaign(prev => {
+        if (!prev) return prev
+        const updatedArticles = [...prev.articles]
+
+        // Update ranks for all active articles based on new order
+        newOrder.forEach((article, index) => {
+          const articleIndex = updatedArticles.findIndex(a => a.id === article.id)
+          if (articleIndex !== -1) {
+            updatedArticles[articleIndex] = {
+              ...updatedArticles[articleIndex],
+              rank: index + 1
             }
-          })
-
-          return { ...prev, articles: updatedArticles }
+          }
         })
 
-        // Send update to server
-        try {
-          const articleOrders = newOrder.map((article, index) => ({
-            articleId: article.id,
-            rank: index + 1
-          }))
+        return { ...prev, articles: updatedArticles }
+      })
 
-          await fetch(`/api/campaigns/${campaign.id}/articles/reorder`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ articleOrders })
-          })
-        } catch (error) {
-          console.error('Failed to update article order:', error)
-          // Optionally refresh the campaign to revert changes
+      // Send update to server
+      try {
+        const articleOrders = newOrder.map((article, index) => ({
+          articleId: article.id,
+          rank: index + 1
+        }))
+
+        console.log('Sending rank updates:', articleOrders)
+
+        const response = await fetch(`/api/campaigns/${campaign.id}/articles/reorder`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ articleOrders })
+        })
+
+        if (!response.ok) {
+          throw new Error(`Failed to update order: ${response.status}`)
+        }
+
+        console.log('Successfully updated article ranks')
+      } catch (error) {
+        console.error('Failed to update article order:', error)
+        // Refresh campaign to revert changes
+        if (campaign.id) {
+          fetchCampaign(campaign.id)
         }
       }
     }
@@ -1228,7 +1255,7 @@ export default function CampaignDetailPage() {
             ) : (
               <DndContext
                 sensors={sensors}
-                collisionDetection={closestCenter}
+                collisionDetection={pointerWithin}
                 onDragEnd={handleDragEnd}
               >
                 {/* Active articles section - sortable */}

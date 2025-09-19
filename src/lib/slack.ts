@@ -8,6 +8,47 @@ export class SlackNotificationService {
     this.webhookUrl = process.env.SLACK_WEBHOOK_URL || ''
   }
 
+  async sendSimpleMessage(message: string) {
+    if (!this.webhookUrl) {
+      console.warn('Slack webhook URL not configured')
+      return
+    }
+
+    try {
+      const payload = {
+        text: message
+      }
+
+      await axios.post(this.webhookUrl, payload)
+
+      // Log the notification
+      await supabaseAdmin
+        .from('system_logs')
+        .insert([{
+          level: 'info',
+          message: 'Simple Slack message sent',
+          context: { message },
+          source: 'slack_service'
+        }])
+
+    } catch (error) {
+      console.error('Failed to send simple Slack message:', error)
+
+      // Log the failure
+      await supabaseAdmin
+        .from('system_logs')
+        .insert([{
+          level: 'error',
+          message: 'Failed to send simple Slack message',
+          context: {
+            message,
+            error: error instanceof Error ? error.message : 'Unknown error'
+          },
+          source: 'slack_service'
+        }])
+    }
+  }
+
   async sendAlert(message: string, level: 'info' | 'warn' | 'error' = 'info', context?: Record<string, any>) {
     if (!this.webhookUrl) {
       console.warn('Slack webhook URL not configured')

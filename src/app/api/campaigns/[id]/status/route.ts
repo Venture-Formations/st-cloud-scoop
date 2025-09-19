@@ -61,18 +61,10 @@ export async function POST(
     if (action === 'changes_made') {
       try {
         const slack = new SlackNotificationService()
-        const campaignName = campaign.subject_line || `Campaign for ${campaign.date}`
         const userName = session.user?.name || session.user?.email || 'Unknown User'
 
-        await slack.sendAlert(
-          `Changes to "${campaignName}" made by ${userName}`,
-          'info',
-          {
-            campaign_id: campaignId,
-            campaign_date: campaign.date,
-            user: userName,
-            action: 'changes_made'
-          }
+        await slack.sendSimpleMessage(
+          `Changes to ${campaign.date} made by ${userName}`
         )
       } catch (slackError) {
         console.error('Failed to send Slack notification:', slackError)

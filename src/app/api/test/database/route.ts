@@ -12,9 +12,16 @@ export async function GET(request: NextRequest) {
     }
 
     // Test database schema - check if new columns exist
-    const { data: columns, error: columnsError } = await supabaseAdmin
-      .rpc('get_columns', { table_name: 'newsletter_campaigns' })
-      .catch(() => null)
+    let columns = null
+    let columnsError = null
+    try {
+      const result = await supabaseAdmin
+        .rpc('get_columns', { table_name: 'newsletter_campaigns' })
+      columns = result.data
+      columnsError = result.error
+    } catch (error) {
+      columnsError = error
+    }
 
     // Try a direct query to see what columns exist
     const { data: schemaTest, error: schemaError } = await supabaseAdmin

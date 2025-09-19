@@ -561,11 +561,11 @@ export default function CampaignDetailPage() {
                   <div key={article.id} className="p-6">
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
-                        <div className="flex items-center space-x-3 mb-2">
+                        <div className="flex items-start space-x-3 mb-2">
                           <button
                             onClick={() => toggleArticle(article.id, article.is_active)}
                             disabled={saving}
-                            className={`w-5 h-5 rounded border-2 flex items-center justify-center ${
+                            className={`w-5 h-5 rounded border-2 flex items-center justify-center flex-shrink-0 mt-1 ${
                               article.is_active
                                 ? 'bg-brand-primary border-brand-primary text-white'
                                 : 'border-gray-300 hover:border-gray-400'
@@ -577,16 +577,35 @@ export default function CampaignDetailPage() {
                               </svg>
                             )}
                           </button>
-                          <h3 className="text-lg font-medium text-gray-900">
-                            {article.headline}
-                          </h3>
-                          {article.rss_post?.post_rating?.[0] && (
-                            <div className="flex space-x-1 text-xs">
-                              <span className={`font-medium ${getScoreColor(article.rss_post.post_rating[0].total_score)}`}>
-                                Score: {article.rss_post.post_rating[0].total_score}/30
-                              </span>
+
+                          {/* Article image thumbnail */}
+                          {(article.rss_post?.image_url || article.image_url) && (
+                            <div className="flex-shrink-0">
+                              <img
+                                src={article.rss_post?.image_url || article.image_url || ''}
+                                alt=""
+                                className="w-16 h-16 object-cover rounded-md border border-gray-200"
+                                onError={(e) => {
+                                  e.currentTarget.style.display = 'none'
+                                }}
+                              />
                             </div>
                           )}
+
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-start justify-between">
+                              <h3 className="text-lg font-medium text-gray-900 pr-2">
+                                {article.headline}
+                              </h3>
+                              {article.rss_post?.post_rating?.[0] && (
+                                <div className="flex space-x-1 text-xs flex-shrink-0">
+                                  <span className={`font-medium ${getScoreColor(article.rss_post.post_rating[0].total_score)}`}>
+                                    Score: {article.rss_post.post_rating[0].total_score}/30
+                                  </span>
+                                </div>
+                              )}
+                            </div>
+                          </div>
                         </div>
 
                         <p className="text-gray-700 mb-3">

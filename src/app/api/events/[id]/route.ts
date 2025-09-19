@@ -3,10 +3,16 @@ import { getServerSession } from 'next-auth'
 import { supabaseAdmin } from '@/lib/supabase'
 import { authOptions } from '@/lib/auth'
 
+interface RouteParams {
+  params: Promise<{
+    id: string
+  }>
+}
+
 // PATCH - Update an event
 export async function PATCH(
   request: NextRequest,
-  context: { params: { id: string } }
+  { params }: RouteParams
 ) {
   try {
     const session = await getServerSession(authOptions)
@@ -14,7 +20,7 @@ export async function PATCH(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const eventId = context.params.id
+    const { id: eventId } = await params
     const body = await request.json()
 
     // Only allow updating certain fields
@@ -60,7 +66,7 @@ export async function PATCH(
 // DELETE - Delete an event
 export async function DELETE(
   request: NextRequest,
-  context: { params: { id: string } }
+  { params }: RouteParams
 ) {
   try {
     const session = await getServerSession(authOptions)
@@ -68,7 +74,7 @@ export async function DELETE(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const eventId = context.params.id
+    const { id: eventId } = await params
 
     // First, delete any campaign_events that reference this event
     const { error: campaignEventsError } = await supabaseAdmin

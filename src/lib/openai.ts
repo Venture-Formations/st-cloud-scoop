@@ -162,7 +162,7 @@ Respond with valid JSON in this exact format:
   "passed": <boolean true if score >= 20, false otherwise>
 }`,
 
-  eventSummarizer: (event: { title: string; description: string | null; venue?: string }) => `
+  eventSummarizer: (event: { title: string; description: string | null; venue?: string | null }) => `
 Rewrite the description field into a concise, natural-language highlight of 50 words or fewer. Do not copy or truncate the first words; paraphrase so it reads well.
 
 Event Title: ${event.title}

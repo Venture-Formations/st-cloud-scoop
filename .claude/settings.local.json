@@ -17,7 +17,8 @@
       "Read(//c/**)",
       "WebFetch(domain:stc-scoop.vercel.app)",
       "WebFetch(domain:st-cloud-scoop.vercel.app)",
-      "Bash(npm uninstall:*)"
+      "Bash(npm uninstall:*)",
+      "Bash(git tag:*)"
     ],
     "deny": [],
     "ask": []

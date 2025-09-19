@@ -171,10 +171,53 @@ export interface ArticleWithPost extends Article {
   }
 }
 
+// Local Events types
+export interface Event {
+  id: string
+  external_id: string
+  title: string
+  description: string | null
+  start_date: string
+  end_date: string | null
+  venue: string | null
+  address: string | null
+  url: string | null
+  image_url: string | null
+  featured: boolean
+  active: boolean
+  raw_data: any
+  created_at: string
+  updated_at: string
+}
+
+export interface CampaignEvent {
+  id: string
+  campaign_id: string
+  event_id: string
+  event_date: string
+  is_selected: boolean
+  is_featured: boolean
+  display_order: number | null
+  created_at: string
+  event?: Event
+}
+
+export interface NewsletterSection {
+  id: string
+  name: string
+  display_order: number
+  is_active: boolean
+  created_at: string
+}
+
 export interface CampaignWithArticles extends NewsletterCampaign {
   articles: ArticleWithPost[]
   manual_articles: ManualArticle[]
   email_metrics: EmailMetrics | null
+}
+
+export interface CampaignWithEvents extends CampaignWithArticles {
+  campaign_events: CampaignEvent[]
 }
 
 // AI Processing types

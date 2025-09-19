@@ -27,6 +27,10 @@
     {
       "path": "/api/cron/health-check",
       "schedule": "*/15 8-22 * * *"
+    },
+    {
+      "path": "/api/cron/sync-events",
+      "schedule": "0 */6 * * *"
     }
   ],
   "functions": {
@@ -50,6 +54,9 @@
     },
     "app/api/cron/health-check/route.ts": {
       "maxDuration": 30
+    },
+    "app/api/cron/sync-events/route.ts": {
+      "maxDuration": 120
     }
   }
 }

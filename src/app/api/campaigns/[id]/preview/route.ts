@@ -184,19 +184,96 @@ function generateLocalScoopSection(articles: any[]): string {
 <br>`
 }
 
-function generateLocalEventsSection(eventsData: any[]): string {
-  if (!eventsData || eventsData.length === 0) {
+async function generateLocalEventsSection(campaign: any): Promise<string> {
+  // Calculate the same 3-day range as the dashboard using Central Time
+  const campaignCreated = new Date(campaign.created_at)
+
+  // Convert to Central Time (-5 hours from UTC)
+  const centralTimeOffset = -5 * 60 * 60 * 1000 // -5 hours in milliseconds
+  const campaignCreatedCentral = new Date(campaignCreated.getTime() + centralTimeOffset)
+
+  // Add 12 hours to get start time in Central Time
+  const startDateTime = new Date(campaignCreatedCentral.getTime() + (12 * 60 * 60 * 1000))
+
+  const dates = []
+  for (let i = 0; i <= 2; i++) {
+    const date = new Date(startDateTime)
+    date.setDate(startDateTime.getDate() + i)
+    dates.push(date.toISOString().split('T')[0])
+  }
+
+  console.log('HTML generation - calculated dates:', dates)
+
+  // Fetch events for the calculated date range
+  const startDate = dates[0]
+  const endDate = dates[dates.length - 1]
+
+  const { data: availableEvents } = await supabaseAdmin
+    .from('events')
+    .select('*')
+    .gte('start_date', startDate)
+    .lte('start_date', endDate + 'T23:59:59')
+    .eq('active', true)
+    .order('start_date', { ascending: true })
+
+  if (!availableEvents || availableEvents.length === 0) {
     return '' // Don't include section if no events
   }
 
-  // Group events by date
-  const eventsByDate: { [key: string]: any[] } = {}
-  eventsData.forEach((ce: any) => {
-    if (!eventsByDate[ce.event_date]) {
-      eventsByDate[ce.event_date] = []
-    }
-    eventsByDate[ce.event_date].push(ce)
+  console.log(`HTML generation - found ${availableEvents.length} events for date range ${startDate} to ${endDate}`)
+
+  // Get the campaign events to determine which are selected and featured
+  const { data: campaignEvents } = await supabaseAdmin
+    .from('campaign_events')
+    .select('*')
+    .eq('campaign_id', campaign.id)
+
+  const campaignEventsMap = new Map()
+  campaignEvents?.forEach(ce => {
+    const key = `${ce.event_id}_${ce.event_date}`
+    campaignEventsMap.set(key, ce)
   })
+
+  // Filter events by date and selection status
+  const eventsByDate: { [key: string]: any[] } = {}
+
+  dates.forEach(date => {
+    // Filter events that occur on this date
+    const dateStart = new Date(date + 'T00:00:00-05:00')
+    const dateEnd = new Date(date + 'T23:59:59-05:00')
+
+    const eventsForDate = availableEvents.filter(event => {
+      const eventStart = new Date(event.start_date)
+      const eventEnd = event.end_date ? new Date(event.end_date) : eventStart
+      return (eventStart <= dateEnd && eventEnd >= dateStart)
+    })
+
+    // Only include events that are selected for the campaign
+    const selectedEvents = eventsForDate
+      .map(event => {
+        const campaignEvent = campaignEventsMap.get(`${event.id}_${date}`)
+        if (campaignEvent && campaignEvent.is_selected) {
+          return {
+            ...event,
+            is_featured: campaignEvent.is_featured,
+            display_order: campaignEvent.display_order
+          }
+        }
+        return null
+      })
+      .filter(Boolean)
+      .sort((a, b) => (a.display_order || 999) - (b.display_order || 999))
+
+    if (selectedEvents.length > 0) {
+      eventsByDate[date] = selectedEvents
+    }
+  })
+
+  console.log('HTML generation - events by date:', Object.keys(eventsByDate).map(date => `${date}: ${eventsByDate[date].length} events`))
+
+  if (Object.keys(eventsByDate).length === 0) {
+    return '' // Don't include section if no selected events
+  }
 
   const formatEventDate = (dateString: string) => {
     try {
@@ -262,30 +339,29 @@ function generateLocalEventsSection(eventsData: any[]): string {
     return '🎉' // Default emoji
   }
 
-  // Generate each day column
-  const sortedDates = Object.keys(eventsByDate).sort()
-  const dayColumns = sortedDates.slice(0, 3).map(date => { // Only take first 3 days
-    const events = eventsByDate[date].sort((a: any, b: any) => (a.display_order || 999) - (b.display_order || 999))
-    const featuredEvent = events.find(ce => ce.is_featured)
-    const regularEvents = events.filter(ce => !ce.is_featured)
+  // Generate each day column using the calculated dates in order
+  const dayColumns = dates.map(date => {
+    const events = eventsByDate[date] || []
+    const featuredEvent = events.find(event => event.is_featured)
+    const regularEvents = events.filter(event => !event.is_featured)
 
     // Generate featured event HTML
     const featuredHtml = featuredEvent ? `
     <tr>
       <td style='padding:0; border-top: 1px solid #eee;'>
         <div style='padding:8px 16px; background:#E8F0FE; border:2px solid #1877F2; border-radius:6px;'>
-          <span style='font-size: 16px;'>${getEventEmoji(featuredEvent.event.title, featuredEvent.event.venue)} <strong>${featuredEvent.event.title}</strong></span><br>
-          <span style='font-size:14px;'><a href='${featuredEvent.event.url || '#'}' style='color: #000; text-decoration: underline;'>${formatEventTime(featuredEvent.event.start_date, featuredEvent.event.end_date)}</a>  | ${featuredEvent.event.venue || 'TBA'}</span>${featuredEvent.event.description ? `<br><br><span style='font-size:13px;'>${featuredEvent.event.description}</span>` : ''}
+          <span style='font-size: 16px;'>${getEventEmoji(featuredEvent.title, featuredEvent.venue)} <strong>${featuredEvent.title}</strong></span><br>
+          <span style='font-size:14px;'><a href='${featuredEvent.url || '#'}' style='color: #000; text-decoration: underline;'>${formatEventTime(featuredEvent.start_date, featuredEvent.end_date)}</a>  | ${featuredEvent.venue || 'TBA'}</span>${featuredEvent.description ? `<br><br><span style='font-size:13px;'>${featuredEvent.description}</span>` : ''}
         </div>
       </td>
     </tr>` : ''
 
     // Generate regular events HTML
-    const regularEventsHtml = regularEvents.map((ce: any) => `
+    const regularEventsHtml = regularEvents.map((event: any) => `
     <tr>
       <td style='padding: 8px 16px; border-top: 1px solid #eee;'>
-        <span style='font-size: 16px;'>${getEventEmoji(ce.event.title, ce.event.venue)} <strong>${ce.event.title}</strong></span><br>
-        <span style='font-size:14px;'><a href='${ce.event.url || '#'}' style='color: #000; text-decoration: underline;'>${formatEventTime(ce.event.start_date, ce.event.end_date)}</a>  | ${ce.event.venue || 'TBA'}</span>
+        <span style='font-size: 16px;'>${getEventEmoji(event.title, event.venue)} <strong>${event.title}</strong></span><br>
+        <span style='font-size:14px;'><a href='${event.url || '#'}' style='color: #000; text-decoration: underline;'>${formatEventTime(event.start_date, event.end_date)}</a>  | ${event.venue || 'TBA'}</span>
       </td>
     </tr>`).join('')
 
@@ -342,13 +418,7 @@ async function generateNewsletterHtml(campaign: any): Promise<string> {
     console.log('Active articles to render:', activeArticles.length)
     console.log('Article order:', activeArticles.map((a: any) => `${a.headline} (rank: ${a.rank})`).join(', '))
 
-    // Filter selected events
-    const eventsData = (campaign.campaign_events || [])
-      .filter((ce: any) => ce.is_selected && ce.event)
-      .sort((a: any, b: any) => (a.display_order || 999) - (b.display_order || 999))
-
-    console.log('Selected events to render:', eventsData.length)
-    console.log('Events data:', eventsData.map((ce: any) => `${ce.event.title} (${ce.event_date})`).join(', '))
+    console.log('Generating events section using calculated dates...')
 
     // Fetch newsletter sections order
     const { data: sections } = await supabaseAdmin
@@ -389,14 +459,14 @@ async function generateNewsletterHtml(campaign: any): Promise<string> {
       for (const section of sections) {
         if (section.name === 'The Local Scoop' && activeArticles.length > 0) {
           sectionsHtml += generateLocalScoopSection(activeArticles)
-        } else if (section.name === 'Local Events' && eventsData.length > 0) {
-          sectionsHtml += generateLocalEventsSection(eventsData)
+        } else if (section.name === 'Local Events') {
+          sectionsHtml += await generateLocalEventsSection(campaign)
         }
       }
     } else {
       // Fallback to default order if no sections configured
       console.log('No sections found, using default order')
-      sectionsHtml = generateLocalScoopSection(activeArticles) + generateLocalEventsSection(eventsData)
+      sectionsHtml = generateLocalScoopSection(activeArticles) + await generateLocalEventsSection(campaign)
     }
 
     // Combine all sections

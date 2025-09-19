@@ -211,64 +211,95 @@ function generateLocalEventsSection(eventsData: any[]): string {
     }
   }
 
-  const formatEventTime = (dateString: string) => {
+  const formatEventTime = (startDate: string, endDate?: string) => {
     try {
-      const date = new Date(dateString)
-      return date.toLocaleTimeString('en-US', {
+      const start = new Date(startDate)
+      const startTime = start.toLocaleTimeString('en-US', {
         hour: 'numeric',
         minute: '2-digit',
         hour12: true
-      })
+      }).replace(':00', '').replace(' ', '')
+
+      if (endDate) {
+        const end = new Date(endDate)
+        const endTime = end.toLocaleTimeString('en-US', {
+          hour: 'numeric',
+          minute: '2-digit',
+          hour12: true
+        }).replace(':00', '').replace(' ', '')
+        return `${startTime} → ${endTime}`
+      }
+
+      return startTime
     } catch (e) {
       return ''
     }
   }
 
-  const dateGroupsHtml = Object.entries(eventsByDate)
-    .sort(([a], [b]) => a.localeCompare(b)) // Sort dates chronologically
-    .map(([date, events]) => {
-      const featuredEvent = events.find(ce => ce.is_featured)
-      const regularEvents = events.filter(ce => !ce.is_featured)
+  // Helper function to get event emoji based on title/venue
+  const getEventEmoji = (title: string, venue: string) => {
+    const titleLower = title.toLowerCase()
+    const venueLower = venue ? venue.toLowerCase() : ''
 
-      // Generate featured event HTML
-      const featuredHtml = featuredEvent ? `
-<tr class='row'>
- <td class='column' style='padding:8px; vertical-align: top;'>
- <table width='100%' cellpadding='0' cellspacing='0' style='border: 2px solid #FFD700; border-radius: 8px; background: #FFFBF0; font-family: Arial, sans-serif; font-size: 16px; line-height: 26px; box-shadow:0 4px 12px rgba(255,215,0,.3);'>
- <tr><td style='padding: 8px 12px 4px; font-size: 12px; font-weight: bold; color: #B8860B; text-align: center;'>⭐ FEATURED EVENT</td></tr>
- <tr><td style='padding: 4px 12px 8px; font-size: 18px; font-weight: bold; text-align: center;'>${featuredEvent.event.title}</td></tr>
- ${featuredEvent.event.image_url ? `<tr><td style='padding: 0 12px; text-align: center;'><img src='${featuredEvent.event.image_url}' alt='${featuredEvent.event.title}' style='max-width: 100%; max-height: 300px; border-radius: 4px;'></td></tr>` : ''}
- <tr><td style='padding: 8px 12px 4px; font-size: 14px; font-weight: bold; color: #1877F2;'>${formatEventTime(featuredEvent.event.start_date)}</td></tr>
- ${featuredEvent.event.venue ? `<tr><td style='padding: 0 12px 4px; font-size: 14px;'>${featuredEvent.event.venue}</td></tr>` : ''}
- ${featuredEvent.event.address ? `<tr><td style='padding: 0 12px 4px; font-size: 12px; color: #666;'>${featuredEvent.event.address}</td></tr>` : ''}
- ${featuredEvent.event.description ? `<tr><td style='padding: 4px 12px 8px; font-size: 14px;'>${featuredEvent.event.description}</td></tr>` : ''}
- ${featuredEvent.event.url ? `<tr><td style='padding: 4px 12px 12px; text-align: center;'><a href='${featuredEvent.event.url}' style='color: #0080FE; text-decoration: none; font-weight: bold;'>Learn More</a></td></tr>` : ''}
- </table>
- </td>
-</tr>` : ''
+    if (titleLower.includes('harvest') || titleLower.includes('corn maze') || titleLower.includes('farm')) return '🌽'
+    if (titleLower.includes('art') || titleLower.includes('exhibition') || titleLower.includes('ceramic')) return '🎨'
+    if (titleLower.includes('blacklight') || titleLower.includes('adventure')) return '🎯'
+    if (titleLower.includes('farmers') || titleLower.includes('market')) return '🥕'
+    if (titleLower.includes('skate') || titleLower.includes('skating')) return '🛼'
+    if (titleLower.includes('carnival')) return '🎡'
+    if (titleLower.includes('music') || titleLower.includes('concert') || venueLower.includes('amphitheater')) return '🎶'
+    if (titleLower.includes('magic') || titleLower.includes('gathering') || titleLower.includes('commander')) return '🎲'
+    if (titleLower.includes('run') || titleLower.includes('5k') || titleLower.includes('race')) return '🏃‍♂️'
+    if (titleLower.includes('fall') || titleLower.includes('festival')) return '🍂'
+    if (titleLower.includes('hockey')) return '🏒'
+    if (titleLower.includes('pride')) return '🏳️‍🌈'
+    if (titleLower.includes('beer') || titleLower.includes('oktoberfest') || titleLower.includes('brewing')) return '🍺'
+    if (titleLower.includes('sensory') || titleLower.includes('kids') || titleLower.includes('children')) return '🧒'
+    if (titleLower.includes('dungeons') || titleLower.includes('dragons')) return '🐉'
+    if (titleLower.includes('theater') || titleLower.includes('play') || titleLower.includes('piggie')) return '🎭'
+    if (titleLower.includes('bluegrass') || titleLower.includes('brews')) return '🎶'
 
-      // Generate regular events HTML
-      const regularEventsHtml = regularEvents.map((ce: any) => `
-<tr class='row'>
- <td class='column' style='padding:4px 8px; vertical-align: top;'>
- <table width='100%' cellpadding='0' cellspacing='0' style='border: 1px solid #ddd; border-radius: 6px; background: #fff; font-family: Arial, sans-serif; font-size: 14px; line-height: 20px;'>
- <tr><td style='padding: 8px 10px 4px; font-size: 16px; font-weight: bold;'>${ce.event.title}</td></tr>
- <tr><td style='padding: 0 10px 4px; font-size: 12px; font-weight: bold; color: #1877F2;'>${formatEventTime(ce.event.start_date)}</td></tr>
- ${ce.event.venue ? `<tr><td style='padding: 0 10px 4px; font-size: 12px;'>${ce.event.venue}</td></tr>` : ''}
- ${ce.event.url ? `<tr><td style='padding: 4px 10px 8px; text-align: right;'><a href='${ce.event.url}' style='color: #0080FE; text-decoration: none; font-size: 11px;'>Details</a></td></tr>` : '<tr><td style="padding: 4px;"></td></tr>'}
- </table>
- </td>
-</tr>`).join('')
+    return '🎉' // Default emoji
+  }
 
-      return `
-<tr>
-  <td style="padding: 12px 5px 8px;">
-    <h3 style="font-size: 1.2em; font-family: Arial, sans-serif; color: #1877F2; margin: 0; padding: 0; border-bottom: 2px solid #1877F2; padding-bottom: 4px;">${formatEventDate(date)}</h3>
-  </td>
-</tr>
-${featuredHtml}
-${regularEventsHtml}`
-    }).join('')
+  // Generate each day column
+  const sortedDates = Object.keys(eventsByDate).sort()
+  const dayColumns = sortedDates.slice(0, 3).map(date => { // Only take first 3 days
+    const events = eventsByDate[date].sort((a: any, b: any) => (a.display_order || 999) - (b.display_order || 999))
+    const featuredEvent = events.find(ce => ce.is_featured)
+    const regularEvents = events.filter(ce => !ce.is_featured)
+
+    // Generate featured event HTML
+    const featuredHtml = featuredEvent ? `
+    <tr>
+      <td style='padding:0; border-top: 1px solid #eee;'>
+        <div style='padding:8px 16px; background:#E8F0FE; border:2px solid #1877F2; border-radius:6px;'>
+          <span style='font-size: 16px;'>${getEventEmoji(featuredEvent.event.title, featuredEvent.event.venue)} <strong>${featuredEvent.event.title}</strong></span><br>
+          <span style='font-size:14px;'><a href='${featuredEvent.event.url || '#'}' style='color: #000; text-decoration: underline;'>${formatEventTime(featuredEvent.event.start_date, featuredEvent.event.end_date)}</a>  | ${featuredEvent.event.venue || 'TBA'}</span>${featuredEvent.event.description ? `<br><br><span style='font-size:13px;'>${featuredEvent.event.description}</span>` : ''}
+        </div>
+      </td>
+    </tr>` : ''
+
+    // Generate regular events HTML
+    const regularEventsHtml = regularEvents.map((ce: any) => `
+    <tr>
+      <td style='padding: 8px 16px; border-top: 1px solid #eee;'>
+        <span style='font-size: 16px;'>${getEventEmoji(ce.event.title, ce.event.venue)} <strong>${ce.event.title}</strong></span><br>
+        <span style='font-size:14px;'><a href='${ce.event.url || '#'}' style='color: #000; text-decoration: underline;'>${formatEventTime(ce.event.start_date, ce.event.end_date)}</a>  | ${ce.event.venue || 'TBA'}</span>
+      </td>
+    </tr>`).join('')
+
+    return `
+<td class='column' style='padding:8px; vertical-align: top;'>
+  <table width='100%' cellpadding='0' cellspacing='0' style='table-layout: fixed; border: 1px solid #ddd; border-radius: 8px; background: #fff; height: 100%; font-family: Arial, sans-serif; font-size: 16px; line-height: 26px; box-shadow:0 4px 12px rgba(0,0,0,.15);'>
+    <tr>
+      <td style='background: #F8F9FA; padding: 8px; text-align: center; font-weight: normal; font-size: 16px; line-height: 26px; color: #3C4043; border-top-left-radius: 8px; border-top-right-radius: 8px;'>${formatEventDate(date)}</td>
+    </tr>
+    ${featuredHtml}
+    ${regularEventsHtml}
+  </table>
+</td>`
+  }).join(' ')
 
   return `
 <table width="100%" cellpadding="0" cellspacing="0" style="border: 1px solid #f7f7f7; border-radius: 10px; margin-top: 10px; max-width: 990px; margin: 0 auto; background-color: #f7f7f7; font-family: Arial, sans-serif;">
@@ -276,9 +307,8 @@ ${regularEventsHtml}`
     <td style="padding: 5px;">
       <h2 style="font-size: 1.625em; line-height: 1.16em; font-family: Arial, sans-serif; color: #1877F2; margin: 0; padding: 0;">Local Events</h2>
     </td>
-  </tr>
-  ${dateGroupsHtml}
-</table>
+  </tr><tr class="row">${dayColumns}
+</td></table>
 <br>`
 }
 

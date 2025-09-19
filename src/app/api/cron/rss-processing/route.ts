@@ -13,6 +13,25 @@ export async function POST(request: NextRequest) {
     console.log('=== AUTOMATED RSS PROCESSING STARTED ===')
     console.log('Time:', new Date().toISOString())
 
+    // Check if review schedule is enabled
+    const { data: scheduleSettings } = await supabaseAdmin
+      .from('app_settings')
+      .select('value')
+      .eq('key', 'email_reviewScheduleEnabled')
+      .single()
+
+    const reviewScheduleEnabled = scheduleSettings?.value === 'true'
+    console.log('Review schedule enabled:', reviewScheduleEnabled)
+
+    if (!reviewScheduleEnabled) {
+      return NextResponse.json({
+        success: true,
+        message: 'Review schedule is disabled, skipping RSS processing',
+        skipped: true,
+        timestamp: new Date().toISOString()
+      })
+    }
+
     // Get tomorrow's date for campaign creation (RSS processing is for next day)
     const tomorrow = new Date()
     tomorrow.setDate(tomorrow.getDate() + 1)

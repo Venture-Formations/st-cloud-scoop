@@ -16,24 +16,22 @@ export async function GET(request: NextRequest) {
     const active = searchParams.get('active')
     const featured = searchParams.get('featured')
 
+    console.log('Events API called with:', { startDate, endDate, active, featured })
+
     let query = supabaseAdmin
       .from('events')
       .select('*')
       .order('start_date', { ascending: true })
 
-    // Filter by date range - find events that overlap with the requested range
-    if (startDate && endDate) {
-      // Events that overlap: event starts before/on endDate AND event ends after/on startDate
-      query = query
-        .lte('start_date', endDate + 'T23:59:59')
-        .or(`end_date.gte.${startDate}T00:00:00,end_date.is.null,start_date.gte.${startDate}T00:00:00`)
-    } else if (startDate) {
-      // Events on or after startDate
-      query = query
-        .or(`start_date.gte.${startDate}T00:00:00,end_date.gte.${startDate}T00:00:00,end_date.is.null`)
-    } else if (endDate) {
-      // Events on or before endDate
-      query = query.lte('start_date', endDate + 'T23:59:59')
+    // Simplified date filtering - just use start_date for now to debug
+    if (startDate) {
+      query = query.gte('start_date', startDate)
+    }
+    if (endDate) {
+      // Add one day to endDate to make it inclusive
+      const endDateInclusive = new Date(endDate)
+      endDateInclusive.setDate(endDateInclusive.getDate() + 1)
+      query = query.lt('start_date', endDateInclusive.toISOString().split('T')[0])
     }
 
     // Filter by active status
@@ -49,8 +47,11 @@ export async function GET(request: NextRequest) {
     const { data: events, error } = await query
 
     if (error) {
+      console.error('Events query error:', error)
       throw error
     }
+
+    console.log(`Events API returning ${events?.length || 0} events`)
 
     return NextResponse.json({
       events: events || [],

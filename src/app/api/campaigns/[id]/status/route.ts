@@ -51,7 +51,9 @@ export async function POST(
     if (updateError) {
       console.error('Failed to update campaign status:', updateError)
       return NextResponse.json({
-        error: 'Failed to update campaign status'
+        error: 'Failed to update campaign status',
+        details: updateError.message || 'Unknown database error',
+        code: updateError.code || 'UNKNOWN'
       }, { status: 500 })
     }
 

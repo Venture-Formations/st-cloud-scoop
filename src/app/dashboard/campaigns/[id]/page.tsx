@@ -1101,7 +1101,7 @@ export default function CampaignDetailPage() {
           <div className="px-6 py-4 border-b border-gray-200">
             <div className="flex items-center justify-between">
               <h2 className="text-lg font-medium text-gray-900">
-                The Local Scoop ({campaign.articles.length})
+                The Local Scoop
               </h2>
               <button
                 onClick={() => setArticlesExpanded(!articlesExpanded)}

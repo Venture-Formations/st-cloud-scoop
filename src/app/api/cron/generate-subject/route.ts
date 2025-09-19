@@ -51,6 +51,7 @@ export async function POST(request: NextRequest) {
           headline,
           content,
           is_active,
+          rank,
           rss_post:rss_posts(
             post_rating:post_ratings(total_score)
           )
@@ -91,14 +92,10 @@ export async function POST(request: NextRequest) {
       })
     }
 
-    // Get active articles sorted by rating (highest first)
+    // Get active articles sorted by rank (custom order, rank 1 = #1 position)
     const activeArticles = campaign.articles
       .filter((article: any) => article.is_active)
-      .sort((a: any, b: any) => {
-        const scoreA = a.rss_post?.post_rating?.[0]?.total_score || 0
-        const scoreB = b.rss_post?.post_rating?.[0]?.total_score || 0
-        return scoreB - scoreA
-      })
+      .sort((a: any, b: any) => (a.rank || 999) - (b.rank || 999))
 
     if (activeArticles.length === 0) {
       return NextResponse.json({
@@ -108,9 +105,9 @@ export async function POST(request: NextRequest) {
       }, { status: 400 })
     }
 
-    // Use only the highest scored article
+    // Use the #1 ranked article for subject line generation
     const topArticle = activeArticles[0] as any
-    console.log(`Generating subject line based on top article: "${topArticle.headline}" (score: ${topArticle.rss_post?.post_rating?.[0]?.total_score || 0})`)
+    console.log(`Generating subject line based on #1 ranked article: "${topArticle.headline}" (rank: ${topArticle.rank || 'unranked'}, score: ${topArticle.rss_post?.post_rating?.[0]?.total_score || 0})`)
 
     // Generate subject line using AI with just the top article
     const prompt = AI_PROMPTS.subjectLineGenerator([topArticle])

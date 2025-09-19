@@ -4,7 +4,7 @@
 
 -- Create events table
 CREATE TABLE IF NOT EXISTS events (
-  id SERIAL PRIMARY KEY,
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   external_id VARCHAR(255) UNIQUE NOT NULL,
   title VARCHAR(500) NOT NULL,
   description TEXT,
@@ -29,9 +29,9 @@ CREATE INDEX IF NOT EXISTS idx_events_external_id ON events(external_id);
 
 -- Create campaign_events table
 CREATE TABLE IF NOT EXISTS campaign_events (
-  id SERIAL PRIMARY KEY,
-  campaign_id INTEGER REFERENCES newsletter_campaigns(id) ON DELETE CASCADE,
-  event_id INTEGER REFERENCES events(id) ON DELETE CASCADE,
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  campaign_id UUID REFERENCES newsletter_campaigns(id) ON DELETE CASCADE,
+  event_id UUID REFERENCES events(id) ON DELETE CASCADE,
   event_date DATE NOT NULL,
   is_selected BOOLEAN DEFAULT FALSE,
   is_featured BOOLEAN DEFAULT FALSE,
@@ -46,7 +46,7 @@ CREATE INDEX IF NOT EXISTS idx_campaign_events_event ON campaign_events(event_id
 
 -- Create newsletter_sections table
 CREATE TABLE IF NOT EXISTS newsletter_sections (
-  id SERIAL PRIMARY KEY,
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   name VARCHAR(100) NOT NULL,
   display_order INTEGER NOT NULL,
   is_active BOOLEAN DEFAULT TRUE,
@@ -79,9 +79,7 @@ CREATE TRIGGER update_events_updated_at
     EXECUTE FUNCTION update_updated_at_column();
 
 -- Grant necessary permissions (adjust role name as needed)
+-- Note: Using UUIDs instead of SERIAL, so no sequences to grant
 -- GRANT SELECT, INSERT, UPDATE, DELETE ON events TO authenticated;
 -- GRANT SELECT, INSERT, UPDATE, DELETE ON campaign_events TO authenticated;
 -- GRANT SELECT, INSERT, UPDATE, DELETE ON newsletter_sections TO authenticated;
--- GRANT USAGE, SELECT ON SEQUENCE events_id_seq TO authenticated;
--- GRANT USAGE, SELECT ON SEQUENCE campaign_events_id_seq TO authenticated;
--- GRANT USAGE, SELECT ON SEQUENCE newsletter_sections_id_seq TO authenticated;

@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useParams } from 'next/navigation'
 import Layout from '@/components/Layout'
-import type { CampaignWithArticles, ArticleWithPost } from '@/types/database'
+import type { CampaignWithArticles, ArticleWithPost, CampaignEvent, Event } from '@/types/database'
 import {
   DndContext,
   closestCenter,
@@ -23,6 +23,209 @@ import {
   useSortable
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
+
+// Events Manager Component
+function EventsManager({
+  campaign,
+  availableEvents,
+  campaignEvents,
+  onUpdateEvents,
+  updating
+}: {
+  campaign: CampaignWithArticles | null
+  availableEvents: Event[]
+  campaignEvents: CampaignEvent[]
+  onUpdateEvents: (eventDate: string, selectedEvents: string[], featuredEvent?: string) => void
+  updating: boolean
+}) {
+  if (!campaign) return null
+
+  // Calculate 3-day range around campaign date
+  const campaignDate = new Date(campaign.date)
+  const dates = []
+  for (let i = -1; i <= 1; i++) {
+    const date = new Date(campaignDate)
+    date.setDate(campaignDate.getDate() + i)
+    dates.push(date.toISOString().split('T')[0])
+  }
+
+  const getEventsForDate = (date: string) => {
+    const dateStart = new Date(date + 'T00:00:00')
+    const dateEnd = new Date(date + 'T23:59:59')
+
+    return availableEvents.filter(event => {
+      const eventStart = new Date(event.start_date)
+      const eventEnd = event.end_date ? new Date(event.end_date) : eventStart
+
+      // Event overlaps with this date
+      return (eventStart <= dateEnd && eventEnd >= dateStart)
+    })
+  }
+
+  const getSelectedEventsForDate = (date: string) => {
+    return campaignEvents
+      .filter(ce => ce.event_date === date && ce.is_selected)
+      .sort((a, b) => (a.display_order || 999) - (b.display_order || 999))
+  }
+
+  const getFeaturedEventForDate = (date: string) => {
+    const featured = campaignEvents.find(ce => ce.event_date === date && ce.is_featured)
+    return featured?.event_id
+  }
+
+  const handleEventToggle = (date: string, eventId: string, isSelected: boolean) => {
+    const currentSelected = getSelectedEventsForDate(date).map(ce => ce.event_id)
+    const currentFeatured = getFeaturedEventForDate(date)
+
+    let newSelected: string[]
+    if (isSelected) {
+      // Add event if under limit
+      if (currentSelected.length < 8) {
+        newSelected = [...currentSelected, eventId]
+      } else {
+        return // Don't add if at limit
+      }
+    } else {
+      // Remove event
+      newSelected = currentSelected.filter(id => id !== eventId)
+    }
+
+    // Clear featured if we're removing the featured event
+    const newFeatured = newSelected.includes(currentFeatured || '') ? currentFeatured : undefined
+
+    onUpdateEvents(date, newSelected, newFeatured)
+  }
+
+  const handleFeaturedToggle = (date: string, eventId: string) => {
+    const currentSelected = getSelectedEventsForDate(date).map(ce => ce.event_id)
+    const currentFeatured = getFeaturedEventForDate(date)
+
+    const newFeatured = currentFeatured === eventId ? undefined : eventId
+    onUpdateEvents(date, currentSelected, newFeatured)
+  }
+
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString + 'T00:00:00')
+    return date.toLocaleDateString('en-US', {
+      weekday: 'short',
+      month: 'short',
+      day: 'numeric'
+    })
+  }
+
+  const formatEventTime = (dateString: string) => {
+    const date = new Date(dateString)
+    return date.toLocaleTimeString('en-US', {
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true
+    })
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="text-sm text-gray-600">
+        Select up to 8 events per day. Mark one event as "featured" to highlight it in the newsletter.
+      </div>
+
+      {dates.map(date => {
+        const dateEvents = getEventsForDate(date)
+        const selectedEvents = getSelectedEventsForDate(date)
+        const featuredEventId = getFeaturedEventForDate(date)
+
+        return (
+          <div key={date} className="border border-gray-200 rounded-lg p-4">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-medium text-gray-900">
+                {formatDate(date)}
+              </h3>
+              <div className="text-sm text-gray-600">
+                {selectedEvents.length}/8 events selected
+              </div>
+            </div>
+
+            {dateEvents.length === 0 ? (
+              <div className="text-gray-500 text-sm py-4">
+                No events available for this date
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {dateEvents.map(event => {
+                  const isSelected = selectedEvents.some(ce => ce.event_id === event.id)
+                  const isFeatured = featuredEventId === event.id
+
+                  return (
+                    <div
+                      key={event.id}
+                      className={`flex items-start space-x-3 p-3 rounded border ${
+                        isSelected ? 'border-blue-300 bg-blue-50' : 'border-gray-200'
+                      }`}
+                    >
+                      <button
+                        onClick={() => handleEventToggle(date, event.id, !isSelected)}
+                        disabled={updating || (!isSelected && selectedEvents.length >= 8)}
+                        className={`w-5 h-5 rounded border-2 flex items-center justify-center flex-shrink-0 mt-1 ${
+                          isSelected
+                            ? 'bg-brand-primary border-brand-primary text-white'
+                            : 'border-gray-300 hover:border-gray-400'
+                        } ${updating || (!isSelected && selectedEvents.length >= 8) ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+                      >
+                        {isSelected && (
+                          <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                          </svg>
+                        )}
+                      </button>
+
+                      {event.image_url && (
+                        <img
+                          src={event.image_url}
+                          alt=""
+                          className="w-16 h-16 object-cover rounded border border-gray-200 flex-shrink-0"
+                          onError={(e) => {
+                            e.currentTarget.style.display = 'none'
+                          }}
+                        />
+                      )}
+
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-start justify-between">
+                          <div>
+                            <h4 className="text-sm font-medium text-gray-900 pr-2">
+                              {event.title}
+                            </h4>
+                            <div className="text-sm text-gray-600 space-y-1">
+                              <div>{formatEventTime(event.start_date)}</div>
+                              {event.venue && <div>{event.venue}</div>}
+                              {event.address && <div className="text-xs">{event.address}</div>}
+                            </div>
+                          </div>
+                          {isSelected && (
+                            <button
+                              onClick={() => handleFeaturedToggle(date, event.id)}
+                              disabled={updating}
+                              className={`px-2 py-1 text-xs rounded border ${
+                                isFeatured
+                                  ? 'bg-yellow-100 text-yellow-800 border-yellow-300'
+                                  : 'bg-gray-100 text-gray-700 border-gray-300 hover:bg-gray-200'
+                              } ${updating ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+                            >
+                              {isFeatured ? 'Featured' : 'Feature'}
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+          </div>
+        )
+      })}
+    </div>
+  )
+}
 
 // Sortable Article Component
 function SortableArticle({
@@ -189,6 +392,13 @@ export default function CampaignDetailPage() {
   const [generatingSubject, setGeneratingSubject] = useState(false)
   const [updatingStatus, setUpdatingStatus] = useState(false)
 
+  // Events state
+  const [campaignEvents, setCampaignEvents] = useState<CampaignEvent[]>([])
+  const [availableEvents, setAvailableEvents] = useState<Event[]>([])
+  const [loadingEvents, setLoadingEvents] = useState(false)
+  const [eventsExpanded, setEventsExpanded] = useState(false)
+  const [updatingEvents, setUpdatingEvents] = useState(false)
+
   // Drag and drop sensors
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -200,6 +410,7 @@ export default function CampaignDetailPage() {
   useEffect(() => {
     if (params.id) {
       fetchCampaign(params.id as string)
+      fetchCampaignEvents(params.id as string)
     }
   }, [params.id])
 
@@ -215,6 +426,33 @@ export default function CampaignDetailPage() {
       setError(error instanceof Error ? error.message : 'Unknown error')
     } finally {
       setLoading(false)
+    }
+  }
+
+  const fetchCampaignEvents = async (campaignId: string) => {
+    try {
+      const response = await fetch(`/api/campaigns/${campaignId}/events`)
+      if (response.ok) {
+        const data = await response.json()
+        setCampaignEvents(data.campaign_events || [])
+      }
+    } catch (error) {
+      console.error('Failed to fetch campaign events:', error)
+    }
+  }
+
+  const fetchAvailableEvents = async (startDate: string, endDate: string) => {
+    setLoadingEvents(true)
+    try {
+      const response = await fetch(`/api/events?start_date=${startDate}&end_date=${endDate}&active=true`)
+      if (response.ok) {
+        const data = await response.json()
+        setAvailableEvents(data.events || [])
+      }
+    } catch (error) {
+      console.error('Failed to fetch available events:', error)
+    } finally {
+      setLoadingEvents(false)
     }
   }
 
@@ -490,6 +728,55 @@ export default function CampaignDetailPage() {
     } finally {
       setGeneratingSubject(false)
     }
+  }
+
+  const updateEventSelections = async (eventDate: string, selectedEvents: string[], featuredEvent?: string) => {
+    if (!campaign) return
+
+    setUpdatingEvents(true)
+    try {
+      const response = await fetch(`/api/campaigns/${campaign.id}/events`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          event_date: eventDate,
+          selected_events: selectedEvents,
+          featured_event: featuredEvent
+        })
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Failed to update events')
+      }
+
+      // Refresh campaign events
+      await fetchCampaignEvents(campaign.id)
+
+    } catch (error) {
+      alert('Failed to update events: ' + (error instanceof Error ? error.message : 'Unknown error'))
+    } finally {
+      setUpdatingEvents(false)
+    }
+  }
+
+  const handleEventsExpand = () => {
+    if (!eventsExpanded && campaign) {
+      // Calculate 3-day range around campaign date
+      const campaignDate = new Date(campaign.date)
+      const startDate = new Date(campaignDate)
+      startDate.setDate(campaignDate.getDate() - 1)
+      const endDate = new Date(campaignDate)
+      endDate.setDate(campaignDate.getDate() + 1)
+
+      const startDateStr = startDate.toISOString().split('T')[0]
+      const endDateStr = endDate.toISOString().split('T')[0]
+
+      fetchAvailableEvents(startDateStr, endDateStr)
+    }
+    setEventsExpanded(!eventsExpanded)
   }
 
   const getScoreColor = (score: number) => {
@@ -849,6 +1136,63 @@ export default function CampaignDetailPage() {
               </DndContext>
             )}
           </div>
+        </div>
+
+        {/* Local Events Section */}
+        <div className="bg-white shadow rounded-lg mt-6">
+          <div className="px-6 py-4 border-b border-gray-200">
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-medium text-gray-900">
+                Local Events
+              </h2>
+              <button
+                onClick={handleEventsExpand}
+                className="flex items-center space-x-2 text-sm text-brand-primary hover:text-blue-700"
+              >
+                <span>{eventsExpanded ? 'Collapse' : 'Manage Events'}</span>
+                <svg
+                  className={`w-4 h-4 transform transition-transform ${eventsExpanded ? 'rotate-180' : ''}`}
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+            </div>
+            {campaignEvents.length > 0 && (
+              <p className="text-sm text-gray-600 mt-1">
+                {campaignEvents.length} events selected across dates
+              </p>
+            )}
+          </div>
+
+          {eventsExpanded && (
+            <div className="p-6">
+              {loadingEvents ? (
+                <div className="flex items-center justify-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-primary"></div>
+                  <span className="ml-3 text-gray-600">Loading events...</span>
+                </div>
+              ) : (
+                <EventsManager
+                  campaign={campaign}
+                  availableEvents={availableEvents}
+                  campaignEvents={campaignEvents}
+                  onUpdateEvents={updateEventSelections}
+                  updating={updatingEvents}
+                />
+              )}
+            </div>
+          )}
+
+          {!eventsExpanded && campaignEvents.length > 0 && (
+            <div className="px-6 pb-4">
+              <div className="text-sm text-gray-600">
+                Events configured for this newsletter. Click "Manage Events" to modify selections.
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Preview Modal */}

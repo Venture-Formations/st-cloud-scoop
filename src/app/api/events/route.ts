@@ -21,12 +21,19 @@ export async function GET(request: NextRequest) {
       .select('*')
       .order('start_date', { ascending: true })
 
-    // Filter by date range
-    if (startDate) {
-      query = query.gte('start_date', startDate)
-    }
-    if (endDate) {
-      query = query.lte('start_date', endDate)
+    // Filter by date range - find events that overlap with the requested range
+    if (startDate && endDate) {
+      // Events that overlap: event starts before/on endDate AND event ends after/on startDate
+      query = query
+        .lte('start_date', endDate + 'T23:59:59')
+        .or(`end_date.gte.${startDate}T00:00:00,end_date.is.null,start_date.gte.${startDate}T00:00:00`)
+    } else if (startDate) {
+      // Events on or after startDate
+      query = query
+        .or(`start_date.gte.${startDate}T00:00:00,end_date.gte.${startDate}T00:00:00,end_date.is.null`)
+    } else if (endDate) {
+      // Events on or before endDate
+      query = query.lte('start_date', endDate + 'T23:59:59')
     }
 
     // Filter by active status

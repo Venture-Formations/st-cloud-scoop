@@ -62,26 +62,13 @@ function EventsManager({
     const dateStart = new Date(date + 'T00:00:00-05:00')
     const dateEnd = new Date(date + 'T23:59:59-05:00')
 
-    console.log(`DEBUG: Filtering events for date ${date}`)
-    console.log(`DEBUG: Date range: ${dateStart.toISOString()} to ${dateEnd.toISOString()}`)
-    console.log(`DEBUG: Total available events: ${availableEvents.length}`)
-
-    const filteredEvents = availableEvents.filter(event => {
+    return availableEvents.filter(event => {
       const eventStart = new Date(event.start_date)
       const eventEnd = event.end_date ? new Date(event.end_date) : eventStart
 
       // Event overlaps with this date
-      const overlaps = (eventStart <= dateEnd && eventEnd >= dateStart)
-
-      if (date === '2025-09-19') {
-        console.log(`DEBUG: Event "${event.title}" - Start: ${eventStart.toISOString()}, End: ${eventEnd.toISOString()}, Overlaps: ${overlaps}`)
-      }
-
-      return overlaps
+      return (eventStart <= dateEnd && eventEnd >= dateStart)
     })
-
-    console.log(`DEBUG: Filtered events for ${date}: ${filteredEvents.length}`)
-    return filteredEvents
   }
 
   const getSelectedEventsForDate = (date: string) => {

@@ -36,16 +36,30 @@ export async function POST(request: NextRequest) {
 
     console.log('Starting events sync from Visit St. Cloud API...')
 
-    // Calculate date range (next 7 days)
-    const startDate = new Date()
-    const endDate = new Date()
-    endDate.setDate(startDate.getDate() + 7)
+    // For testing/manual sync, allow date override from query params
+    const { searchParams } = new URL(request.url)
+    const overrideStartDate = searchParams.get('start_date')
+    const overrideEndDate = searchParams.get('end_date')
 
-    const startDateString = startDate.toISOString().split('T')[0]
-    const endDateString = endDate.toISOString().split('T')[0]
+    let startDateString, endDateString
+
+    if (overrideStartDate && overrideEndDate) {
+      // Use override dates if provided
+      startDateString = overrideStartDate
+      endDateString = overrideEndDate
+      console.log('Using override dates:', startDateString, 'to', endDateString)
+    } else {
+      // Calculate date range (next 7 days)
+      const startDate = new Date()
+      const endDate = new Date()
+      endDate.setDate(startDate.getDate() + 7)
+
+      startDateString = startDate.toISOString().split('T')[0]
+      endDateString = endDate.toISOString().split('T')[0]
+    }
 
     // Fetch events from Visit St. Cloud API
-    const apiUrl = `https://www.visitstcloud.com/wp-json/tribe/events/v1/events?start_date=${startDateString}&end_date=${endDateString}&per_page=100`
+    const apiUrl = `https://www.visitstcloud.com/wp-json/tribe/events/v1/events?start_date=${startDateString}&end_date=${endDateString}&per_page=100&status=publish`
 
     console.log('Fetching from:', apiUrl)
 

@@ -6,7 +6,7 @@ import { authOptions } from '@/lib/auth'
 // PATCH - Update an event
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: { id: string } }
 ) {
   try {
     const session = await getServerSession(authOptions)
@@ -14,7 +14,7 @@ export async function PATCH(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const eventId = params.id
+    const eventId = context.params.id
     const body = await request.json()
 
     // Only allow updating certain fields
@@ -60,7 +60,7 @@ export async function PATCH(
 // DELETE - Delete an event
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: { id: string } }
 ) {
   try {
     const session = await getServerSession(authOptions)
@@ -68,7 +68,7 @@ export async function DELETE(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const eventId = params.id
+    const eventId = context.params.id
 
     // First, delete any campaign_events that reference this event
     const { error: campaignEventsError } = await supabaseAdmin

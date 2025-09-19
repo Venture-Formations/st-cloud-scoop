@@ -69,64 +69,102 @@ export async function POST(request: NextRequest) {
       endDateString = overrideEndDate
       console.log('Using override dates:', startDateString, 'to', endDateString)
     } else {
-      // Calculate date range (next 7 days)
+      // We'll fetch each day individually instead of using a date range
       const startDate = new Date()
-      const endDate = new Date()
-      endDate.setDate(startDate.getDate() + 7)
-
       startDateString = startDate.toISOString().split('T')[0]
-      endDateString = endDate.toISOString().split('T')[0]
+      endDateString = startDate.toISOString().split('T')[0] // This will be updated in the loop
     }
 
-    // Fetch events from Visit St. Cloud API with pagination
+    // Fetch events from Visit St. Cloud API - using daily calls for better results
     let allEvents: VisitStCloudEvent[] = []
-    let page = 1
-    let hasMorePages = true
-    const perPage = 100
 
-    while (hasMorePages) {
-      const apiUrl = `https://www.visitstcloud.com/wp-json/tribe/events/v1/events?start_date=${startDateString}&end_date=${endDateString}&per_page=${perPage}&page=${page}&status=publish`
+    if (overrideStartDate && overrideEndDate) {
+      // If override dates provided, use the original pagination logic for that range
+      let page = 1
+      let hasMorePages = true
+      const perPage = 100
 
-      console.log(`Fetching page ${page} from:`, apiUrl)
+      while (hasMorePages) {
+        const apiUrl = `https://www.visitstcloud.com/wp-json/tribe/events/v1/events?start_date=${startDateString}&end_date=${endDateString}&per_page=${perPage}&page=${page}&status=publish`
 
-      const response = await fetch(apiUrl, {
-        headers: {
-          'User-Agent': 'St. Cloud Scoop Newsletter (stcscoop.com)',
-          'Accept': 'application/json'
+        console.log(`Fetching page ${page} from:`, apiUrl)
+
+        const response = await fetch(apiUrl, {
+          headers: {
+            'User-Agent': 'St. Cloud Scoop Newsletter (stcscoop.com)',
+            'Accept': 'application/json'
+          }
+        })
+
+        if (!response.ok) {
+          throw new Error(`Visit St. Cloud API error: ${response.status} ${response.statusText}`)
         }
-      })
 
-      if (!response.ok) {
-        throw new Error(`Visit St. Cloud API error: ${response.status} ${response.statusText}`)
-      }
+        const data = await response.json()
+        const pageEvents: VisitStCloudEvent[] = data.events || []
 
-      const data = await response.json()
-      const pageEvents: VisitStCloudEvent[] = data.events || []
-
-      if (pageEvents.length === 0) {
-        // No more events, stop pagination
-        hasMorePages = false
-      } else {
-        allEvents = allEvents.concat(pageEvents)
-        console.log(`Page ${page}: fetched ${pageEvents.length} events (total so far: ${allEvents.length})`)
-
-        // If we got fewer events than requested per page, we've reached the end
-        if (pageEvents.length < perPage) {
+        if (pageEvents.length === 0) {
           hasMorePages = false
         } else {
-          page++
+          allEvents = allEvents.concat(pageEvents)
+          console.log(`Page ${page}: fetched ${pageEvents.length} events (total so far: ${allEvents.length})`)
+
+          if (pageEvents.length < perPage) {
+            hasMorePages = false
+          } else {
+            page++
+          }
+        }
+
+        if (page > 50) {
+          console.warn('Reached maximum pagination safety limit (50 pages)')
+          hasMorePages = false
         }
       }
+    } else {
+      // For daily sync, fetch each of the next 7 days individually
+      console.log('Using daily fetch strategy for better results')
 
-      // Safety check to prevent infinite loops
-      if (page > 50) {
-        console.warn('Reached maximum pagination safety limit (50 pages)')
-        hasMorePages = false
+      for (let dayOffset = 0; dayOffset < 7; dayOffset++) {
+        const currentDate = new Date()
+        currentDate.setDate(currentDate.getDate() + dayOffset)
+        const dayString = currentDate.toISOString().split('T')[0]
+
+        console.log(`Fetching events for day ${dayOffset + 1}/7: ${dayString}`)
+
+        try {
+          const apiUrl = `https://www.visitstcloud.com/wp-json/tribe/events/v1/events?start_date=${dayString}&end_date=${dayString}&per_page=100&status=publish`
+
+          const response = await fetch(apiUrl, {
+            headers: {
+              'User-Agent': 'St. Cloud Scoop Newsletter (stcscoop.com)',
+              'Accept': 'application/json'
+            }
+          })
+
+          if (!response.ok) {
+            console.warn(`API error for ${dayString}: ${response.status} ${response.statusText}`)
+            continue // Skip this day and continue with others
+          }
+
+          const data = await response.json()
+          const dayEvents: VisitStCloudEvent[] = data.events || []
+
+          if (dayEvents.length > 0) {
+            allEvents = allEvents.concat(dayEvents)
+            console.log(`Day ${dayString}: fetched ${dayEvents.length} events (total so far: ${allEvents.length})`)
+          } else {
+            console.log(`Day ${dayString}: no events found`)
+          }
+        } catch (error) {
+          console.warn(`Error fetching events for ${dayString}:`, error)
+          // Continue with other days even if one fails
+        }
       }
     }
 
     const events = allEvents
-    console.log(`Fetched total ${events.length} events from API across ${page} pages`)
+    console.log(`Fetched total ${events.length} events from API using daily strategy`)
 
     let newEvents = 0
     let updatedEvents = 0

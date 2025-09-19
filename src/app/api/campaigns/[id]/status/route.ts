@@ -63,8 +63,16 @@ export async function POST(
         const slack = new SlackNotificationService()
         const userName = session.user?.name || session.user?.email || 'Unknown User'
 
+        // Format date like the dashboard: "Wednesday, September 17, 2025"
+        const formattedDate = new Date(campaign.date).toLocaleDateString('en-US', {
+          weekday: 'long',
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric'
+        })
+
         await slack.sendSimpleMessage(
-          `Changes to ${campaign.date} made by ${userName}`
+          `Changes to ${formattedDate} made by ${userName}`
         )
       } catch (slackError) {
         console.error('Failed to send Slack notification:', slackError)

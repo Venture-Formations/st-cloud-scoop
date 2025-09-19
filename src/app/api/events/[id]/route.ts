@@ -3,14 +3,6 @@ import { getServerSession } from 'next-auth'
 import { supabaseAdmin } from '@/lib/supabase'
 import { authOptions } from '@/lib/auth'
 
-interface UpdateEventData {
-  title?: string
-  venue?: string | null
-  address?: string | null
-  featured?: boolean
-  updated_at?: string
-}
-
 // PATCH - Update an event
 export async function PATCH(
   request: NextRequest,
@@ -26,12 +18,12 @@ export async function PATCH(
     const body = await request.json()
 
     // Only allow updating certain fields
-    const allowedFields: (keyof UpdateEventData)[] = ['title', 'venue', 'address', 'featured']
-    const updateData: UpdateEventData = {}
+    const allowedFields = ['title', 'venue', 'address', 'featured'] as const
+    const updateData: Record<string, any> = {}
 
     for (const field of allowedFields) {
       if (field in body) {
-        (updateData as any)[field] = body[field]
+        updateData[field] = body[field]
       }
     }
 

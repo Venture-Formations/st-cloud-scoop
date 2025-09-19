@@ -776,16 +776,25 @@ export default function CampaignDetailPage() {
 
   const handleEventsExpand = () => {
     if (!eventsExpanded && campaign) {
-      // Calculate 3-day range starting 12 hours from campaign creation
+      // Use the same date calculation logic as EventsManager component
       const campaignCreated = new Date(campaign.created_at)
-      const startDateTime = new Date(campaignCreated.getTime() + (12 * 60 * 60 * 1000)) // Add 12 hours
+
+      // Convert to Central Time (-5 hours from UTC)
+      const centralTimeOffset = -5 * 60 * 60 * 1000 // -5 hours in milliseconds
+      const campaignCreatedCentral = new Date(campaignCreated.getTime() + centralTimeOffset)
+
+      // Add 12 hours to get start time in Central Time
+      const startDateTime = new Date(campaignCreatedCentral.getTime() + (12 * 60 * 60 * 1000))
+
+      // Calculate 3-day range (0, 1, 2 = 3 days total)
       const startDate = new Date(startDateTime)
       const endDate = new Date(startDateTime)
-      endDate.setDate(startDateTime.getDate() + 2)
+      endDate.setDate(startDateTime.getDate() + 2) // +2 days for 3-day range
 
       const startDateStr = startDate.toISOString().split('T')[0]
       const endDateStr = endDate.toISOString().split('T')[0]
 
+      console.log('Fetching events with date range:', startDateStr, 'to', endDateStr)
       fetchAvailableEvents(startDateStr, endDateStr)
     }
     setEventsExpanded(!eventsExpanded)

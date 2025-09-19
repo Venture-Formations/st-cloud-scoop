@@ -1,7 +1,7 @@
 # St. Cloud Scoop Development Session Notes
 
-**Last Updated:** 2025-09-18 20:35 UTC
-**Session Focus:** AI Subject Line Generation Debugging & Automated Newsletter Scheduling
+**Last Updated:** 2025-09-19 15:45 UTC
+**Session Focus:** Campaign Approval System, Slack Notifications & Article Image Thumbnails
 
 ## 🔍 Current Issues Identified & Resolved
 
@@ -104,13 +104,38 @@ Current Campaign Articles (All Score 21):
 - **Idempotent**: Safe to run multiple times, won't duplicate work
 - **Manual Testing**: GET endpoints with secret parameter for debugging
 
+## 🆕 Recent Updates (Sept 19, 2025)
+
+### Campaign Approval System
+- **Added**: "Changes Made" and "Approved" buttons to campaign detail page
+- **Status Workflow**: Draft → In Review → Ready to Send → Sent
+- **Database**: Added `last_action`, `last_action_at`, `last_action_by` fields
+- **Slack Integration**: Sends notifications when "Changes Made" is clicked
+- **UI Updates**: "Ready to Send" status displays throughout dashboard
+
+### Slack Notification Improvements
+- **Simple Messages**: Clean format using `sendSimpleMessage()` method
+- **Date Format**: Uses full formatted date "Wednesday, September 17, 2025"
+- **Removed Fields**: Eliminated INFO/TIME/CONTEXT metadata for cleaner messages
+- **Webhook**: Configured `SLACK_WEBHOOK_URL` in Vercel environment
+
+### Article Image Thumbnails
+- **Visual Selection**: Added 64x64px thumbnail images next to article titles
+- **Source**: Images from RSS post `image_url` field when available
+- **Error Handling**: Images gracefully hide on load failure
+- **Layout**: Responsive design with proper spacing and alignment
+
+### Technical Fixes
+- **TypeScript Errors**: Fixed compilation issues with Next.js 15 route params
+- **Build Process**: Local build verification before deployments
+- **Database Migration**: Applied approval system schema changes
+
 ## 🚀 Next Steps
 
-1. **Deploy**: Push changes to activate automated scheduling
-2. **Configure**: Set up Email settings in dashboard (Review Group ID, From Email, Sender Name)
-3. **Test**: Use manual endpoints to verify each step works
-4. **Monitor**: Check Vercel cron logs for automated execution
-5. **Future**: Add main group newsletter sending after review testing is complete
+1. **Monitor**: Test approval workflow in production
+2. **Verify**: Slack notifications work correctly with formatted dates
+3. **Review**: Check article images display properly for RSS posts
+4. **Future**: Add main group newsletter sending after review testing is complete
 
 ## 📁 Key Files Modified
 
@@ -132,6 +157,15 @@ src/app/api/cron/rss-processing/route.ts             # RSS automation
 src/app/api/cron/generate-subject/route.ts           # Subject automation
 src/app/api/cron/create-campaign/route.ts            # Campaign automation (review only)
 vercel.json                                           # Cron schedule config (main group sending removed)
+
+# Recent Updates (Sept 19, 2025)
+src/app/api/campaigns/[id]/status/route.ts           # Campaign approval API
+src/app/dashboard/campaigns/[id]/page.tsx            # Approval buttons + image thumbnails
+src/app/dashboard/campaigns/page.tsx                 # "Ready to Send" status display
+src/lib/slack.ts                                     # Simple message method
+src/app/api/test/database/route.ts                   # TypeScript compilation fix
+src/types/database.ts                                # Status workflow types
+database_migration_approval_system.sql               # Database schema update
 ```
 
 ## 🔄 Auto-Update Instructions

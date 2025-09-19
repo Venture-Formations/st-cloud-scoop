@@ -64,7 +64,10 @@ export async function POST(
         const userName = session.user?.name || session.user?.email || 'Unknown User'
 
         // Format date like the dashboard: "Wednesday, September 17, 2025"
-        const formattedDate = new Date(campaign.date).toLocaleDateString('en-US', {
+        // Parse date as local date to avoid timezone offset issues
+        const [year, month, day] = campaign.date.split('-').map(Number)
+        const date = new Date(year, month - 1, day) // month is 0-indexed
+        const formattedDate = date.toLocaleDateString('en-US', {
           weekday: 'long',
           year: 'numeric',
           month: 'long',

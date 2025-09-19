@@ -31,7 +31,7 @@ export async function PATCH(
 
     for (const field of allowedFields) {
       if (field in body) {
-        updateData[field] = body[field]
+        (updateData as any)[field] = body[field]
       }
     }
 

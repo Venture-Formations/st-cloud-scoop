@@ -33,6 +33,7 @@ export async function GET(
           word_count,
           fact_check_score,
           is_active,
+          rank,
           rss_post:rss_posts(
             source_url,
             image_url,

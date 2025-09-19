@@ -1,7 +1,7 @@
 import axios from 'axios'
 import { supabaseAdmin } from './supabase'
 import { ErrorHandler, SlackNotificationService } from './slack'
-import type { CampaignWithArticles, Article } from '@/types/database'
+import type { CampaignWithArticles, CampaignWithEvents, Article } from '@/types/database'
 
 const MAILERLITE_API_BASE = 'https://connect.mailerlite.com/api'
 
@@ -23,7 +23,7 @@ export class MailerLiteService {
     this.slack = new SlackNotificationService()
   }
 
-  async createReviewCampaign(campaign: CampaignWithArticles, forcedSubjectLine?: string) {
+  async createReviewCampaign(campaign: CampaignWithEvents, forcedSubjectLine?: string) {
     try {
       console.log(`Creating review campaign for ${campaign.date}`)
 
@@ -175,7 +175,7 @@ export class MailerLiteService {
     }
   }
 
-  private generateEmailHTML(campaign: CampaignWithArticles, isReview: boolean): string {
+  private generateEmailHTML(campaign: CampaignWithEvents, isReview: boolean): string {
     // Filter active articles and sort by rank (custom order)
     const activeArticles = campaign.articles
       .filter(article => article.is_active)
@@ -183,6 +183,14 @@ export class MailerLiteService {
 
     console.log('MailerLite - Active articles to render:', activeArticles.length)
     console.log('MailerLite - Article order:', activeArticles.map(a => `${a.headline} (rank: ${a.rank})`).join(', '))
+
+    // Filter selected events
+    const eventsData = (campaign.campaign_events || [])
+      .filter((ce: any) => ce.is_selected && ce.event)
+      .sort((a: any, b: any) => (a.display_order || 999) - (b.display_order || 999))
+
+    console.log('MailerLite - Selected events to render:', eventsData.length)
+    console.log('MailerLite - Events data:', eventsData.map((ce: any) => `${ce.event.title} (${ce.event_date})`).join(', '))
 
     // Use the same format as the preview template with local date parsing
     const [year, month, day] = campaign.date.split('-').map(Number)
@@ -239,6 +247,107 @@ export class MailerLiteService {
  </td>
 </tr>`
     }).join('')
+
+    // Generate events HTML using the same logic as preview
+    const generateEventsHTML = (eventsData: any[]) => {
+      if (!eventsData || eventsData.length === 0) {
+        return '' // Don't include section if no events
+      }
+
+      // Group events by date
+      const eventsByDate: { [key: string]: any[] } = {}
+      eventsData.forEach((ce: any) => {
+        if (!eventsByDate[ce.event_date]) {
+          eventsByDate[ce.event_date] = []
+        }
+        eventsByDate[ce.event_date].push(ce)
+      })
+
+      const formatEventDate = (dateString: string) => {
+        try {
+          const date = new Date(dateString + 'T00:00:00')
+          return date.toLocaleDateString('en-US', {
+            weekday: 'long',
+            month: 'long',
+            day: 'numeric'
+          })
+        } catch (e) {
+          return dateString
+        }
+      }
+
+      const formatEventTime = (dateString: string) => {
+        try {
+          const date = new Date(dateString)
+          return date.toLocaleTimeString('en-US', {
+            hour: 'numeric',
+            minute: '2-digit',
+            hour12: true
+          })
+        } catch (e) {
+          return ''
+        }
+      }
+
+      const dateGroupsHtml = Object.entries(eventsByDate)
+        .sort(([a], [b]) => a.localeCompare(b)) // Sort dates chronologically
+        .map(([date, events]) => {
+          const featuredEvent = events.find(ce => ce.is_featured)
+          const regularEvents = events.filter(ce => !ce.is_featured)
+
+          // Generate featured event HTML
+          const featuredHtml = featuredEvent ? `
+<tr class='row'>
+ <td class='column' style='padding:8px; vertical-align: top;'>
+ <table width='100%' cellpadding='0' cellspacing='0' style='border: 2px solid #FFD700; border-radius: 8px; background: #FFFBF0; font-family: Arial, sans-serif; font-size: 16px; line-height: 26px; box-shadow:0 4px 12px rgba(255,215,0,.3);'>
+ <tr><td style='padding: 8px 12px 4px; font-size: 12px; font-weight: bold; color: #B8860B; text-align: center;'>⭐ FEATURED EVENT</td></tr>
+ <tr><td style='padding: 4px 12px 8px; font-size: 18px; font-weight: bold; text-align: center;'>${featuredEvent.event.title}</td></tr>
+ ${featuredEvent.event.image_url ? `<tr><td style='padding: 0 12px; text-align: center;'><img src='${featuredEvent.event.image_url}' alt='${featuredEvent.event.title}' style='max-width: 100%; max-height: 300px; border-radius: 4px;'></td></tr>` : ''}
+ <tr><td style='padding: 8px 12px 4px; font-size: 14px; font-weight: bold; color: #1877F2;'>${formatEventTime(featuredEvent.event.start_date)}</td></tr>
+ ${featuredEvent.event.venue ? `<tr><td style='padding: 0 12px 4px; font-size: 14px;'>${featuredEvent.event.venue}</td></tr>` : ''}
+ ${featuredEvent.event.address ? `<tr><td style='padding: 0 12px 4px; font-size: 12px; color: #666;'>${featuredEvent.event.address}</td></tr>` : ''}
+ ${featuredEvent.event.description ? `<tr><td style='padding: 4px 12px 8px; font-size: 14px;'>${featuredEvent.event.description}</td></tr>` : ''}
+ ${featuredEvent.event.url ? `<tr><td style='padding: 4px 12px 12px; text-align: center;'><a href='${featuredEvent.event.url}' style='color: #0080FE; text-decoration: none; font-weight: bold;'>Learn More</a></td></tr>` : ''}
+ </table>
+ </td>
+</tr>` : ''
+
+          // Generate regular events HTML
+          const regularEventsHtml = regularEvents.map((ce: any) => `
+<tr class='row'>
+ <td class='column' style='padding:4px 8px; vertical-align: top;'>
+ <table width='100%' cellpadding='0' cellspacing='0' style='border: 1px solid #ddd; border-radius: 6px; background: #fff; font-family: Arial, sans-serif; font-size: 14px; line-height: 20px;'>
+ <tr><td style='padding: 8px 10px 4px; font-size: 16px; font-weight: bold;'>${ce.event.title}</td></tr>
+ <tr><td style='padding: 0 10px 4px; font-size: 12px; font-weight: bold; color: #1877F2;'>${formatEventTime(ce.event.start_date)}</td></tr>
+ ${ce.event.venue ? `<tr><td style='padding: 0 10px 4px; font-size: 12px;'>${ce.event.venue}</td></tr>` : ''}
+ ${ce.event.url ? `<tr><td style='padding: 4px 10px 8px; text-align: right;'><a href='${ce.event.url}' style='color: #0080FE; text-decoration: none; font-size: 11px;'>Details</a></td></tr>` : '<tr><td style="padding: 4px;"></td></tr>'}
+ </table>
+ </td>
+</tr>`).join('')
+
+          return `
+<tr>
+  <td style="padding: 12px 5px 8px;">
+    <h3 style="font-size: 1.2em; font-family: Arial, sans-serif; color: #1877F2; margin: 0; padding: 0; border-bottom: 2px solid #1877F2; padding-bottom: 4px;">${formatEventDate(date)}</h3>
+  </td>
+</tr>
+${featuredHtml}
+${regularEventsHtml}`
+        }).join('')
+
+      return `
+<table width="100%" cellpadding="0" cellspacing="0" style="border: 1px solid #f7f7f7; border-radius: 10px; margin-top: 10px; max-width: 990px; margin: 0 auto; background-color: #f7f7f7; font-family: Arial, sans-serif;">
+  <tr>
+    <td style="padding: 5px;">
+      <h2 style="font-size: 1.625em; line-height: 1.16em; font-family: Arial, sans-serif; color: #1877F2; margin: 0; padding: 0;">Local Events</h2>
+    </td>
+  </tr>
+  ${dateGroupsHtml}
+</table>
+<br>`
+    }
+
+    const eventsHtml = generateEventsHTML(eventsData)
 
     // Use exact same template as preview with review banner at top and global email rules
     return `<html lang="en">
@@ -377,6 +486,7 @@ ${reviewHeaderTop}
   ${articlesHtml}
 </table>
 <br>
+${eventsHtml}
 <div style="max-width: 990px; margin: 0 auto; background-color: #1877F2; padding: 8px 0; text-align: center;">
   <a href="https://www.facebook.com/61578947310955/" target="_blank">
     <img src="https://raw.githubusercontent.com/VFDavid/STCScoop/refs/heads/main/facebook_light.png" alt="Facebook" width="24" height="24" style="border: none; display: inline-block;">
@@ -415,7 +525,7 @@ ${reviewHeaderTop}
     return utcTime.toISOString()
   }
 
-  async createFinalCampaign(campaign: CampaignWithArticles, mainGroupId: string) {
+  async createFinalCampaign(campaign: CampaignWithEvents, mainGroupId: string) {
     try {
       console.log(`Creating final campaign for ${campaign.date}`)
 

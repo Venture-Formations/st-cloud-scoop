@@ -24,7 +24,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     console.log('=== SEND REVIEW REQUEST ===')
     console.log('Forced subject line from frontend:', forcedSubjectLine)
 
-    // Fetch campaign with articles
+    // Fetch campaign with articles and events
     const { data: campaign, error } = await supabaseAdmin
       .from('newsletter_campaigns')
       .select(`
@@ -36,7 +36,25 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
             rss_feed:rss_feeds(*)
           )
         ),
-        manual_articles:manual_articles(*)
+        manual_articles:manual_articles(*),
+        campaign_events(
+          id,
+          event_date,
+          is_selected,
+          is_featured,
+          display_order,
+          event:events(
+            id,
+            title,
+            description,
+            start_date,
+            end_date,
+            venue,
+            address,
+            url,
+            image_url
+          )
+        )
       `)
       .eq('id', id)
       .single()

@@ -28,10 +28,8 @@ export async function GET(request: NextRequest) {
       query = query.gte('start_date', startDate)
     }
     if (endDate) {
-      // Add one day to endDate to make it inclusive
-      const endDateInclusive = new Date(endDate)
-      endDateInclusive.setDate(endDateInclusive.getDate() + 1)
-      query = query.lt('start_date', endDateInclusive.toISOString().split('T')[0])
+      // Make endDate inclusive by using lte instead of lt with +1 day
+      query = query.lte('start_date', endDate + 'T23:59:59')
     }
 
     // Filter by active status

@@ -398,6 +398,7 @@ export default function CampaignDetailPage() {
   const [loadingEvents, setLoadingEvents] = useState(false)
   const [eventsExpanded, setEventsExpanded] = useState(false)
   const [updatingEvents, setUpdatingEvents] = useState(false)
+  const [articlesExpanded, setArticlesExpanded] = useState(true)
 
   // Drag and drop sensors
   const sensors = useSensors(
@@ -1042,10 +1043,26 @@ export default function CampaignDetailPage() {
         {/* Articles Section */}
         <div className="bg-white shadow rounded-lg">
           <div className="px-6 py-4 border-b border-gray-200">
-            <h2 className="text-lg font-medium text-gray-900">
-              Articles ({campaign.articles.length})
-            </h2>
             <div className="flex items-center justify-between">
+              <h2 className="text-lg font-medium text-gray-900">
+                The Local Scoop ({campaign.articles.length})
+              </h2>
+              <button
+                onClick={() => setArticlesExpanded(!articlesExpanded)}
+                className="flex items-center space-x-2 text-sm text-brand-primary hover:text-blue-700"
+              >
+                <span>{articlesExpanded ? 'Minimize' : 'Expand'}</span>
+                <svg
+                  className={`w-4 h-4 transform transition-transform ${articlesExpanded ? 'rotate-180' : ''}`}
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+            </div>
+            <div className="flex items-center justify-between mt-2">
               <p className="text-sm text-gray-600">
                 Toggle articles on/off for the newsletter. Articles are ranked by AI evaluation.
               </p>
@@ -1058,8 +1075,9 @@ export default function CampaignDetailPage() {
             </div>
           </div>
 
-          <div className="divide-y divide-gray-200">
-            {campaign.articles.length === 0 ? (
+          {articlesExpanded && (
+            <div className="divide-y divide-gray-200">
+              {campaign.articles.length === 0 ? (
               <div className="p-6 text-center text-gray-500">
                 <p className="mb-4">No articles generated yet. Run RSS processing to generate articles.</p>
                 <button
@@ -1135,7 +1153,15 @@ export default function CampaignDetailPage() {
                 })()}
               </DndContext>
             )}
-          </div>
+            </div>
+          )}
+          {!articlesExpanded && (
+            <div className="px-6 pb-4">
+              <div className="text-sm text-gray-600">
+                The Local Scoop articles configured for this newsletter. Click "Expand" to modify selections.
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Local Events Section */}

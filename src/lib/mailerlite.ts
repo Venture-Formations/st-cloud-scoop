@@ -27,7 +27,7 @@ export class MailerLiteService {
     try {
       console.log(`Creating review campaign for ${campaign.date}`)
 
-      const emailContent = this.generateEmailHTML(campaign, true)
+      const emailContent = await this.generateEmailHTML(campaign, true)
 
       // Log subject line status
       console.log('Campaign subject line:', campaign.subject_line)
@@ -175,7 +175,15 @@ export class MailerLiteService {
     }
   }
 
-  private generateEmailHTML(campaign: CampaignWithEvents, isReview: boolean): string {
+  private shouldIncludeEventsSection(sections: any[]): boolean {
+    if (!sections || sections.length === 0) {
+      return true // Include by default if no section config
+    }
+
+    return sections.some(section => section.name === 'Local Events')
+  }
+
+  private async generateEmailHTML(campaign: CampaignWithEvents, isReview: boolean): Promise<string> {
     // Filter active articles and sort by rank (custom order)
     const activeArticles = campaign.articles
       .filter(article => article.is_active)
@@ -191,6 +199,15 @@ export class MailerLiteService {
 
     console.log('MailerLite - Selected events to render:', eventsData.length)
     console.log('MailerLite - Events data:', eventsData.map((ce: any) => `${ce.event.title} (${ce.event_date})`).join(', '))
+
+    // Fetch newsletter sections order
+    const { data: sections } = await supabaseAdmin
+      .from('newsletter_sections')
+      .select('*')
+      .eq('is_active', true)
+      .order('display_order', { ascending: true })
+
+    console.log('MailerLite - Active newsletter sections:', sections?.map(s => `${s.name} (order: ${s.display_order})`).join(', '))
 
     // Use the same format as the preview template with local date parsing
     const [year, month, day] = campaign.date.split('-').map(Number)
@@ -486,7 +503,7 @@ ${reviewHeaderTop}
   ${articlesHtml}
 </table>
 <br>
-${eventsHtml}
+${this.shouldIncludeEventsSection(sections) ? eventsHtml : ''}
 <div style="max-width: 990px; margin: 0 auto; background-color: #1877F2; padding: 8px 0; text-align: center;">
   <a href="https://www.facebook.com/61578947310955/" target="_blank">
     <img src="https://raw.githubusercontent.com/VFDavid/STCScoop/refs/heads/main/facebook_light.png" alt="Facebook" width="24" height="24" style="border: none; display: inline-block;">
@@ -529,7 +546,7 @@ ${eventsHtml}
     try {
       console.log(`Creating final campaign for ${campaign.date}`)
 
-      const emailContent = this.generateEmailHTML(campaign, false) // Not a review
+      const emailContent = await this.generateEmailHTML(campaign, false) // Not a review
 
       const subjectLine = campaign.subject_line || `Newsletter - ${new Date(campaign.date).toLocaleDateString()}`
 

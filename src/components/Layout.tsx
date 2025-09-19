@@ -63,6 +63,12 @@ export default function Layout({ children }: LayoutProps) {
                   Analytics
                 </Link>
                 <Link
+                  href="/dashboard/databases"
+                  className="text-gray-900 hover:text-brand-primary px-3 py-2 text-sm font-medium"
+                >
+                  Databases
+                </Link>
+                <Link
                   href="/dashboard/settings"
                   className="text-gray-900 hover:text-brand-primary px-3 py-2 text-sm font-medium"
                 >

@@ -94,7 +94,7 @@ export async function GET(
 
     console.log('Generating HTML newsletter')
     // Generate HTML newsletter
-    const newsletterHtml = generateNewsletterHtml(campaign)
+    const newsletterHtml = await generateNewsletterHtml(campaign)
     console.log('HTML generated, length:', newsletterHtml.length)
 
     return NextResponse.json({
@@ -300,7 +300,7 @@ function generateNewsletterFooter(): string {
 </html>`
 }
 
-function generateNewsletterHtml(campaign: any): string {
+async function generateNewsletterHtml(campaign: any): Promise<string> {
   try {
     console.log('Generating HTML for campaign:', campaign?.id)
 
@@ -319,6 +319,15 @@ function generateNewsletterHtml(campaign: any): string {
 
     console.log('Selected events to render:', eventsData.length)
     console.log('Events data:', eventsData.map((ce: any) => `${ce.event.title} (${ce.event_date})`).join(', '))
+
+    // Fetch newsletter sections order
+    const { data: sections } = await supabaseAdmin
+      .from('newsletter_sections')
+      .select('*')
+      .eq('is_active', true)
+      .order('display_order', { ascending: true })
+
+    console.log('Active newsletter sections:', sections?.map(s => `${s.name} (order: ${s.display_order})`).join(', '))
 
     const formatDate = (dateString: string) => {
       try {
@@ -342,12 +351,26 @@ function generateNewsletterHtml(campaign: any): string {
 
     // Generate modular HTML sections
     const header = generateNewsletterHeader(formattedDate)
-    const localScoopSection = generateLocalScoopSection(activeArticles)
-    const localEventsSection = generateLocalEventsSection(eventsData)
     const footer = generateNewsletterFooter()
 
+    // Generate sections in order based on database configuration
+    let sectionsHtml = ''
+    if (sections && sections.length > 0) {
+      for (const section of sections) {
+        if (section.name === 'The Local Scoop' && activeArticles.length > 0) {
+          sectionsHtml += generateLocalScoopSection(activeArticles)
+        } else if (section.name === 'Local Events' && eventsData.length > 0) {
+          sectionsHtml += generateLocalEventsSection(eventsData)
+        }
+      }
+    } else {
+      // Fallback to default order if no sections configured
+      console.log('No sections found, using default order')
+      sectionsHtml = generateLocalScoopSection(activeArticles) + generateLocalEventsSection(eventsData)
+    }
+
     // Combine all sections
-    const html = header + localScoopSection + localEventsSection + footer
+    const html = header + sectionsHtml + footer
 
     console.log('HTML template generated successfully, length:', html.length)
     return html

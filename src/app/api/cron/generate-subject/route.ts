@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
 import { AI_PROMPTS, callOpenAI } from '@/lib/openai'
+import { ScheduleChecker } from '@/lib/schedule-checker'
 
 export async function POST(request: NextRequest) {
   try {
@@ -10,27 +11,23 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    console.log('=== AUTOMATED SUBJECT LINE GENERATION STARTED ===')
+    console.log('=== AUTOMATED SUBJECT LINE GENERATION CHECK ===')
     console.log('Time:', new Date().toISOString())
 
-    // Check if review schedule is enabled
-    const { data: scheduleSettings } = await supabaseAdmin
-      .from('app_settings')
-      .select('value')
-      .eq('key', 'email_reviewScheduleEnabled')
-      .single()
+    // Check if it's time to run subject generation based on database settings
+    const shouldRun = await ScheduleChecker.shouldRunSubjectGeneration()
 
-    const reviewScheduleEnabled = scheduleSettings?.value === 'true'
-    console.log('Review schedule enabled:', reviewScheduleEnabled)
-
-    if (!reviewScheduleEnabled) {
+    if (!shouldRun) {
       return NextResponse.json({
         success: true,
-        message: 'Review schedule is disabled, skipping subject generation',
+        message: 'Not time to run subject generation or already ran today',
         skipped: true,
         timestamp: new Date().toISOString()
       })
     }
+
+    console.log('=== SUBJECT LINE GENERATION STARTED (Time Matched) ===')
+    console.log('Central Time:', new Date().toLocaleString("en-US", {timeZone: "America/Chicago"}))
 
     // Get tomorrow's campaign (created by RSS processing 15 minutes ago)
     const tomorrow = new Date()

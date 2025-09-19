@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
 import { MailerLiteService } from '@/lib/mailerlite'
+import { ScheduleChecker } from '@/lib/schedule-checker'
 
 export async function POST(request: NextRequest) {
   // Verify cron secret for security
@@ -10,7 +11,23 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    console.log('Starting scheduled final newsletter send...')
+    console.log('=== AUTOMATED FINAL SEND CHECK ===')
+    console.log('Time:', new Date().toISOString())
+
+    // Check if it's time to run final send based on database settings
+    const shouldRun = await ScheduleChecker.shouldRunFinalSend()
+
+    if (!shouldRun) {
+      return NextResponse.json({
+        success: true,
+        message: 'Not time to run final send or already ran today',
+        skipped: true,
+        timestamp: new Date().toISOString()
+      })
+    }
+
+    console.log('=== FINAL SEND STARTED (Time Matched) ===')
+    console.log('Central Time:', new Date().toLocaleString("en-US", {timeZone: "America/Chicago"}))
 
     // Get today's campaign that's ready to send
     const today = new Date().toISOString().split('T')[0]

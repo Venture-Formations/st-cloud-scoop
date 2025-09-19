@@ -346,10 +346,12 @@ function NewsletterSettings() {
 
 function SystemStatus() {
   const [status, setStatus] = useState<any>(null)
+  const [scheduleDisplay, setScheduleDisplay] = useState<any>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     fetchSystemStatus()
+    fetchScheduleDisplay()
   }, [])
 
   const fetchSystemStatus = async () => {
@@ -361,6 +363,18 @@ function SystemStatus() {
       console.error('Failed to fetch system status:', error)
     } finally {
       setLoading(false)
+    }
+  }
+
+  const fetchScheduleDisplay = async () => {
+    try {
+      const response = await fetch('/api/settings/schedule-display')
+      if (response.ok) {
+        const data = await response.json()
+        setScheduleDisplay(data)
+      }
+    } catch (error) {
+      console.error('Failed to fetch schedule display:', error)
     }
   }
 
@@ -426,16 +440,46 @@ function SystemStatus() {
           <div className="flex justify-between items-center py-2 border-b">
             <div>
               <div className="font-medium">RSS Processing</div>
-              <div className="text-sm text-gray-600">Daily at 8:30 PM CT</div>
+              <div className="text-sm text-gray-600">
+                Daily at {scheduleDisplay?.rssProcessing || '20:30'} CT
+              </div>
             </div>
-            <span className="text-green-600 text-sm">Active</span>
+            <span className={`text-sm ${scheduleDisplay?.reviewEnabled ? 'text-green-600' : 'text-gray-500'}`}>
+              {scheduleDisplay?.reviewEnabled ? 'Active' : 'Disabled'}
+            </span>
+          </div>
+          <div className="flex justify-between items-center py-2 border-b">
+            <div>
+              <div className="font-medium">Subject Line Generation</div>
+              <div className="text-sm text-gray-600">
+                Daily at {scheduleDisplay?.subjectGeneration || '20:45'} CT
+              </div>
+            </div>
+            <span className={`text-sm ${scheduleDisplay?.reviewEnabled ? 'text-green-600' : 'text-gray-500'}`}>
+              {scheduleDisplay?.reviewEnabled ? 'Active' : 'Disabled'}
+            </span>
+          </div>
+          <div className="flex justify-between items-center py-2 border-b">
+            <div>
+              <div className="font-medium">Campaign Creation</div>
+              <div className="text-sm text-gray-600">
+                Daily at {scheduleDisplay?.campaignCreation || '20:50'} CT
+              </div>
+            </div>
+            <span className={`text-sm ${scheduleDisplay?.reviewEnabled ? 'text-green-600' : 'text-gray-500'}`}>
+              {scheduleDisplay?.reviewEnabled ? 'Active' : 'Disabled'}
+            </span>
           </div>
           <div className="flex justify-between items-center py-2 border-b">
             <div>
               <div className="font-medium">Final Newsletter Send</div>
-              <div className="text-sm text-gray-600">Daily at 4:55 AM CT</div>
+              <div className="text-sm text-gray-600">
+                Daily at {scheduleDisplay?.finalSend || '04:55'} CT
+              </div>
             </div>
-            <span className="text-green-600 text-sm">Active</span>
+            <span className={`text-sm ${scheduleDisplay?.dailyEnabled ? 'text-green-600' : 'text-gray-500'}`}>
+              {scheduleDisplay?.dailyEnabled ? 'Active' : 'Disabled'}
+            </span>
           </div>
           <div className="flex justify-between items-center py-2 border-b">
             <div>

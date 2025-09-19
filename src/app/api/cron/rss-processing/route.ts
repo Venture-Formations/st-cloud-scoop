@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
 import { RSSProcessor } from '@/lib/rss-processor'
+import { ScheduleChecker } from '@/lib/schedule-checker'
 
 export async function POST(request: NextRequest) {
   try {
@@ -10,27 +11,23 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    console.log('=== AUTOMATED RSS PROCESSING STARTED ===')
+    console.log('=== AUTOMATED RSS PROCESSING CHECK ===')
     console.log('Time:', new Date().toISOString())
 
-    // Check if review schedule is enabled
-    const { data: scheduleSettings } = await supabaseAdmin
-      .from('app_settings')
-      .select('value')
-      .eq('key', 'email_reviewScheduleEnabled')
-      .single()
+    // Check if it's time to run RSS processing based on database settings
+    const shouldRun = await ScheduleChecker.shouldRunRSSProcessing()
 
-    const reviewScheduleEnabled = scheduleSettings?.value === 'true'
-    console.log('Review schedule enabled:', reviewScheduleEnabled)
-
-    if (!reviewScheduleEnabled) {
+    if (!shouldRun) {
       return NextResponse.json({
         success: true,
-        message: 'Review schedule is disabled, skipping RSS processing',
+        message: 'Not time to run RSS processing or already ran today',
         skipped: true,
         timestamp: new Date().toISOString()
       })
     }
+
+    console.log('=== RSS PROCESSING STARTED (Time Matched) ===')
+    console.log('Central Time:', new Date().toLocaleString("en-US", {timeZone: "America/Chicago"}))
 
     // Get tomorrow's date for campaign creation (RSS processing is for next day)
     const tomorrow = new Date()

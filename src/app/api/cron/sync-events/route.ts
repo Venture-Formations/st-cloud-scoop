@@ -53,6 +53,9 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url)
     const secret = searchParams.get('secret')
 
+    console.log('Received secret length:', secret?.length, 'Expected length:', process.env.CRON_SECRET?.length)
+    console.log('Secrets match:', secret === process.env.CRON_SECRET)
+
     if (secret !== process.env.CRON_SECRET) {
       return NextResponse.json({ error: 'Unauthorized - secret required' }, { status: 401 })
     }

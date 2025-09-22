@@ -104,8 +104,18 @@ export async function POST(request: NextRequest) {
 
     const aiResponse = await callOpenAI(subjectPrompt, 100, 0.8)
 
-    if (aiResponse && aiResponse.trim()) {
-      const generatedSubject = aiResponse.trim()
+    // Handle both string and object responses from OpenAI
+    let responseText = ''
+    if (typeof aiResponse === 'string') {
+      responseText = aiResponse
+    } else if (aiResponse && typeof aiResponse === 'object' && aiResponse.raw) {
+      responseText = aiResponse.raw
+    } else if (aiResponse && typeof aiResponse === 'object') {
+      responseText = JSON.stringify(aiResponse)
+    }
+
+    if (responseText && responseText.trim()) {
+      const generatedSubject = responseText.trim()
       console.log('Generated subject line:', generatedSubject)
 
       // Update campaign with generated subject line

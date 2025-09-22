@@ -2,31 +2,59 @@
   "crons": [
     {
       "path": "/api/cron/rss-processing",
-      "schedule": "*/15 * * * *"
+      "schedule": "*/15 * * * *",
+      "method": "POST",
+      "headers": {
+        "authorization": "Bearer ${CRON_SECRET}"
+      }
     },
     {
       "path": "/api/cron/create-campaign",
-      "schedule": "*/15 * * * *"
+      "schedule": "*/15 * * * *",
+      "method": "POST",
+      "headers": {
+        "authorization": "Bearer ${CRON_SECRET}"
+      }
     },
     {
       "path": "/api/cron/process-rss",
-      "schedule": "30 20 * * *"
+      "schedule": "30 20 * * *",
+      "method": "POST",
+      "headers": {
+        "authorization": "Bearer ${CRON_SECRET}"
+      }
     },
     {
       "path": "/api/cron/send-final",
-      "schedule": "*/15 * * * *"
+      "schedule": "*/15 * * * *",
+      "method": "POST",
+      "headers": {
+        "authorization": "Bearer ${CRON_SECRET}"
+      }
     },
     {
       "path": "/api/cron/import-metrics",
-      "schedule": "0 6 * * *"
+      "schedule": "0 6 * * *",
+      "method": "POST",
+      "headers": {
+        "authorization": "Bearer ${CRON_SECRET}"
+      }
     },
     {
       "path": "/api/cron/health-check",
-      "schedule": "*/15 8-22 * * *"
+      "schedule": "*/15 8-22 * * *",
+      "method": "POST",
+      "headers": {
+        "authorization": "Bearer ${CRON_SECRET}"
+      }
     },
     {
       "path": "/api/cron/sync-events",
-      "schedule": "0 0 * * *"
+      "schedule": "0 0 * * *",
+      "method": "POST",
+      "headers": {
+        "authorization": "Bearer ${CRON_SECRET}"
+      }
     }
   ],
   "functions": {

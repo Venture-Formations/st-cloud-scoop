@@ -8,7 +8,11 @@ export async function POST(request: NextRequest) {
   try {
     // Verify this is a legitimate cron request
     const authHeader = request.headers.get('authorization')
+    console.log('Auth header received:', authHeader ? 'Present' : 'Missing')
+    console.log('Expected format:', `Bearer ${process.env.CRON_SECRET?.substring(0, 5)}...`)
+
     if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+      console.log('Authentication failed - headers:', Object.fromEntries(request.headers.entries()))
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 

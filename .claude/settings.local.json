@@ -37,7 +37,8 @@
       "Bash(VERCEL_API_KEY=b2rRlFmL9kPxMPl6ZA7pgGDX npx vercel env add NEXTAUTH_URL production)",
       "Bash(VERCEL_API_KEY=b2rRlFmL9kPxMPl6ZA7pgGDX npx vercel env add NEXTAUTH_URL production --token=b2rRlFmL9kPxMPl6ZA7pgGDX)",
       "Bash(VERCEL_API_KEY=b2rRlFmL9kPxMPl6ZA7pgGDX npx -y vercel-mcp)",
-      "mcp__vercel__getDeployment"
+      "mcp__vercel__getDeployment",
+      "mcp__vercel__getDeploymentEvents"
     ],
     "deny": [],
     "ask": []

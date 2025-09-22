@@ -3,10 +3,11 @@ import { supabaseAdmin } from '@/lib/supabase'
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const campaignId = params.id
+    const resolvedParams = await params
+    const campaignId = resolvedParams.id
 
     // Verify campaign exists before deletion
     const { data: campaign, error: fetchError } = await supabaseAdmin

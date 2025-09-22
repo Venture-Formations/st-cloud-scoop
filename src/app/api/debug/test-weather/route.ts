@@ -16,11 +16,13 @@ export async function GET(request: NextRequest) {
 
     // Test image generation (optional)
     let imageUrl = null
+    let imageError = null
     try {
       imageUrl = await generateWeatherImage(weatherHTML)
       console.log('Weather image generated:', imageUrl)
     } catch (error) {
-      console.log('Image generation failed (API key may not be set):', error)
+      imageError = error instanceof Error ? error.message : 'Unknown error'
+      console.log('Image generation failed:', imageError)
     }
 
     return NextResponse.json({
@@ -28,6 +30,7 @@ export async function GET(request: NextRequest) {
       weatherData,
       htmlLength: weatherHTML.length,
       imageUrl,
+      imageError,
       html: weatherHTML
     })
   } catch (error) {

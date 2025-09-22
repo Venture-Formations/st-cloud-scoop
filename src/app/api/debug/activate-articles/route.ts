@@ -56,7 +56,7 @@ export async function POST(request: NextRequest) {
       .map(article => ({
         id: article.id,
         headline: article.headline,
-        score: article.rss_post?.post_rating?.[0]?.total_score || 0,
+        score: (article.rss_post as any)?.post_rating?.[0]?.total_score || 0,
         currentlyActive: article.is_active
       }))
       .sort((a, b) => b.score - a.score)

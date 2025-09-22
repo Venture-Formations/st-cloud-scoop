@@ -107,19 +107,37 @@ export async function POST(request: NextRequest) {
     console.log('AI Response type:', typeof aiResponse)
     console.log('AI Response:', aiResponse)
 
-    // Handle both string and object responses from OpenAI
-    let responseText = ''
-    if (typeof aiResponse === 'string') {
-      responseText = aiResponse
-      console.log('Using string response directly')
-    } else if (aiResponse && typeof aiResponse === 'object' && (aiResponse as any).raw) {
-      responseText = (aiResponse as any).raw
-      console.log('Using raw property from object response')
-    } else if (aiResponse && typeof aiResponse === 'object') {
-      responseText = JSON.stringify(aiResponse)
-      console.log('Converting object to JSON string')
+    // The AI returns JSON with subject_line and character_count
+    let generatedSubject = ''
+
+    if (typeof aiResponse === 'object' && aiResponse && 'subject_line' in aiResponse) {
+      // Direct JSON object response
+      generatedSubject = (aiResponse as any).subject_line
+      console.log('Using direct object subject_line property')
+    } else if (typeof aiResponse === 'object' && aiResponse && 'raw' in aiResponse) {
+      // JSON string in raw property - parse it
+      console.log('Parsing JSON from raw property')
+      try {
+        const parsed = JSON.parse((aiResponse as any).raw)
+        generatedSubject = parsed.subject_line || (aiResponse as any).raw
+        console.log('Extracted subject_line from parsed JSON:', generatedSubject)
+      } catch (e) {
+        generatedSubject = (aiResponse as any).raw
+        console.log('Failed to parse JSON, using raw content')
+      }
+    } else if (typeof aiResponse === 'string') {
+      // JSON string response - parse it
+      console.log('Parsing JSON from string response')
+      try {
+        const parsed = JSON.parse(aiResponse)
+        generatedSubject = parsed.subject_line || aiResponse
+        console.log('Extracted subject_line from parsed string JSON:', generatedSubject)
+      } catch (e) {
+        generatedSubject = aiResponse
+        console.log('Failed to parse string as JSON, using as-is')
+      }
     } else {
-      console.log('Unknown response type:', aiResponse)
+      console.log('Unknown response type:', typeof aiResponse, aiResponse)
       return NextResponse.json({
         success: false,
         error: 'Invalid AI response type',
@@ -128,11 +146,10 @@ export async function POST(request: NextRequest) {
       }, { status: 500 })
     }
 
-    console.log('Response text type:', typeof responseText)
-    console.log('Response text value:', responseText)
+    console.log('Final generated subject:', generatedSubject)
 
-    if (responseText && typeof responseText === 'string' && responseText.trim()) {
-      const generatedSubject = responseText.trim()
+    if (generatedSubject && generatedSubject.trim()) {
+      generatedSubject = generatedSubject.trim()
       console.log('Generated subject line:', generatedSubject)
 
       // Update campaign with generated subject line

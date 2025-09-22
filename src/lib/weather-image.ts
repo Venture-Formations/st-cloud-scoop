@@ -9,13 +9,16 @@ interface ImageGenerationResponse {
  */
 export async function generateWeatherImage(html: string): Promise<string | null> {
   const apiKey = process.env.HTML_CSS_TO_IMAGE_API_KEY
+  const userId = process.env.HTML_CSS_TO_IMAGE_USER_ID
 
-  if (!apiKey) {
-    console.log('HTML_CSS_TO_IMAGE_API_KEY not set, skipping image generation')
+  if (!apiKey || !userId) {
+    console.log('HTML_CSS_TO_IMAGE_API_KEY or HTML_CSS_TO_IMAGE_USER_ID not set, skipping image generation')
+    console.log('API Key present:', !!apiKey, 'User ID present:', !!userId)
     return null
   }
 
   console.log('API key found, length:', apiKey.length)
+  console.log('User ID found, length:', userId.length)
 
   try {
     // Prepare the HTML for image generation
@@ -62,7 +65,7 @@ export async function generateWeatherImage(html: string): Promise<string | null>
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`
+        'Authorization': `Basic ${Buffer.from(`${userId}:${apiKey}`).toString('base64')}`
       },
       body: JSON.stringify({
         html: imageHtml,

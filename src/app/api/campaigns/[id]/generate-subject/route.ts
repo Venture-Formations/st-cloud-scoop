@@ -77,15 +77,39 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     console.log(result)
     console.log('=== END AI RESPONSE ===')
 
-    if (!result.subject_line) {
-      throw new Error('Invalid subject line response from AI')
+    // Handle both plain text and JSON responses
+    let subjectLine = ''
+    if (typeof result === 'string') {
+      subjectLine = result.trim()
+    } else if (result && typeof result === 'object') {
+      if (result.subject_line) {
+        subjectLine = result.subject_line.trim()
+      } else if (result.raw) {
+        subjectLine = result.raw.trim()
+      } else {
+        subjectLine = String(result).trim()
+      }
+    } else {
+      subjectLine = String(result).trim()
     }
+
+    if (!subjectLine) {
+      throw new Error('Empty subject line response from AI')
+    }
+
+    // Enforce character limit
+    if (subjectLine.length > 35) {
+      console.warn(`Subject line too long (${subjectLine.length} chars), truncating to 35`)
+      subjectLine = subjectLine.substring(0, 35).trim()
+    }
+
+    console.log(`Processed subject line: "${subjectLine}" (${subjectLine.length} chars)`)
 
     // Update campaign with generated subject line
     const { error: updateError } = await supabaseAdmin
       .from('newsletter_campaigns')
       .update({
-        subject_line: result.subject_line
+        subject_line: subjectLine
       })
       .eq('id', id)
 
@@ -94,7 +118,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       // Continue anyway - we still return the generated subject line
     }
 
-    console.log(`Generated subject line: "${result.subject_line}" (${result.character_count} chars)`)
+    console.log(`Generated subject line: "${subjectLine}" (${subjectLine.length} chars)`)
 
     // Log user activity
     if (session.user?.email) {
@@ -112,8 +136,8 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
             campaign_id: id,
             action: 'subject_line_generated',
             details: {
-              subject_line: result.subject_line,
-              character_count: result.character_count,
+              subject_line: subjectLine,
+              character_count: subjectLine.length,
               top_article_headline: topArticle.headline,
               top_article_score: topArticle.rss_post?.post_rating?.[0]?.total_score || 0
             }
@@ -123,16 +147,17 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
 
     return NextResponse.json({
       success: true,
-      subject_line: result.subject_line,
-      character_count: result.character_count,
+      subject_line: subjectLine,
+      character_count: subjectLine.length,
       top_article_used: topArticle.headline,
       top_article_score: topArticle.rss_post?.post_rating?.[0]?.total_score || 0
     })
 
   } catch (error) {
     console.error('Failed to generate subject line:', error)
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error'
     return NextResponse.json({
-      error: 'Failed to generate subject line',
+      error: `Failed to generate subject line: ${errorMessage}`,
       message: error instanceof Error ? error.message : 'Unknown error'
     }, { status: 500 })
   }

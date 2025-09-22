@@ -34,7 +34,7 @@ export async function GET() {
         slackSettings.webhookUrl = setting.value || ''
       } else if (key.endsWith('_enabled')) {
         const notificationType = key.replace('_enabled', '')
-        const camelCaseKey = notificationType.replace(/_([a-z])/g, (_, letter) => letter.toUpperCase())
+        const camelCaseKey = notificationType.replace(/_([a-z])/g, (_: string, letter: string) => letter.toUpperCase())
         ;(slackSettings as any)[camelCaseKey] = setting.value === 'true'
       }
     })

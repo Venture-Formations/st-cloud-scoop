@@ -42,7 +42,9 @@
       "Bash(set CRON_SECRET=your_cron_secret_here)",
       "Bash(git reset:*)",
       "Bash(git pull:*)",
-      "Bash(timeout 60 curl -X POST -H \"Content-Type: application/json\" -v https://st-cloud-scoop.vercel.app/api/debug/activate-articles)"
+      "Bash(timeout 60 curl -X POST -H \"Content-Type: application/json\" -v https://st-cloud-scoop.vercel.app/api/debug/activate-articles)",
+      "Bash(VERCEL_API_KEY=b2rRlFmL9kPxMPl6ZA7pgGDX npx vercel env add HTML_CSS_TO_IMAGE_API_KEY production --token=b2rRlFmL9kPxMPl6ZA7pgGDX)",
+      "Bash(timeout 60 curl -X GET \"https://st-cloud-scoop.vercel.app/api/debug/test-weather\" -H \"Content-Type: application/json\" -v)"
     ],
     "deny": [],
     "ask": []

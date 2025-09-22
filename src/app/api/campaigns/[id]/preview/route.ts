@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { supabaseAdmin } from '@/lib/supabase'
+import { getWeatherForCampaign } from '@/lib/weather-manager'
 
 export async function GET(
   request: NextRequest,
@@ -467,6 +468,11 @@ async function generateNewsletterHtml(campaign: any): Promise<string> {
           sectionsHtml += generateLocalScoopSection(activeArticles)
         } else if (section.name === 'Local Events') {
           sectionsHtml += await generateLocalEventsSection(campaign)
+        } else if (section.name === 'Local Weather') {
+          const weatherHtml = await getWeatherForCampaign(campaign.id)
+          if (weatherHtml) {
+            sectionsHtml += weatherHtml
+          }
         }
       }
     } else {

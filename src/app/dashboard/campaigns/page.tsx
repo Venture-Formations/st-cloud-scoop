@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import Layout from '@/components/Layout'
 import Link from 'next/link'
+import DeleteCampaignModal from '@/components/DeleteCampaignModal'
 import type { NewsletterCampaign } from '@/types/database'
 
 export default function CampaignsPage() {
@@ -10,6 +11,10 @@ export default function CampaignsPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [filter, setFilter] = useState<string>('all')
+  const [deleteModal, setDeleteModal] = useState<{
+    isOpen: boolean
+    campaign: NewsletterCampaign | null
+  }>({ isOpen: false, campaign: null })
 
   useEffect(() => {
     fetchCampaigns()
@@ -63,6 +68,19 @@ export default function CampaignsPage() {
       month: 'short',
       day: 'numeric'
     })
+  }
+
+  const handleDeleteClick = (campaign: NewsletterCampaign) => {
+    setDeleteModal({ isOpen: true, campaign })
+  }
+
+  const handleDeleteConfirm = () => {
+    setDeleteModal({ isOpen: false, campaign: null })
+    fetchCampaigns() // Refresh the campaigns list
+  }
+
+  const handleDeleteCancel = () => {
+    setDeleteModal({ isOpen: false, campaign: null })
   }
 
   return (
@@ -158,12 +176,20 @@ export default function CampaignsPage() {
                         })}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                        <Link
-                          href={`/dashboard/campaigns/${campaign.id}`}
-                          className="text-brand-primary hover:text-blue-700"
-                        >
-                          View
-                        </Link>
+                        <div className="flex space-x-3">
+                          <Link
+                            href={`/dashboard/campaigns/${campaign.id}`}
+                            className="text-brand-primary hover:text-blue-700"
+                          >
+                            View
+                          </Link>
+                          <button
+                            onClick={() => handleDeleteClick(campaign)}
+                            className="text-red-600 hover:text-red-800"
+                          >
+                            Delete
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -172,6 +198,16 @@ export default function CampaignsPage() {
             </div>
           )}
         </div>
+
+        {/* Delete Campaign Modal */}
+        {deleteModal.campaign && (
+          <DeleteCampaignModal
+            campaign={deleteModal.campaign}
+            isOpen={deleteModal.isOpen}
+            onClose={handleDeleteCancel}
+            onConfirm={handleDeleteConfirm}
+          />
+        )}
       </div>
     </Layout>
   )

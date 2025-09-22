@@ -1,8 +1,9 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useParams } from 'next/navigation'
+import { useParams, useRouter } from 'next/navigation'
 import Layout from '@/components/Layout'
+import DeleteCampaignModal from '@/components/DeleteCampaignModal'
 import type { CampaignWithArticles, ArticleWithPost, CampaignEvent, Event } from '@/types/database'
 import {
   DndContext,
@@ -473,6 +474,7 @@ function SortableArticle({
 
 export default function CampaignDetailPage() {
   const params = useParams()
+  const router = useRouter()
   const [campaign, setCampaign] = useState<CampaignWithArticles | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -484,6 +486,7 @@ export default function CampaignDetailPage() {
   const [sendingReview, setSendingReview] = useState(false)
   const [generatingSubject, setGeneratingSubject] = useState(false)
   const [updatingStatus, setUpdatingStatus] = useState(false)
+  const [deleteModal, setDeleteModal] = useState(false)
 
   // Events state
   const [campaignEvents, setCampaignEvents] = useState<CampaignEvent[]>([])
@@ -978,6 +981,15 @@ export default function CampaignDetailPage() {
     }
   }
 
+  const handleDeleteConfirm = () => {
+    setDeleteModal(false)
+    router.push('/dashboard/campaigns')
+  }
+
+  const handleDeleteCancel = () => {
+    setDeleteModal(false)
+  }
+
   const handleDragEnd = async (event: DragEndEvent) => {
     console.log('🎯 handleDragEnd called with event:', event)
     const { active, over } = event
@@ -1203,6 +1215,12 @@ export default function CampaignDetailPage() {
               ) : (
                 'Approved'
               )}
+            </button>
+            <button
+              onClick={() => setDeleteModal(true)}
+              className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-md font-medium text-sm"
+            >
+              Delete Campaign
             </button>
           </div>
         </div>
@@ -1435,6 +1453,16 @@ export default function CampaignDetailPage() {
               </div>
             </div>
           </div>
+        )}
+
+        {/* Delete Campaign Modal */}
+        {campaign && (
+          <DeleteCampaignModal
+            campaign={campaign}
+            isOpen={deleteModal}
+            onClose={handleDeleteCancel}
+            onConfirm={handleDeleteConfirm}
+          />
         )}
       </div>
     </Layout>

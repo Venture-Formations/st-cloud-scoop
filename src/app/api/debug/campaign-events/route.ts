@@ -28,7 +28,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Get campaign events
-    const { data: campaignEvents, error: eventsError } = await supabaseAdmin
+    const { data: campaignEvents, error: eventsError }: { data: any[] | null, error: any } = await supabaseAdmin
       .from('campaign_events')
       .select(`
         *,
@@ -52,7 +52,7 @@ export async function GET(request: NextRequest) {
     const startDate = dates[0]
     const endDate = dates[dates.length - 1]
 
-    const { data: availableEvents, error: availableEventsError } = await supabaseAdmin
+    const { data: availableEvents, error: availableEventsError }: { data: any[] | null, error: any } = await supabaseAdmin
       .from('events')
       .select('*')
       .gte('start_date', startDate)

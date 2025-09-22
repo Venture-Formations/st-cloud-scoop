@@ -733,28 +733,78 @@ function EmailSettings() {
             <label className="block text-sm font-medium text-gray-700 mb-1">
               RSS Processing Time
             </label>
-            <input
-              type="time"
-              value={settings.rssProcessingTime}
-              onChange={(e) => handleChange('rssProcessingTime', e.target.value)}
-              disabled={!settings.reviewScheduleEnabled}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-brand-primary disabled:bg-gray-100"
-            />
-            <p className="text-xs text-gray-500 mt-1">Daily RSS feed processing and article rating</p>
+            <div className="flex space-x-2">
+              <select
+                value={settings.rssProcessingTime.split(':')[0]}
+                onChange={(e) => {
+                  const minutes = settings.rssProcessingTime.split(':')[1] || '00'
+                  handleChange('rssProcessingTime', `${e.target.value}:${minutes}`)
+                }}
+                disabled={!settings.reviewScheduleEnabled}
+                className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-brand-primary disabled:bg-gray-100"
+              >
+                {Array.from({ length: 24 }, (_, i) => (
+                  <option key={i} value={i.toString().padStart(2, '0')}>
+                    {i.toString().padStart(2, '0')}
+                  </option>
+                ))}
+              </select>
+              <span className="flex items-center">:</span>
+              <select
+                value={settings.rssProcessingTime.split(':')[1] || '00'}
+                onChange={(e) => {
+                  const hours = settings.rssProcessingTime.split(':')[0]
+                  handleChange('rssProcessingTime', `${hours}:${e.target.value}`)
+                }}
+                disabled={!settings.reviewScheduleEnabled}
+                className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-brand-primary disabled:bg-gray-100"
+              >
+                <option value="00">00</option>
+                <option value="15">15</option>
+                <option value="30">30</option>
+                <option value="45">45</option>
+              </select>
+            </div>
+            <p className="text-xs text-gray-500 mt-1">Daily RSS feed processing and article rating (15-minute increments)</p>
           </div>
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Campaign Creation Time
             </label>
-            <input
-              type="time"
-              value={settings.campaignCreationTime}
-              onChange={(e) => handleChange('campaignCreationTime', e.target.value)}
-              disabled={!settings.reviewScheduleEnabled}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-brand-primary disabled:bg-gray-100"
-            />
-            <p className="text-xs text-gray-500 mt-1">Newsletter campaign setup and review</p>
+            <div className="flex space-x-2">
+              <select
+                value={settings.campaignCreationTime.split(':')[0]}
+                onChange={(e) => {
+                  const minutes = settings.campaignCreationTime.split(':')[1] || '00'
+                  handleChange('campaignCreationTime', `${e.target.value}:${minutes}`)
+                }}
+                disabled={!settings.reviewScheduleEnabled}
+                className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-brand-primary disabled:bg-gray-100"
+              >
+                {Array.from({ length: 24 }, (_, i) => (
+                  <option key={i} value={i.toString().padStart(2, '0')}>
+                    {i.toString().padStart(2, '0')}
+                  </option>
+                ))}
+              </select>
+              <span className="flex items-center">:</span>
+              <select
+                value={settings.campaignCreationTime.split(':')[1] || '00'}
+                onChange={(e) => {
+                  const hours = settings.campaignCreationTime.split(':')[0]
+                  handleChange('campaignCreationTime', `${hours}:${e.target.value}`)
+                }}
+                disabled={!settings.reviewScheduleEnabled}
+                className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-brand-primary disabled:bg-gray-100"
+              >
+                <option value="00">00</option>
+                <option value="15">15</option>
+                <option value="30">30</option>
+                <option value="45">45</option>
+              </select>
+            </div>
+            <p className="text-xs text-gray-500 mt-1">Newsletter campaign setup and review (15-minute increments)</p>
           </div>
 
           <div>
@@ -817,14 +867,39 @@ function EmailSettings() {
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Campaign Creation Time
             </label>
-            <input
-              type="time"
-              value={settings.dailyCampaignCreationTime}
-              onChange={(e) => handleChange('dailyCampaignCreationTime', e.target.value)}
-              disabled={!settings.dailyScheduleEnabled}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-brand-primary disabled:bg-gray-100"
-            />
-            <p className="text-xs text-gray-500 mt-1">Final newsletter campaign creation with any review changes</p>
+            <div className="flex space-x-2">
+              <select
+                value={settings.dailyCampaignCreationTime.split(':')[0]}
+                onChange={(e) => {
+                  const minutes = settings.dailyCampaignCreationTime.split(':')[1] || '00'
+                  handleChange('dailyCampaignCreationTime', `${e.target.value}:${minutes}`)
+                }}
+                disabled={!settings.dailyScheduleEnabled}
+                className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-brand-primary disabled:bg-gray-100"
+              >
+                {Array.from({ length: 24 }, (_, i) => (
+                  <option key={i} value={i.toString().padStart(2, '0')}>
+                    {i.toString().padStart(2, '0')}
+                  </option>
+                ))}
+              </select>
+              <span className="flex items-center">:</span>
+              <select
+                value={settings.dailyCampaignCreationTime.split(':')[1] || '00'}
+                onChange={(e) => {
+                  const hours = settings.dailyCampaignCreationTime.split(':')[0]
+                  handleChange('dailyCampaignCreationTime', `${hours}:${e.target.value}`)
+                }}
+                disabled={!settings.dailyScheduleEnabled}
+                className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-brand-primary disabled:bg-gray-100"
+              >
+                <option value="00">00</option>
+                <option value="15">15</option>
+                <option value="30">30</option>
+                <option value="45">45</option>
+              </select>
+            </div>
+            <p className="text-xs text-gray-500 mt-1">Final newsletter campaign creation with any review changes (15-minute increments)</p>
           </div>
 
           <div>

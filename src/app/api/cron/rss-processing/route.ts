@@ -123,7 +123,9 @@ export async function POST(request: NextRequest) {
             headline,
             content,
             is_active,
-            ai_score
+            rss_post:rss_posts(
+              post_rating:post_ratings(total_score)
+            )
           )
         `)
         .eq('id', campaignId)
@@ -141,7 +143,11 @@ export async function POST(request: NextRequest) {
         // Get active articles sorted by AI score
         const activeArticles = campaignWithArticles.articles
           ?.filter((article: any) => article.is_active)
-          ?.sort((a: any, b: any) => (b.ai_score || 0) - (a.ai_score || 0)) || []
+          ?.sort((a: any, b: any) => {
+            const scoreA = a.rss_post?.post_rating?.[0]?.total_score || 0
+            const scoreB = b.rss_post?.post_rating?.[0]?.total_score || 0
+            return scoreB - scoreA
+          }) || []
 
         if (activeArticles.length === 0) {
           console.log('No active articles found for subject line generation')
@@ -150,7 +156,7 @@ export async function POST(request: NextRequest) {
           const topArticle = activeArticles[0] as any
           console.log(`Using top article for subject line generation:`)
           console.log(`- Headline: ${topArticle.headline}`)
-          console.log(`- AI Score: ${topArticle.ai_score}`)
+          console.log(`- AI Score: ${topArticle.rss_post?.post_rating?.[0]?.total_score || 0}`)
 
           // Generate subject line using AI
           const timestamp = new Date().toISOString()
@@ -322,7 +328,9 @@ export async function GET(request: NextRequest) {
             headline,
             content,
             is_active,
-            ai_score
+            rss_post:rss_posts(
+              post_rating:post_ratings(total_score)
+            )
           )
         `)
         .eq('id', campaignId)
@@ -340,7 +348,11 @@ export async function GET(request: NextRequest) {
         // Get active articles sorted by AI score
         const activeArticles = campaignWithArticles.articles
           ?.filter((article: any) => article.is_active)
-          ?.sort((a: any, b: any) => (b.ai_score || 0) - (a.ai_score || 0)) || []
+          ?.sort((a: any, b: any) => {
+            const scoreA = a.rss_post?.post_rating?.[0]?.total_score || 0
+            const scoreB = b.rss_post?.post_rating?.[0]?.total_score || 0
+            return scoreB - scoreA
+          }) || []
 
         if (activeArticles.length === 0) {
           console.log('No active articles found for subject line generation')
@@ -349,7 +361,7 @@ export async function GET(request: NextRequest) {
           const topArticle = activeArticles[0] as any
           console.log(`Using top article for subject line generation:`)
           console.log(`- Headline: ${topArticle.headline}`)
-          console.log(`- AI Score: ${topArticle.ai_score}`)
+          console.log(`- AI Score: ${topArticle.rss_post?.post_rating?.[0]?.total_score || 0}`)
 
           // Generate subject line using AI
           const timestamp = new Date().toISOString()

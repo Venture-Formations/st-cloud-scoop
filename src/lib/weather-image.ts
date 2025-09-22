@@ -121,7 +121,7 @@ function createWeatherWidgetHTML(weatherData: any[]): string {
   })
 
   return `
-<!-- Generated at ${new Date().toISOString()} -->
+<!-- Weather Widget v2.0 - Generated at ${new Date().toISOString()} -->
 <!--[if mso]>
 <table width="100%" cellpadding="0" cellspacing="0" border="0">
   <tr>

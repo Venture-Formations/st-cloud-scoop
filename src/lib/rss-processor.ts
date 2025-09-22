@@ -954,7 +954,7 @@ export class RSSProcessor {
 
       // Calculate 3-day range starting from campaign date
       const baseDate = new Date(campaignDate)
-      const dates = []
+      const dates: string[] = []
       for (let i = 0; i <= 2; i++) {
         const date = new Date(baseDate)
         date.setDate(baseDate.getDate() + i)

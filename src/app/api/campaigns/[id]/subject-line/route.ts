@@ -1,11 +1,25 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { getServerSession } from 'next-auth'
 import { supabaseAdmin } from '@/lib/supabase'
+import { authOptions } from '@/lib/auth'
+
+interface RouteParams {
+  params: Promise<{
+    id: string
+  }>
+}
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: RouteParams
 ) {
   try {
+    const session = await getServerSession(authOptions)
+    if (!session) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    const { id } = await params
     const { subject_line } = await request.json()
 
     if (!subject_line || typeof subject_line !== 'string') {
@@ -35,7 +49,7 @@ export async function PATCH(
         subject_line: trimmedSubjectLine,
         updated_at: new Date().toISOString()
       })
-      .eq('id', params.id)
+      .eq('id', id)
       .select('id, subject_line')
       .single()
 

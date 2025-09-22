@@ -165,46 +165,11 @@ export class ScheduleChecker {
     }
   }
 
+  // NOTE: Subject generation is now integrated into RSS processing
+  // This method is kept for potential manual testing or future use
   static async shouldRunSubjectGeneration(): Promise<boolean> {
-    try {
-      const settings = await this.getScheduleSettings()
-
-      if (!settings.reviewScheduleEnabled) {
-        return false
-      }
-
-      // Subject generation runs 15 minutes after RSS processing
-      const rssTime = this.parseTime(settings.rssProcessingTime)
-      const subjectTime = {
-        hours: rssTime.hours,
-        minutes: rssTime.minutes + 15
-      }
-
-      // Handle minute overflow
-      if (subjectTime.minutes >= 60) {
-        subjectTime.hours += 1
-        subjectTime.minutes -= 60
-      }
-
-      // Handle hour overflow
-      if (subjectTime.hours >= 24) {
-        subjectTime.hours -= 24
-      }
-
-      const subjectTimeString = `${subjectTime.hours.toString().padStart(2, '0')}:${subjectTime.minutes.toString().padStart(2, '0')}`
-
-      const currentTime = this.getCurrentTimeInCT()
-      console.log(`Subject Generation check: Current CT time ${currentTime.timeString}, Scheduled: ${subjectTimeString}`)
-
-      return await this.isTimeToRun(
-        currentTime.timeString,
-        subjectTimeString,
-        'last_subject_generation_run'
-      )
-    } catch (error) {
-      console.error('Error checking subject generation schedule:', error)
-      return false
-    }
+    console.log('Subject generation is now integrated into RSS processing - this method is deprecated')
+    return false
   }
 
   static async getScheduleDisplay(): Promise<{
@@ -218,26 +183,12 @@ export class ScheduleChecker {
     try {
       const settings = await this.getScheduleSettings()
 
-      // Calculate subject generation time (RSS + 15 minutes)
-      const rssTime = this.parseTime(settings.rssProcessingTime)
-      const subjectTime = {
-        hours: rssTime.hours,
-        minutes: rssTime.minutes + 15
-      }
-
-      if (subjectTime.minutes >= 60) {
-        subjectTime.hours += 1
-        subjectTime.minutes -= 60
-      }
-      if (subjectTime.hours >= 24) {
-        subjectTime.hours -= 24
-      }
-
-      const subjectTimeString = `${subjectTime.hours.toString().padStart(2, '0')}:${subjectTime.minutes.toString().padStart(2, '0')}`
+      // Subject generation now happens as part of RSS processing (after 60-second delay)
+      const subjectGeneration = `${settings.rssProcessingTime} (integrated)`
 
       return {
         rssProcessing: settings.rssProcessingTime,
-        subjectGeneration: subjectTimeString,
+        subjectGeneration: subjectGeneration,
         campaignCreation: settings.campaignCreationTime,
         finalSend: settings.dailyScheduledSendTime,
         reviewEnabled: settings.reviewScheduleEnabled,
@@ -247,7 +198,7 @@ export class ScheduleChecker {
       console.error('Error getting schedule display:', error)
       return {
         rssProcessing: '20:30',
-        subjectGeneration: '20:45',
+        subjectGeneration: '20:30 (integrated)',
         campaignCreation: '20:50',
         finalSend: '04:55',
         reviewEnabled: false,

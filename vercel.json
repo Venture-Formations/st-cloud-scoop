@@ -5,10 +5,6 @@
       "schedule": "*/15 * * * *"
     },
     {
-      "path": "/api/cron/generate-subject",
-      "schedule": "*/15 * * * *"
-    },
-    {
       "path": "/api/cron/create-campaign",
       "schedule": "*/15 * * * *"
     },
@@ -35,10 +31,7 @@
   ],
   "functions": {
     "app/api/cron/rss-processing/route.ts": {
-      "maxDuration": 300
-    },
-    "app/api/cron/generate-subject/route.ts": {
-      "maxDuration": 60
+      "maxDuration": 420
     },
     "app/api/cron/create-campaign/route.ts": {
       "maxDuration": 120

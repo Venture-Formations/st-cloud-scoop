@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
 import { RSSProcessor } from '@/lib/rss-processor'
 import { ScheduleChecker } from '@/lib/schedule-checker'
+import { AI_PROMPTS, callOpenAI } from '@/lib/openai'
 
 export async function POST(request: NextRequest) {
   try {
@@ -93,12 +94,99 @@ export async function POST(request: NextRequest) {
 
     console.log('=== RSS PROCESSING COMPLETED ===')
 
+    // Wait 60 seconds to ensure all processing is complete
+    console.log('Waiting 60 seconds before generating subject line...')
+    await new Promise(resolve => setTimeout(resolve, 60000))
+
+    // STEP 2: Generate AI subject line
+    console.log('=== STARTING SUBJECT LINE GENERATION ===')
+
+    try {
+      // Get the campaign with its articles for subject line generation
+      const { data: campaignWithArticles, error: campaignError } = await supabaseAdmin
+        .from('newsletter_campaigns')
+        .select(`
+          id,
+          date,
+          status,
+          subject_line,
+          articles:articles(
+            headline,
+            content,
+            is_active,
+            ai_score
+          )
+        `)
+        .eq('id', campaignId)
+        .single()
+
+      if (campaignError || !campaignWithArticles) {
+        console.error('Failed to fetch campaign for subject generation:', campaignError)
+        throw new Error(`Campaign not found: ${campaignError?.message}`)
+      }
+
+      // Check if subject line already exists
+      if (campaignWithArticles.subject_line && campaignWithArticles.subject_line.trim()) {
+        console.log('Subject line already exists:', campaignWithArticles.subject_line)
+      } else {
+        // Get active articles sorted by AI score
+        const activeArticles = campaignWithArticles.articles
+          ?.filter((article: any) => article.is_active)
+          ?.sort((a: any, b: any) => (b.ai_score || 0) - (a.ai_score || 0)) || []
+
+        if (activeArticles.length === 0) {
+          console.log('No active articles found for subject line generation')
+        } else {
+          // Use the highest scored article for subject line generation
+          const topArticle = activeArticles[0]
+          console.log(`Using top article for subject line generation:`)
+          console.log(`- Headline: ${topArticle.headline}`)
+          console.log(`- AI Score: ${topArticle.ai_score}`)
+
+          // Generate subject line using AI
+          const timestamp = new Date().toISOString()
+          const subjectPrompt = `${AI_PROMPTS.subjectLine}\n\n${topArticle.headline}\n\nTimestamp: ${timestamp}`
+
+          console.log('Generating AI subject line...')
+          const aiResponse = await callOpenAI(subjectPrompt, 100, 0.8)
+
+          if (aiResponse && aiResponse.trim()) {
+            const generatedSubject = aiResponse.trim()
+            console.log('Generated subject line:', generatedSubject)
+
+            // Update campaign with generated subject line
+            const { error: updateError } = await supabaseAdmin
+              .from('newsletter_campaigns')
+              .update({
+                subject_line: generatedSubject,
+                updated_at: new Date().toISOString()
+              })
+              .eq('id', campaignId)
+
+            if (updateError) {
+              console.error('Failed to update campaign with subject line:', updateError)
+            } else {
+              console.log('Successfully updated campaign with AI-generated subject line')
+            }
+          } else {
+            console.error('AI failed to generate subject line - empty response')
+          }
+        }
+      }
+
+      console.log('=== SUBJECT LINE GENERATION COMPLETED ===')
+
+    } catch (subjectError) {
+      console.error('Subject line generation failed:', subjectError)
+      // Continue with RSS processing success even if subject generation fails
+    }
+
     return NextResponse.json({
       success: true,
-      message: 'RSS processing completed successfully for tomorrow\'s campaign',
+      message: 'RSS processing and subject line generation completed successfully for tomorrow\'s campaign',
       campaignId: campaignId,
       campaignDate: campaignDate,
-      note: 'Campaign created for next day delivery',
+      note: 'Campaign created for next day delivery with AI subject line',
       timestamp: new Date().toISOString()
     })
 

@@ -138,14 +138,14 @@ export async function POST(request: NextRequest) {
           console.log('No active articles found for subject line generation')
         } else {
           // Use the highest scored article for subject line generation
-          const topArticle = activeArticles[0]
+          const topArticle = activeArticles[0] as any
           console.log(`Using top article for subject line generation:`)
           console.log(`- Headline: ${topArticle.headline}`)
           console.log(`- AI Score: ${topArticle.ai_score}`)
 
           // Generate subject line using AI
           const timestamp = new Date().toISOString()
-          const subjectPrompt = `${AI_PROMPTS.subjectLine}\n\n${topArticle.headline}\n\nTimestamp: ${timestamp}`
+          const subjectPrompt = AI_PROMPTS.subjectLineGenerator([topArticle]) + `\n\nTimestamp: ${timestamp}`
 
           console.log('Generating AI subject line...')
           const aiResponse = await callOpenAI(subjectPrompt, 100, 0.8)

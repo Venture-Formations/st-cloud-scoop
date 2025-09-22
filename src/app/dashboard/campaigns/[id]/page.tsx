@@ -499,6 +499,11 @@ export default function CampaignDetailPage() {
   const [updatingEvents, setUpdatingEvents] = useState(false)
   const [articlesExpanded, setArticlesExpanded] = useState(false)
 
+  // Weather state
+  const [weatherExpanded, setWeatherExpanded] = useState(false)
+  const [weatherData, setWeatherData] = useState<any>(null)
+  const [loadingWeather, setLoadingWeather] = useState(false)
+
   // Drag and drop sensors
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -965,6 +970,28 @@ export default function CampaignDetailPage() {
       fetchAvailableEvents(startDateStr, endDateStr)
     }
     setEventsExpanded(!eventsExpanded)
+  }
+
+  const handleWeatherExpand = async () => {
+    if (!weatherExpanded && campaign) {
+      setLoadingWeather(true)
+      try {
+        // Fetch weather data starting from the campaign date
+        const response = await fetch('/api/debug/test-weather')
+        const data = await response.json()
+
+        if (data.success) {
+          setWeatherData(data)
+        } else {
+          console.error('Failed to fetch weather data:', data.error)
+        }
+      } catch (error) {
+        console.error('Error fetching weather data:', error)
+      } finally {
+        setLoadingWeather(false)
+      }
+    }
+    setWeatherExpanded(!weatherExpanded)
   }
 
   const getScoreColor = (score: number) => {
@@ -1498,6 +1525,100 @@ export default function CampaignDetailPage() {
                   </div>
                 ))}
               </div>
+            </div>
+          )}
+        </div>
+
+        {/* Weather Section */}
+        <div className="bg-white shadow rounded-lg mt-6">
+          <div className="px-6 py-4 border-b border-gray-200">
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-medium text-gray-900">
+                Weather Forecast
+              </h2>
+              <button
+                onClick={handleWeatherExpand}
+                className="flex items-center space-x-2 text-sm text-brand-primary hover:text-blue-700"
+              >
+                <span>{weatherExpanded ? 'Minimize' : 'View Weather'}</span>
+                <svg
+                  className={`w-4 h-4 transform transition-transform ${weatherExpanded ? 'rotate-180' : ''}`}
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+            </div>
+            {!weatherExpanded && (
+              <div className="mt-2">
+                <div className="text-sm text-gray-500">
+                  3-day forecast starting {campaign?.date ? new Date(campaign.date).toLocaleDateString('en-US', {
+                    weekday: 'long',
+                    month: 'short',
+                    day: 'numeric'
+                  }) : 'campaign date'}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {weatherExpanded && (
+            <div className="p-6">
+              {loadingWeather ? (
+                <div className="flex items-center justify-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-primary"></div>
+                  <span className="ml-3 text-gray-600">Loading weather data...</span>
+                </div>
+              ) : weatherData ? (
+                <div className="space-y-4">
+                  {weatherData.imageUrl ? (
+                    <div className="mb-4">
+                      <img
+                        src={weatherData.imageUrl}
+                        alt="Weather Forecast"
+                        className="w-full max-w-md mx-auto rounded-lg border"
+                      />
+                    </div>
+                  ) : (
+                    <div className="mb-4 text-center text-sm text-gray-500">
+                      Weather image generation is not configured
+                    </div>
+                  )}
+
+                  <div className="bg-gray-50 p-4 rounded-lg">
+                    <h4 className="font-medium text-gray-900 mb-3">3-Day Forecast</h4>
+                    <div className="grid grid-cols-3 gap-4">
+                      {weatherData.weatherData && weatherData.weatherData.map((day: any, index: number) => (
+                        <div key={index} className="text-center">
+                          <div className="font-semibold text-gray-900">{day.day}</div>
+                          <div className="text-sm text-gray-500 mb-2">{day.dateLabel}</div>
+                          <div className="text-2xl mb-2">{day.icon === 'sunny' ? '☀️' : day.icon === 'cloudy' ? '☁️' : day.icon === 'rainy' ? '🌧️' : '☀️'}</div>
+                          <div className="text-sm">
+                            <div className="font-semibold">{day.high}° / {day.low}°</div>
+                            <div className="text-gray-500">{day.precipitation}% rain</div>
+                            <div className="text-xs text-gray-500 mt-1">{day.condition}</div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {weatherData.html && (
+                    <div className="mt-4">
+                      <h4 className="font-medium text-gray-900 mb-2">Newsletter Preview</h4>
+                      <div className="border rounded-lg p-4 bg-white max-h-64 overflow-auto">
+                        <div dangerouslySetInnerHTML={{ __html: weatherData.html }} />
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="text-center py-8 text-gray-500">
+                  Click "View Weather" to load forecast data
+                </div>
+              )}
             </div>
           )}
         </div>

@@ -972,10 +972,9 @@ function EmailSettings() {
         <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
           <h4 className="font-medium text-blue-900 mb-2">Review Workflow Overview</h4>
           <div className="text-sm text-blue-800 space-y-1">
-            <div>1. <strong>{settings.rssProcessingTime}</strong> - Create tomorrow's campaign and process RSS feeds</div>
-            <div>2. <strong>+15 min</strong> - Generate AI subject line from top article (automatic)</div>
-            <div>3. <strong>{settings.campaignCreationTime}</strong> - Create review campaign, schedule for 9pm</div>
-            <div>4. <strong>{settings.scheduledSendTime}</strong> - MailerLite sends review to review group only</div>
+            <div>1. <strong>{settings.rssProcessingTime}</strong> - Create tomorrow's campaign, process RSS feeds, and generate AI subject line</div>
+            <div>2. <strong>{settings.campaignCreationTime}</strong> - Create review campaign, schedule for 9pm</div>
+            <div>3. <strong>{settings.scheduledSendTime}</strong> - MailerLite sends review to review group only</div>
           </div>
         </div>
       </div>

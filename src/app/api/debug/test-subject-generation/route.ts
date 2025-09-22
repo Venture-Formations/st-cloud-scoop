@@ -104,17 +104,34 @@ export async function POST(request: NextRequest) {
 
     const aiResponse = await callOpenAI(subjectPrompt, 100, 0.8)
 
+    console.log('AI Response type:', typeof aiResponse)
+    console.log('AI Response:', aiResponse)
+
     // Handle both string and object responses from OpenAI
     let responseText = ''
     if (typeof aiResponse === 'string') {
       responseText = aiResponse
-    } else if (aiResponse && typeof aiResponse === 'object' && aiResponse.raw) {
-      responseText = aiResponse.raw
+      console.log('Using string response directly')
+    } else if (aiResponse && typeof aiResponse === 'object' && (aiResponse as any).raw) {
+      responseText = (aiResponse as any).raw
+      console.log('Using raw property from object response')
     } else if (aiResponse && typeof aiResponse === 'object') {
       responseText = JSON.stringify(aiResponse)
+      console.log('Converting object to JSON string')
+    } else {
+      console.log('Unknown response type:', aiResponse)
+      return NextResponse.json({
+        success: false,
+        error: 'Invalid AI response type',
+        responseType: typeof aiResponse,
+        response: aiResponse
+      }, { status: 500 })
     }
 
-    if (responseText && responseText.trim()) {
+    console.log('Response text type:', typeof responseText)
+    console.log('Response text value:', responseText)
+
+    if (responseText && typeof responseText === 'string' && responseText.trim()) {
       const generatedSubject = responseText.trim()
       console.log('Generated subject line:', generatedSubject)
 

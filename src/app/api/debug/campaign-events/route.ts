@@ -84,9 +84,9 @@ export async function GET(request: NextRequest) {
         data: availableEvents || []
       },
       errors: {
-        campaignError: campaignError?.message,
-        eventsError: eventsError?.message,
-        availableEventsError: availableEventsError?.message
+        campaignError: campaignError?.message || null,
+        eventsError: eventsError?.message || null,
+        availableEventsError: availableEventsError?.message || null
       },
       timestamp: new Date().toISOString()
     })

@@ -365,9 +365,10 @@ export class HealthMonitor {
     }, 'health_monitor')
 
     if (!overallHealth) {
-      await this.slack.sendSystemAlert(
+      await this.slack.sendAlert(
         'System health check failed - some components are not healthy',
-        'warn'
+        'warn',
+        'health_check_alerts'
       )
     }
 

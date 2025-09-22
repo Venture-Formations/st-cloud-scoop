@@ -41,6 +41,7 @@ export default function SettingsPage() {
                 { id: 'system', name: 'System Status' },
                 { id: 'newsletter', name: 'Newsletter' },
                 { id: 'email', name: 'Email' },
+                { id: 'slack', name: 'Slack' },
                 { id: 'rss', name: 'RSS Feeds' },
                 { id: 'notifications', name: 'Notifications' },
                 { id: 'users', name: 'Users' }
@@ -66,6 +67,7 @@ export default function SettingsPage() {
           {activeTab === 'system' && <SystemStatus />}
           {activeTab === 'newsletter' && <NewsletterSettings />}
           {activeTab === 'email' && <EmailSettings />}
+          {activeTab === 'slack' && <SlackSettings />}
           {activeTab === 'rss' && <RSSFeeds />}
           {activeTab === 'notifications' && <Notifications />}
           {activeTab === 'users' && <Users />}
@@ -846,6 +848,198 @@ function EmailSettings() {
             <div>1. <strong>{settings.dailyCampaignCreationTime}</strong> - Create final newsletter with any changes made during review</div>
             <div>2. <strong>{settings.dailyScheduledSendTime}</strong> - Send final newsletter to main subscriber group</div>
           </div>
+        </div>
+      </div>
+
+      {/* Save Button */}
+      <div className="flex justify-end">
+        <button
+          onClick={handleSave}
+          disabled={saving}
+          className="bg-brand-primary hover:bg-blue-700 disabled:bg-gray-400 text-white px-6 py-2 rounded-md font-medium"
+        >
+          {saving ? 'Saving...' : 'Save Settings'}
+        </button>
+      </div>
+
+      {message && (
+        <div className={`mt-4 p-4 rounded-md ${
+          message.includes('successfully')
+            ? 'bg-green-50 border border-green-200 text-green-800'
+            : 'bg-red-50 border border-red-200 text-red-800'
+        }`}>
+          {message}
+        </div>
+      )}
+    </div>
+  )
+}
+
+function SlackSettings() {
+  const [settings, setSettings] = useState({
+    webhookUrl: '',
+    campaignStatusUpdates: true,
+    systemErrors: true,
+    rssProcessingUpdates: true,
+    deploymentNotifications: false,
+    userActions: false,
+    healthCheckAlerts: true,
+    emailDeliveryUpdates: true
+  })
+  const [saving, setSaving] = useState(false)
+  const [message, setMessage] = useState('')
+
+  useEffect(() => {
+    loadSettings()
+  }, [])
+
+  const loadSettings = async () => {
+    try {
+      const response = await fetch('/api/settings/slack')
+      if (response.ok) {
+        const data = await response.json()
+        setSettings(prev => ({ ...prev, ...data }))
+      }
+    } catch (error) {
+      console.error('Failed to load Slack settings:', error)
+    }
+  }
+
+  const handleSave = async () => {
+    setSaving(true)
+    setMessage('')
+
+    try {
+      const response = await fetch('/api/settings/slack', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(settings)
+      })
+
+      if (response.ok) {
+        setMessage('Slack settings saved successfully!')
+        setTimeout(() => setMessage(''), 3000)
+      } else {
+        throw new Error('Failed to save settings')
+      }
+    } catch (error) {
+      setMessage('Failed to save settings. Please try again.')
+      console.error('Save error:', error)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const handleToggle = (field: string, value: boolean) => {
+    setSettings(prev => ({ ...prev, [field]: value }))
+  }
+
+  const notificationTypes = [
+    {
+      id: 'campaignStatusUpdates',
+      name: 'Campaign Status Updates',
+      description: 'Notifications when campaigns are approved, sent, or have status changes'
+    },
+    {
+      id: 'systemErrors',
+      name: 'System Errors',
+      description: 'Critical system errors and failures'
+    },
+    {
+      id: 'rssProcessingUpdates',
+      name: 'RSS Processing Updates',
+      description: 'Completion and failure notifications for RSS feed processing'
+    },
+    {
+      id: 'emailDeliveryUpdates',
+      name: 'Email Delivery Updates',
+      description: 'MailerLite campaign delivery confirmations and stats'
+    },
+    {
+      id: 'healthCheckAlerts',
+      name: 'Health Check Alerts',
+      description: 'System health monitoring alerts and warnings'
+    },
+    {
+      id: 'deploymentNotifications',
+      name: 'Deployment Notifications',
+      description: 'Code deployment and update notifications'
+    },
+    {
+      id: 'userActions',
+      name: 'User Actions',
+      description: 'User login, campaign modifications, and administrative actions'
+    }
+  ]
+
+  return (
+    <div className="space-y-6">
+      {/* Webhook Configuration */}
+      <div className="bg-white shadow rounded-lg p-6">
+        <h3 className="text-lg font-medium text-gray-900 mb-4">Slack Webhook Configuration</h3>
+
+        <div className="mb-4">
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Webhook URL
+          </label>
+          <input
+            type="url"
+            value={settings.webhookUrl}
+            onChange={(e) => setSettings(prev => ({ ...prev, webhookUrl: e.target.value }))}
+            placeholder="https://hooks.slack.com/services/..."
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-brand-primary"
+          />
+          <p className="text-xs text-gray-500 mt-1">
+            Get this URL from your Slack workspace's Incoming Webhooks app
+          </p>
+        </div>
+
+        <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+          <h4 className="font-medium text-blue-900 mb-2">Setup Instructions</h4>
+          <div className="text-sm text-blue-800 space-y-1">
+            <div>1. Go to your Slack workspace and create an Incoming Webhook app</div>
+            <div>2. Choose the channel where you want notifications to appear</div>
+            <div>3. Copy the webhook URL and paste it above</div>
+            <div>4. Configure which notification types you want to receive below</div>
+          </div>
+        </div>
+      </div>
+
+      {/* Notification Types */}
+      <div className="bg-white shadow rounded-lg p-6">
+        <h3 className="text-lg font-medium text-gray-900 mb-4">Notification Types</h3>
+        <p className="text-sm text-gray-600 mb-6">
+          Control which types of notifications are sent to your Slack channel.
+        </p>
+
+        <div className="space-y-4">
+          {notificationTypes.map((type) => (
+            <div key={type.id} className="flex items-center justify-between py-3 border-b border-gray-100 last:border-b-0">
+              <div className="flex-1">
+                <div className="font-medium text-gray-900">{type.name}</div>
+                <div className="text-sm text-gray-600">{type.description}</div>
+              </div>
+              <div className="flex items-center ml-4">
+                <button
+                  onClick={() => handleToggle(type.id, !settings[type.id as keyof typeof settings])}
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                    settings[type.id as keyof typeof settings] ? 'bg-brand-primary' : 'bg-gray-300'
+                  }`}
+                >
+                  <span
+                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                      settings[type.id as keyof typeof settings] ? 'translate-x-6' : 'translate-x-1'
+                    }`}
+                  />
+                </button>
+                <span className={`ml-3 text-sm font-medium ${
+                  settings[type.id as keyof typeof settings] ? 'text-green-600' : 'text-gray-500'
+                }`}>
+                  {settings[type.id as keyof typeof settings] ? 'Enabled' : 'Disabled'}
+                </span>
+              </div>
+            </div>
+          ))}
         </div>
       </div>
 

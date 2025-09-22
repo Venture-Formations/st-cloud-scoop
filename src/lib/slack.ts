@@ -8,6 +8,35 @@ export class SlackNotificationService {
     this.webhookUrl = process.env.SLACK_WEBHOOK_URL || ''
   }
 
+  private async isNotificationEnabled(notificationType: string): Promise<boolean> {
+    try {
+      const { data: setting } = await supabaseAdmin
+        .from('app_settings')
+        .select('value')
+        .eq('key', `slack_${notificationType}_enabled`)
+        .single()
+
+      return setting?.value === 'true'
+    } catch (error) {
+      // Default to enabled if setting doesn't exist
+      return true
+    }
+  }
+
+  private async getWebhookUrl(): Promise<string> {
+    try {
+      const { data: setting } = await supabaseAdmin
+        .from('app_settings')
+        .select('value')
+        .eq('key', 'slack_webhook_url')
+        .single()
+
+      return setting?.value || this.webhookUrl
+    } catch (error) {
+      return this.webhookUrl
+    }
+  }
+
   async sendSimpleMessage(message: string) {
     if (!this.webhookUrl) {
       console.warn('Slack webhook URL not configured')
@@ -49,19 +78,20 @@ export class SlackNotificationService {
     }
   }
 
-  async sendAlert(message: string, level: 'info' | 'warn' | 'error' = 'info', context?: Record<string, any>) {
-    if (!this.webhookUrl) {
+  async sendAlert(message: string, level: 'info' | 'warn' | 'error' = 'info', notificationType?: string) {
+    const webhookUrl = await this.getWebhookUrl()
+    if (!webhookUrl) {
       console.warn('Slack webhook URL not configured')
       return
     }
 
-    try {
-      const color = {
-        info: '#36a64f',
-        warn: '#ff9500',
-        error: '#ff0000'
-      }[level]
+    // Check if this notification type is enabled
+    if (notificationType && !(await this.isNotificationEnabled(notificationType))) {
+      console.log(`Slack notification skipped - ${notificationType} is disabled`)
+      return
+    }
 
+    try {
       const emoji = {
         info: ':information_source:',
         warn: ':warning:',
@@ -69,49 +99,10 @@ export class SlackNotificationService {
       }[level]
 
       const payload = {
-        text: `${emoji} St. Cloud Scoop Newsletter Alert`,
-        attachments: [
-          {
-            color,
-            fields: [
-              {
-                title: 'Message',
-                value: message,
-                short: false
-              },
-              {
-                title: 'Level',
-                value: level.toUpperCase(),
-                short: true
-              },
-              {
-                title: 'Time',
-                value: new Date().toLocaleString('en-US', {
-                  timeZone: 'America/Chicago',
-                  weekday: 'short',
-                  year: 'numeric',
-                  month: 'short',
-                  day: 'numeric',
-                  hour: '2-digit',
-                  minute: '2-digit',
-                  timeZoneName: 'short'
-                }),
-                short: true
-              }
-            ]
-          }
-        ]
+        text: `${emoji} ${message}`
       }
 
-      if (context && Object.keys(context).length > 0) {
-        payload.attachments[0].fields.push({
-          title: 'Context',
-          value: '```' + JSON.stringify(context, null, 2) + '```',
-          short: false
-        })
-      }
-
-      await axios.post(this.webhookUrl, payload)
+      await axios.post(webhookUrl, payload)
 
       // Log the notification
       await supabaseAdmin
@@ -148,13 +139,13 @@ export class SlackNotificationService {
       await this.sendAlert(
         `RSS processing completed successfully${campaignId ? ` for campaign ${campaignId}` : ''}`,
         'info',
-        { campaignId }
+        'rss_processing_updates'
       )
     } else {
       await this.sendAlert(
         `RSS processing failed: ${error}`,
         'error',
-        { campaignId, error }
+        'rss_processing_updates'
       )
     }
   }
@@ -166,26 +157,26 @@ export class SlackNotificationService {
       await this.sendAlert(
         `${actionText} sent successfully for campaign ${campaignId}`,
         'info',
-        { campaignId, type }
+        'email_delivery_updates'
       )
     } else {
       await this.sendAlert(
         `${actionText} failed for campaign ${campaignId}: ${error}`,
         'error',
-        { campaignId, type, error }
+        'email_delivery_updates'
       )
     }
   }
 
-  async sendSystemAlert(message: string, level: 'info' | 'warn' | 'error', context?: Record<string, any>) {
-    await this.sendAlert(`System Alert: ${message}`, level, context)
+  async sendSystemAlert(message: string, level: 'info' | 'warn' | 'error') {
+    await this.sendAlert(`System Alert: ${message}`, level, 'system_errors')
   }
 
   async sendHealthCheckAlert(component: string, status: 'healthy' | 'degraded' | 'down', details?: string) {
     const level = status === 'healthy' ? 'info' : status === 'degraded' ? 'warn' : 'error'
     const message = `Health Check: ${component} is ${status}${details ? ` - ${details}` : ''}`
 
-    await this.sendAlert(message, level, { component, status, details })
+    await this.sendAlert(message, level, 'health_check_alerts')
   }
 }
 
@@ -225,7 +216,7 @@ export class ErrorHandler {
       await this.slack.sendAlert(
         `Critical error in ${context.source}${context.operation ? ` during ${context.operation}` : ''}: ${errorMessage}`,
         'error',
-        context
+        'system_errors'
       )
     }
 
@@ -262,7 +253,7 @@ export class ErrorHandler {
       }])
 
     // Send Slack notification for warnings
-    await this.slack.sendAlert(`Warning: ${message}`, 'warn', { source, ...context })
+    await this.slack.sendAlert(`Warning: ${message}`, 'warn', 'system_errors')
   }
 }
 
@@ -376,8 +367,7 @@ export class HealthMonitor {
     if (!overallHealth) {
       await this.slack.sendSystemAlert(
         'System health check failed - some components are not healthy',
-        'warn',
-        { results }
+        'warn'
       )
     }
 

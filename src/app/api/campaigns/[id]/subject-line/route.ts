@@ -36,12 +36,6 @@ export async function PATCH(
       }, { status: 400 })
     }
 
-    if (trimmedSubjectLine.length > 35) {
-      return NextResponse.json({
-        error: 'Subject line cannot exceed 35 characters'
-      }, { status: 400 })
-    }
-
     // Update the campaign's subject line
     const { data, error } = await supabaseAdmin
       .from('newsletter_campaigns')

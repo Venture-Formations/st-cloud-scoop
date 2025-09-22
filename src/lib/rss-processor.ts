@@ -816,6 +816,17 @@ export class RSSProcessor {
       }])
   }
 
+  private async logError(message: string, context: Record<string, any> = {}) {
+    await supabaseAdmin
+      .from('system_logs')
+      .insert([{
+        level: 'error',
+        message,
+        context,
+        source: 'rss_processor'
+      }])
+  }
+
   async populateEventsForCampaign(campaignId: string) {
     try {
       console.log('Starting automatic event population for campaign:', campaignId)

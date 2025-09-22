@@ -17,11 +17,7 @@ export async function GET(request: NextRequest) {
     await slack.sendAlert(
       'Test notification from St. Cloud Scoop approval system',
       'info',
-      {
-        test: true,
-        timestamp: new Date().toISOString(),
-        webhook_configured: !!process.env.SLACK_WEBHOOK_URL
-      }
+      'system_errors'
     )
 
     return NextResponse.json({

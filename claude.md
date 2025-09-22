@@ -1,50 +1,66 @@
 # St. Cloud Scoop Development - Main Content Repository
 
-**Last Updated:** 2025-09-22 (Session 4 - Complete Newsletter Automation)
+**Last Updated:** 2025-09-22 (Session 5 - RSS Processing & Event/Subject Line Fixes)
 **Primary Source:** This is now the authoritative development document
-**Session Focus:** Facebook Image Processing, Event Auto-Population, Subject Line Fixes
+**Session Focus:** RSS Processing Optimization, Event Auto-Population, Subject Line Generation Fixes
 
-## 🔍 Current Issues Identified & Resolved
+## 🔍 Current Session Issues Identified & Resolved
 
-### AI Subject Line Generation Problem
-- **Issue**: AI generating "Boost Community with $5K Donation" when user doesn't see $5K donation posts
-- **Root Cause**: Multiple articles tied at score 21, but wrong article was being used for subject line generation
-- **Campaign ID**: `0f46cbf6-ab82-4aba-ab0c-c983d659a0c2`
+### 1. Events Not Populating in Campaigns
+- **Issue**: RSS processing completing successfully but no events showing in campaigns
+- **Root Cause**: RSS processing timing out before reaching event population step
+- **Investigation**: Manual "Process RSS Feed" completed in 3 minutes vs 12-minute timeout
+- **Discovery**: Event population happened at END of RSS processing and was being skipped
 
-### Article Ranking Analysis
-```
-Current Campaign Articles (All Score 21):
-1. "Absentee Voting Opens for Key Stearns County Elections" ← Should be used
-2. "Celebrate 45 Years of Music at Red Carpet Nightclub"
-3. "Celebrate Local Heroes at Central Minnesota's Safety Awards"
-4. "Veterans Support Brigade Boosts Community" ← Was generating subject line
-5. "Lost Border Collie Awaits Reunion" (Score: 19)
-```
+### 2. Subject Line Generation Failing
+- **Issue**: Subject lines not generating during both manual and scheduled RSS processing
+- **Root Cause**: AI returning JSON format but code expecting plain text
+- **Error**: `d.trim is not a function` when trying to call `.trim()` on JSON object
+- **Discovery**: `callOpenAI` returns `{raw: content}` when JSON parsing fails
 
-## ✅ Fixes Implemented
+### 3. RSS Processing Workflow Analysis
+- **Manual Processing**: Works in 3 minutes, includes articles but no events/subject lines
+- **Scheduled Processing**: Takes 10+ minutes, includes 60-second delays, more complex workflow
+- **Schedule Restrictions**: `ScheduleChecker.shouldRunRSSProcessing()` blocking execution
 
-### 1. Subject Line Generation Logic (`generate-subject/route.ts`)
-- **Changed**: Now uses only the highest scored article (first in sorted array)
-- **Added**: Comprehensive logging to track which article is being used
-- **Enhanced**: Timestamp-based prompt variation for uniqueness
+## ✅ Session 5 Fixes Implemented
 
-### 2. OpenAI Configuration (`openai.ts`)
-- **Temperature**: Increased from 0.3 to 0.8 for more creative variation
-- **Creativity Rules**: Added explicit requirements for unique headline variations
-- **Function**: Made temperature configurable with `callOpenAI(prompt, maxTokens, temperature)`
+### 1. Smart Event Population System (`rss-processor.ts`)
+- **Revolutionary Change**: Events now populate FIRST, before RSS processing starts
+- **Smart Random Selection**: Up to 8 events per day with intelligent featured event logic
+- **Campaign Date-Based**: Uses campaign.date (not creation time) for 3-day event range
+- **Preserves Existing**: Doesn't overwrite existing event selections, only adds new ones
+- **Featured Logic**: Only one featured event per day, preserves existing featured events
 
-### 3. Send for Review Integration (`send-review/route.ts`)
-- **Added**: Support for forced subject line parameter from frontend
-- **Enhanced**: Detailed logging throughout the flow
-- **Fixed**: MailerLite service now accepts and prioritizes forced subject line
+### 2. Subject Line Generation Timing Optimization
+- **Critical Move**: Subject line now generates immediately after top 5 articles are activated
+- **Removed 60-Second Delay**: Eliminated unnecessary wait time that wasted timeout
+- **Works for Both**: Manual and scheduled RSS processing now generate subject lines
+- **Faster Workflow**: Subject lines generated in 3-4 minutes instead of 10+ minutes
 
-### 4. MailerLite Service (`mailerlite.ts`)
-- **Updated**: `createReviewCampaign()` method accepts optional `forcedSubjectLine` parameter
-- **Prioritizes**: Forced subject line > campaign subject line > fallback
+### 3. Subject Line Response Format Fix (`openai.ts`)
+- **Root Cause Fix**: Changed AI prompt from JSON format to plain text response
+- **Simplified Parsing**: Removed complex JSON parsing that was causing errors
+- **Consistent Output**: Now generates clean subject lines like "St. Cloud Rallies To Block Leaves"
+- **Error Elimination**: Fixed `d.trim is not a function` error completely
 
-## 🛠️ Debug Tools Created
+### 4. RSS Processing Workflow Optimization
+- **New Order**: Events → RSS Processing → Article Activation → Subject Generation → Continue
+- **Timeout Management**: Reduced from 15 to 12 minutes but moved critical steps earlier
+- **Manual Button Enhanced**: Now includes both event population and subject generation
+- **Reliability**: Critical steps happen early when function has full timeout available
 
-### API Endpoints
+## 🛠️ Session 5 Debug Tools Created
+
+### New API Endpoints
+- `/api/debug/check-events` - Verifies events availability in database for campaign date ranges
+- `/api/debug/manual-event-population` - Manually populates events for latest campaign
+- `/api/debug/test-event-population` - Tests event population using RSS processor method
+- `/api/debug/complete-campaign` - Fixes interrupted campaigns (status reset, subject generation)
+- `/api/debug/activate-articles` - Manually activates top articles for a campaign
+- `/api/debug/test-subject-generation` - Comprehensive subject line generation testing with detailed logging
+
+### Previous Debug Tools (Still Available)
 - `/api/debug/recent-campaigns` - Lists recent campaigns with details
 - `/api/debug/campaign-articles?campaign_id=X` - Shows all articles for specific campaign
 

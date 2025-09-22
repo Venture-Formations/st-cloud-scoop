@@ -77,6 +77,11 @@ export class RSSProcessor {
         console.log('Previous posts cleared successfully')
       }
 
+      // STEP 1: Populate events first (before RSS processing)
+      console.log('=== POPULATING EVENTS FIRST ===')
+      await this.populateEventsForCampaignSmart(campaignId)
+      console.log('=== EVENTS POPULATION COMPLETED ===')
+
       // Get active RSS feeds
       const { data: feeds, error: feedsError } = await supabaseAdmin
         .from('rss_feeds')
@@ -825,6 +830,188 @@ export class RSSProcessor {
         context,
         source: 'rss_processor'
       }])
+  }
+
+  async populateEventsForCampaignSmart(campaignId: string) {
+    try {
+      console.log('Starting smart event population for campaign:', campaignId)
+
+      // Get campaign info to determine the date
+      const { data: campaign, error: campaignError } = await supabaseAdmin
+        .from('newsletter_campaigns')
+        .select('*')
+        .eq('id', campaignId)
+        .single()
+
+      if (campaignError || !campaign) {
+        console.error('Failed to fetch campaign for event population:', campaignError)
+        return
+      }
+
+      const campaignDate = campaign.date
+      console.log('Populating events for campaign date:', campaignDate)
+
+      // Calculate 3-day range starting from campaign date
+      const baseDate = new Date(campaignDate)
+      const dates = []
+      for (let i = 0; i <= 2; i++) {
+        const date = new Date(baseDate)
+        date.setDate(baseDate.getDate() + i)
+        dates.push(date.toISOString().split('T')[0])
+      }
+
+      console.log('Event date range:', dates)
+
+      // Check if events already exist for this campaign
+      const { data: existingEvents, error: existingError } = await supabaseAdmin
+        .from('campaign_events')
+        .select('*, event:events(*)')
+        .eq('campaign_id', campaignId)
+
+      if (existingError) {
+        console.error('Error checking existing events:', existingError)
+      }
+
+      const existingEventsByDate: Record<string, any[]> = {}
+      if (existingEvents) {
+        existingEvents.forEach(ce => {
+          const eventDate = ce.event_date
+          if (!existingEventsByDate[eventDate]) {
+            existingEventsByDate[eventDate] = []
+          }
+          existingEventsByDate[eventDate].push(ce)
+        })
+      }
+
+      // Get all available events for the date range
+      const startDate = dates[0]
+      const endDate = dates[dates.length - 1]
+
+      const { data: availableEvents, error: eventsError } = await supabaseAdmin
+        .from('events')
+        .select('*')
+        .gte('start_date', startDate)
+        .lte('start_date', endDate + 'T23:59:59')
+        .eq('active', true)
+        .order('start_date', { ascending: true })
+
+      if (eventsError) {
+        console.error('Failed to fetch available events:', eventsError)
+        return
+      }
+
+      if (!availableEvents || availableEvents.length === 0) {
+        console.log('No events found for date range, skipping event population')
+        return
+      }
+
+      console.log(`Found ${availableEvents.length} available events`)
+
+      // Group events by date
+      const eventsByDate: Record<string, any[]> = {}
+      availableEvents.forEach(event => {
+        const eventDate = event.start_date.split('T')[0]
+        if (dates.includes(eventDate)) {
+          if (!eventsByDate[eventDate]) {
+            eventsByDate[eventDate] = []
+          }
+          eventsByDate[eventDate].push(event)
+        }
+      })
+
+      // Process each date
+      const newCampaignEvents: any[] = []
+
+      for (const date of dates) {
+        const eventsForDate = eventsByDate[date] || []
+        const existingForDate = existingEventsByDate[date] || []
+
+        console.log(`Processing ${date}: ${eventsForDate.length} available events, ${existingForDate.length} already selected`)
+
+        if (eventsForDate.length === 0) {
+          console.log(`No events available for ${date}`)
+          continue
+        }
+
+        // Check if we already have a featured event for this date
+        const hasFeaturedEvent = existingForDate.some(ce => ce.is_featured)
+
+        // Determine how many events to select (up to 8 total)
+        const maxEventsPerDay = 8
+        const alreadySelected = existingForDate.length
+        const needToSelect = Math.max(0, Math.min(maxEventsPerDay - alreadySelected, eventsForDate.length))
+
+        if (needToSelect === 0) {
+          console.log(`Already have enough events for ${date}`)
+          continue
+        }
+
+        // Get event IDs already selected for this date
+        const alreadySelectedIds = existingForDate.map(ce => ce.event_id)
+
+        // Filter out already selected events
+        const availableForSelection = eventsForDate.filter(event =>
+          !alreadySelectedIds.includes(event.id)
+        )
+
+        if (availableForSelection.length === 0) {
+          console.log(`No new events available for ${date}`)
+          continue
+        }
+
+        // Randomly select events
+        const shuffled = [...availableForSelection].sort(() => Math.random() - 0.5)
+        const selectedEvents = shuffled.slice(0, needToSelect)
+
+        console.log(`Selecting ${selectedEvents.length} new events for ${date}`)
+
+        // Add selected events to campaign_events
+        selectedEvents.forEach((event, index) => {
+          const displayOrder = alreadySelected + index + 1
+          const isFeatured = !hasFeaturedEvent && index === 0 // First new event becomes featured if no featured event exists
+
+          newCampaignEvents.push({
+            campaign_id: campaignId,
+            event_id: event.id,
+            event_date: date,
+            is_selected: true,
+            is_featured: isFeatured,
+            display_order: displayOrder
+          })
+
+          if (isFeatured) {
+            console.log(`Event "${event.title}" selected as featured for ${date}`)
+          }
+        })
+      }
+
+      // Insert new campaign events
+      if (newCampaignEvents.length > 0) {
+        console.log(`Inserting ${newCampaignEvents.length} new campaign events`)
+
+        const { error: insertError } = await supabaseAdmin
+          .from('campaign_events')
+          .insert(newCampaignEvents)
+
+        if (insertError) {
+          console.error('Error inserting campaign events:', insertError)
+          throw insertError
+        }
+
+        console.log('Successfully inserted new campaign events')
+      } else {
+        console.log('No new events to insert')
+      }
+
+      console.log('Smart event population completed successfully')
+
+    } catch (error) {
+      console.error('Error in populateEventsForCampaignSmart:', error)
+      await this.logError('Failed to populate events for campaign (smart)', {
+        campaignId,
+        error: error instanceof Error ? error.message : 'Unknown error'
+      })
+    }
   }
 
   async populateEventsForCampaign(campaignId: string) {

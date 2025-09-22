@@ -5,10 +5,12 @@ import { fetchWeatherData, generateWeatherHTML, generateNewsletterWeatherHTML } 
 import { generateWeatherImage } from './weather-image'
 import type { WeatherForecast } from '@/types/database'
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
+function getSupabaseClient() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  )
+}
 
 /**
  * Generate and store daily weather forecast
@@ -53,6 +55,7 @@ export async function generateDailyWeatherForecast(): Promise<WeatherForecast> {
     }
 
     // Store in database (upsert to handle duplicates)
+    const supabase = getSupabaseClient()
     const { data, error } = await supabase
       .from('weather_forecasts')
       .upsert(forecastData, {
@@ -82,6 +85,7 @@ export async function getWeatherForCampaign(campaignId: string): Promise<string 
   try {
     // For now, get the latest active forecast
     // In future, could be tied to campaign date
+    const supabase = getSupabaseClient()
     const { data, error } = await supabase
       .from('weather_forecasts')
       .select('*')
@@ -110,6 +114,7 @@ export async function getWeatherForCampaign(campaignId: string): Promise<string 
  */
 export async function getLatestWeatherForecast(): Promise<WeatherForecast | null> {
   try {
+    const supabase = getSupabaseClient()
     const { data, error } = await supabase
       .from('weather_forecasts')
       .select('*')
@@ -140,6 +145,7 @@ export async function cleanupOldForecasts(): Promise<void> {
     const cutoffDate = new Date()
     cutoffDate.setDate(cutoffDate.getDate() - 7)
 
+    const supabase = getSupabaseClient()
     const { error } = await supabase
       .from('weather_forecasts')
       .update({ is_active: false })

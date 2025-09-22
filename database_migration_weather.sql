@@ -29,10 +29,12 @@ $$ language 'plpgsql';
 CREATE TRIGGER update_weather_forecasts_updated_at BEFORE UPDATE
     ON weather_forecasts FOR EACH ROW EXECUTE PROCEDURE update_updated_at_column();
 
--- Add Local Weather section to newsletter_sections table
+-- Add Local Weather section to newsletter_sections table (only if it doesn't exist)
 INSERT INTO newsletter_sections (name, display_order, is_active)
-VALUES ('Local Weather', 30, true)
-ON CONFLICT (name) DO NOTHING;
+SELECT 'Local Weather', 30, true
+WHERE NOT EXISTS (
+    SELECT 1 FROM newsletter_sections WHERE name = 'Local Weather'
+);
 
 -- Enable Row Level Security
 ALTER TABLE weather_forecasts ENABLE ROW LEVEL SECURITY;
@@ -40,5 +42,3 @@ ALTER TABLE weather_forecasts ENABLE ROW LEVEL SECURITY;
 -- Create policy to allow all operations (adjust as needed for your auth setup)
 CREATE POLICY "Enable all operations for weather_forecasts" ON weather_forecasts
     FOR ALL USING (true);
-
-COMMIT;

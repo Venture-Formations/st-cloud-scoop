@@ -947,26 +947,4 @@ export class RSSProcessor {
       })
     }
   }
-
-  private async logInfo(message: string, context: Record<string, any> = {}) {
-    await supabaseAdmin
-      .from('system_logs')
-      .insert([{
-        level: 'info',
-        message,
-        context,
-        source: 'rss_processor'
-      }])
-  }
-
-  private async logError(message: string, context: Record<string, any> = {}) {
-    await supabaseAdmin
-      .from('system_logs')
-      .insert([{
-        level: 'error',
-        message,
-        context,
-        source: 'rss_processor'
-      }])
-  }
 }

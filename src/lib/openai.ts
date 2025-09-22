@@ -29,6 +29,7 @@ BLANK RATING CONDITIONS: Leave all fields blank if:
 - Post is written before an event happening "today"/"tonight"/"this evening"
 - Post mentions events happening "today", "tonight", or "this evening" (we do not include same-day events)
 - Post is about lost, missing, or found pets (lost dogs, cats, etc.)
+- Post is about incidents currently happening, ongoing emergencies, or breaking news that will be outdated by tomorrow (accidents, police responses, active situations, traffic incidents, emergency responses)
 
 Article Title: ${post.title}
 Article Description: ${post.description || 'No description available'}

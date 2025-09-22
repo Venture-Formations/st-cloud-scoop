@@ -38,7 +38,9 @@
       "Bash(VERCEL_API_KEY=b2rRlFmL9kPxMPl6ZA7pgGDX npx vercel env add NEXTAUTH_URL production --token=b2rRlFmL9kPxMPl6ZA7pgGDX)",
       "Bash(VERCEL_API_KEY=b2rRlFmL9kPxMPl6ZA7pgGDX npx -y vercel-mcp)",
       "mcp__vercel__getDeployment",
-      "mcp__vercel__getDeploymentEvents"
+      "mcp__vercel__getDeploymentEvents",
+      "Bash(set CRON_SECRET=your_cron_secret_here)",
+      "Bash(git reset:*)"
     ],
     "deny": [],
     "ask": []

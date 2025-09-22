@@ -224,4 +224,4 @@ For issues and questions:
 
 ## License
 
-This project is proprietary software for St. Cloud Scoop newsletter operations.
+This project is proprietary software for St. Cloud Scoop newsletter operations.# Force deployment

@@ -41,7 +41,8 @@
       "mcp__vercel__getDeploymentEvents",
       "Bash(set CRON_SECRET=your_cron_secret_here)",
       "Bash(git reset:*)",
-      "Bash(git pull:*)"
+      "Bash(git pull:*)",
+      "Bash(timeout 60 curl -X POST -H \"Content-Type: application/json\" -v https://st-cloud-scoop.vercel.app/api/debug/activate-articles)"
     ],
     "deny": [],
     "ask": []

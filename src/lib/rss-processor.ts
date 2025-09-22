@@ -914,7 +914,7 @@ export class RSSProcessor {
       })
 
       // Insert campaign events
-      const campaignEventsData = []
+      const campaignEventsData: any[] = []
       let totalSelected = 0
 
       Object.entries(eventsByDate).forEach(([date, events]) => {

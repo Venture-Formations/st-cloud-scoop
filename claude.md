@@ -1,8 +1,8 @@
 # St. Cloud Scoop Development - Main Content Repository
 
-**Last Updated:** 2025-09-22 (Session 3 - Cron Authentication & RSS Integration)
+**Last Updated:** 2025-09-22 (Session 4 - Complete Newsletter Automation)
 **Primary Source:** This is now the authoritative development document
-**Session Focus:** Ongoing development and maintenance
+**Session Focus:** Facebook Image Processing, Event Auto-Population, Subject Line Fixes
 
 ## 🔍 Current Issues Identified & Resolved
 
@@ -223,6 +223,73 @@ src/types/database.ts                                # Added event_summary field
 ```
 
 ## 📝 Current Session Notes (Auto-Added Before Condensing)
+
+### Sept 22, 2025 - Session 4: Complete Newsletter Automation Implementation
+
+## 🆕 Major Issues Resolved
+
+### 1. Facebook Image Processing (COMPLETED ✅)
+**Root Cause**: Facebook CDN URLs contain temporary authentication tokens that expire quickly
+- Facebook URLs like `https://scontent-*.xx.fbcdn.net/v/t39.30808-6/...&oe=66F0B9E4` contain expiration parameters
+- These URLs become inaccessible within hours, causing broken images in newsletters
+
+**Solution Implemented**:
+- **RSS Processing Enhancement**: Added immediate Facebook image detection and re-hosting during RSS feed processing
+- **GitHub Storage Integration**: Downloads Facebook images in real-time and uploads to GitHub repository
+- **Fallback Protection**: Preview generation now filters out expired Facebook URLs with `&oe=` parameters
+- **Enhanced Error Handling**: Better logging for failed downloads and Facebook-specific error messages
+
+### 2. Automatic Event Population (COMPLETED ✅)
+**Root Cause**: Events were never automatically populated during RSS processing - required manual intervention
+- Campaigns showed no events in Local Events section
+- Manual selection needed for every campaign
+
+**Solution Implemented**:
+- **Auto-Population Logic**: Added `populateEventsForCampaign()` method to RSS processor
+- **Date Range Calculation**: Uses same 3-day Central Time logic as preview generation
+- **Smart Selection**: Auto-selects up to 6 events per day, sorted by start time
+- **Featured Events**: First event of each day automatically set as featured
+- **Integration**: Seamlessly integrated into RSS processing workflow
+
+### 3. Subject Line Generation Fix (COMPLETED ✅)
+**Root Cause**: Database query mismatch - looking for `ai_score` field that doesn't exist
+- Code expected `articles.ai_score` but actual data structure uses `articles.rss_post.post_rating.total_score`
+- Subject line generation was failing silently because no "top" article was found
+
+**Solution Implemented**:
+- **Database Query Fix**: Updated RSS processing route to query proper scoring fields
+- **Sorting Logic**: Fixed article sorting to use `rss_post?.post_rating?.[0]?.total_score`
+- **Enhanced Logging**: Added detailed debugging for which article is selected for subject generation
+
+## 🛠️ Technical Implementation Details
+
+### Facebook Image Processing Flow
+```
+RSS Feed → Extract Image URL → Detect Facebook CDN → Download Immediately → Upload to GitHub → Update Database
+```
+
+### Event Population Workflow
+```
+RSS Processing Complete → Calculate 3-Day Date Range → Query Available Events → Auto-Select Top 6/Day → Insert Campaign Events
+```
+
+### Subject Line Generation Fix
+```
+Campaign Query → Include post_ratings → Sort by total_score → Select Top Article → Generate Subject Line
+```
+
+## 🚧 Deployment Challenges Resolved
+Multiple TypeScript compilation errors encountered and fixed:
+1. **Duplicate Function Error**: Removed duplicate `logInfo` and `logError` functions
+2. **Missing Function Error**: Restored accidentally removed `logError` function
+3. **Type Inference Issues**: Fixed campaign-events debug endpoint type errors
+
+## 🎯 Current Status: FULLY FUNCTIONAL
+**Next automated RSS run will include all features:**
+- ✅ Facebook images converted to GitHub-hosted copies
+- ✅ Events automatically selected and featured
+- ✅ AI subject lines generated from top-rated articles
+- ✅ Complete newsletters created without manual intervention
 
 ### Sept 22, 2025 - Session 3: Vercel Cron Authentication & RSS Processing Integration
 

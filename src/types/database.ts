@@ -191,6 +191,26 @@ export interface Event {
   updated_at: string
 }
 
+export interface WeatherForecast {
+  id: string
+  forecast_date: string
+  generated_at: string
+  weather_data: {
+    day: string
+    dateLabel: string
+    icon: string
+    precipitation: number
+    high: number
+    low: number
+    condition: string
+  }[]
+  html_content: string
+  image_url: string | null
+  is_active: boolean
+  created_at: string
+  updated_at: string
+}
+
 export interface CampaignEvent {
   id: string
   campaign_id: string

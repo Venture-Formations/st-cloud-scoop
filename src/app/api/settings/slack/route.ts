@@ -14,10 +14,9 @@ export async function GET() {
     const { data: settings } = await supabaseAdmin
       .from('app_settings')
       .select('key, value')
-      .like('key', 'slack_%')
+      .like('key', 'slack_%_enabled')
 
     const slackSettings: any = {
-      webhookUrl: '',
       campaignStatusUpdates: true,
       systemErrors: true,
       rssProcessingUpdates: true,
@@ -30,9 +29,7 @@ export async function GET() {
     // Convert database settings to frontend format
     settings?.forEach(setting => {
       const key = setting.key.replace('slack_', '')
-      if (key === 'webhook_url') {
-        slackSettings.webhookUrl = setting.value || ''
-      } else if (key.endsWith('_enabled')) {
+      if (key.endsWith('_enabled')) {
         const notificationType = key.replace('_enabled', '')
         const camelCaseKey = notificationType.replace(/_([a-z])/g, (_: string, letter: string) => letter.toUpperCase())
         ;(slackSettings as any)[camelCaseKey] = setting.value === 'true'
@@ -61,7 +58,6 @@ export async function POST(request: NextRequest) {
 
     // Convert frontend format to database format
     const dbSettings = [
-      { key: 'slack_webhook_url', value: body.webhookUrl || '' },
       { key: 'slack_campaign_status_updates_enabled', value: body.campaignStatusUpdates ? 'true' : 'false' },
       { key: 'slack_system_errors_enabled', value: body.systemErrors ? 'true' : 'false' },
       { key: 'slack_rss_processing_updates_enabled', value: body.rssProcessingUpdates ? 'true' : 'false' },

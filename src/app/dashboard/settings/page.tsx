@@ -877,7 +877,6 @@ function EmailSettings() {
 
 function SlackSettings() {
   const [settings, setSettings] = useState({
-    webhookUrl: '',
     campaignStatusUpdates: true,
     systemErrors: true,
     rssProcessingUpdates: true,
@@ -974,37 +973,6 @@ function SlackSettings() {
 
   return (
     <div className="space-y-6">
-      {/* Webhook Configuration */}
-      <div className="bg-white shadow rounded-lg p-6">
-        <h3 className="text-lg font-medium text-gray-900 mb-4">Slack Webhook Configuration</h3>
-
-        <div className="mb-4">
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Webhook URL
-          </label>
-          <input
-            type="url"
-            value={settings.webhookUrl}
-            onChange={(e) => setSettings(prev => ({ ...prev, webhookUrl: e.target.value }))}
-            placeholder="https://hooks.slack.com/services/..."
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-brand-primary"
-          />
-          <p className="text-xs text-gray-500 mt-1">
-            Get this URL from your Slack workspace's Incoming Webhooks app
-          </p>
-        </div>
-
-        <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
-          <h4 className="font-medium text-blue-900 mb-2">Setup Instructions</h4>
-          <div className="text-sm text-blue-800 space-y-1">
-            <div>1. Go to your Slack workspace and create an Incoming Webhook app</div>
-            <div>2. Choose the channel where you want notifications to appear</div>
-            <div>3. Copy the webhook URL and paste it above</div>
-            <div>4. Configure which notification types you want to receive below</div>
-          </div>
-        </div>
-      </div>
-
       {/* Notification Types */}
       <div className="bg-white shadow rounded-lg p-6">
         <h3 className="text-lg font-medium text-gray-900 mb-4">Notification Types</h3>

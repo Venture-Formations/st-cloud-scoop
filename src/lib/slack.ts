@@ -110,7 +110,7 @@ export class SlackNotificationService {
         .insert([{
           level: 'info',
           message: 'Slack notification sent',
-          context: { originalMessage: message, level, context },
+          context: { originalMessage: message, level, notificationType },
           source: 'slack_service'
         }])
 
@@ -126,7 +126,7 @@ export class SlackNotificationService {
           context: {
             originalMessage: message,
             level,
-            context,
+            notificationType,
             error: error instanceof Error ? error.message : 'Unknown error'
           },
           source: 'slack_service'

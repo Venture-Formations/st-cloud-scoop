@@ -31,7 +31,7 @@ export async function generateDailyWeatherForecast(): Promise<WeatherForecast> {
     // Generate image (optional)
     let imageUrl: string | null = null
     try {
-      imageUrl = await generateWeatherImage(weatherHTML)
+      imageUrl = await generateWeatherImage(weatherData)
       if (imageUrl) {
         console.log('Weather image generated successfully')
       }

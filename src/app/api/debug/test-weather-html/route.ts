@@ -1,72 +1,7 @@
-// Weather image generation using HTML/CSS to Image API
+import { NextRequest, NextResponse } from 'next/server'
+import { fetchWeatherData } from '@/lib/weather'
 
-interface ImageGenerationResponse {
-  url: string
-}
-
-/**
- * Generate weather image from HTML using HTML/CSS to Image API
- * Uses the format specified in WeatherScript.txt
- */
-export async function generateWeatherImage(weatherData: any[]): Promise<string | null> {
-  const apiKey = process.env.HTML_CSS_TO_IMAGE_API_KEY
-  const userId = process.env.HTML_CSS_TO_IMAGE_USER_ID
-
-  if (!apiKey || !userId) {
-    console.log('HTML_CSS_TO_IMAGE_API_KEY or HTML_CSS_TO_IMAGE_USER_ID not set, skipping image generation')
-    console.log('API Key present:', !!apiKey, 'User ID present:', !!userId)
-    return null
-  }
-
-  console.log('API key found, length:', apiKey.length)
-  console.log('User ID found, length:', userId.length)
-
-  try {
-    // Generate weather cards HTML using WeatherScript.txt format
-    const imageHtml = createWeatherWidgetHTML(weatherData)
-    console.log('Generated weather widget HTML, length:', imageHtml.length)
-    console.log('First 200 chars of HTML:', imageHtml.substring(0, 200))
-
-    console.log('Generating weather image...')
-
-    const response = await fetch('https://hcti.io/v1/image', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Basic ${Buffer.from(`${userId}:${apiKey}`).toString('base64')}`
-      },
-      body: JSON.stringify({
-        html: imageHtml,
-        css: '',
-        width: 650,
-        height: 400,
-        device_scale_factor: 2,
-        format: 'png'
-      })
-    })
-
-    console.log('Image API response status:', response.status)
-
-    if (!response.ok) {
-      const errorText = await response.text()
-      console.error('Image API error response:', errorText)
-      throw new Error(`Image API failed: ${response.status} - ${errorText}`)
-    }
-
-    const result: ImageGenerationResponse = await response.json()
-    console.log('Weather image generated successfully:', result.url)
-
-    return result.url
-
-  } catch (error) {
-    console.error('Weather image generation failed:', error)
-    return null
-  }
-}
-
-/**
- * Create weather widget HTML in the format specified by WeatherScript.txt
- */
+// Import the function directly to test it
 function createWeatherWidgetHTML(weatherData: any[]): string {
   const CONFIG = {
     HEADER_IMAGE_URL: 'https://raw.githubusercontent.com/VFDavid/weatherwidget/main/WeatherBanner2.png',
@@ -179,9 +114,6 @@ function createWeatherWidgetHTML(weatherData: any[]): string {
 <![endif]-->`
 }
 
-/**
- * Map NWS conditions to icon codes
- */
 function mapConditionToIcon(condition: string): string {
   const conditionLower = condition.toLowerCase()
 
@@ -203,9 +135,6 @@ function mapConditionToIcon(condition: string): string {
   return '02d' // Default partly cloudy
 }
 
-/**
- * Get weather icon URL from GitHub repository
- */
 function getWeatherIconUrl(iconCode: string): string {
   const iconMap: { [key: string]: string } = {
     '01d': 'https://raw.githubusercontent.com/VFDavid/weatherwidget/main/Sun.png',
@@ -223,4 +152,31 @@ function getWeatherIconUrl(iconCode: string): string {
   }
 
   return iconMap[iconCode] || iconMap['01d']
+}
+
+export async function GET(request: NextRequest) {
+  try {
+    console.log('Testing new weather widget HTML generation...')
+
+    // Test weather data fetch
+    const weatherData = await fetchWeatherData()
+    console.log('Weather data fetched:', weatherData)
+
+    // Test new HTML generation
+    const widgetHTML = createWeatherWidgetHTML(weatherData)
+    console.log('Weather widget HTML generated, length:', widgetHTML.length)
+
+    return NextResponse.json({
+      success: true,
+      weatherData,
+      htmlLength: widgetHTML.length,
+      html: widgetHTML
+    })
+  } catch (error) {
+    console.error('Weather widget test failed:', error)
+    return NextResponse.json({
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error'
+    }, { status: 500 })
+  }
 }

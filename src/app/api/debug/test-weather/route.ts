@@ -18,7 +18,7 @@ export async function GET(request: NextRequest) {
     let imageUrl = null
     let imageError = null
     try {
-      imageUrl = await generateWeatherImage(weatherHTML)
+      imageUrl = await generateWeatherImage(weatherData)
       console.log('Weather image generated:', imageUrl)
     } catch (error) {
       imageError = error instanceof Error ? error.message : 'Unknown error'

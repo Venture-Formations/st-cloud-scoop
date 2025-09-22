@@ -816,6 +816,149 @@ export class RSSProcessor {
       }])
   }
 
+  async populateEventsForCampaign(campaignId: string) {
+    try {
+      console.log('Starting automatic event population for campaign:', campaignId)
+
+      // Get campaign info
+      const { data: campaign, error: campaignError } = await supabaseAdmin
+        .from('newsletter_campaigns')
+        .select('*')
+        .eq('id', campaignId)
+        .single()
+
+      if (campaignError || !campaign) {
+        console.error('Failed to fetch campaign for event population:', campaignError)
+        return
+      }
+
+      // Calculate date range (3 days from campaign creation, same logic as preview)
+      const campaignCreated = new Date(campaign.created_at)
+      const centralTimeOffset = -5 * 60 * 60 * 1000 // -5 hours in milliseconds
+      const campaignCreatedCentral = new Date(campaignCreated.getTime() + centralTimeOffset)
+      const startDateTime = new Date(campaignCreatedCentral.getTime() + (12 * 60 * 60 * 1000))
+
+      const dates = []
+      for (let i = 0; i <= 2; i++) {
+        const date = new Date(startDateTime)
+        date.setDate(startDateTime.getDate() + i)
+        dates.push(date.toISOString().split('T')[0])
+      }
+
+      console.log('Event population date range:', dates)
+
+      // Get available events for the date range
+      const startDate = dates[0]
+      const endDate = dates[dates.length - 1]
+
+      const { data: availableEvents, error: eventsError } = await supabaseAdmin
+        .from('events')
+        .select('*')
+        .gte('start_date', startDate)
+        .lte('start_date', endDate + 'T23:59:59')
+        .eq('active', true)
+        .order('start_date', { ascending: true })
+
+      if (eventsError) {
+        console.error('Failed to fetch available events:', eventsError)
+        return
+      }
+
+      if (!availableEvents || availableEvents.length === 0) {
+        console.log('No events found for date range, skipping event population')
+        return
+      }
+
+      console.log(`Found ${availableEvents.length} available events for population`)
+
+      // Clear existing campaign events
+      const { error: deleteError } = await supabaseAdmin
+        .from('campaign_events')
+        .delete()
+        .eq('campaign_id', campaignId)
+
+      if (deleteError) {
+        console.warn('Warning: Failed to clear existing campaign events:', deleteError)
+      }
+
+      // Group events by date and auto-select up to 6 events per day
+      const eventsByDate: { [key: string]: any[] } = {}
+
+      dates.forEach(date => {
+        const dateStart = new Date(date + 'T00:00:00-05:00')
+        const dateEnd = new Date(date + 'T23:59:59-05:00')
+
+        const eventsForDate = availableEvents.filter(event => {
+          const eventStart = new Date(event.start_date)
+          const eventEnd = event.end_date ? new Date(event.end_date) : eventStart
+          return (eventStart <= dateEnd && eventEnd >= dateStart)
+        })
+
+        if (eventsForDate.length > 0) {
+          // Auto-select up to 6 events per day, prioritizing by start time
+          eventsByDate[date] = eventsForDate
+            .sort((a, b) => new Date(a.start_date).getTime() - new Date(b.start_date).getTime())
+            .slice(0, 6)
+        }
+      })
+
+      // Insert campaign events
+      const campaignEventsData = []
+      let totalSelected = 0
+
+      Object.entries(eventsByDate).forEach(([date, events]) => {
+        events.forEach((event, index) => {
+          campaignEventsData.push({
+            campaign_id: campaignId,
+            event_id: event.id,
+            event_date: date,
+            is_selected: true,
+            is_featured: index === 0, // First event of each day is featured
+            display_order: index + 1
+          })
+          totalSelected++
+        })
+      })
+
+      if (campaignEventsData.length > 0) {
+        const { error: insertError } = await supabaseAdmin
+          .from('campaign_events')
+          .insert(campaignEventsData)
+
+        if (insertError) {
+          console.error('Failed to insert campaign events:', insertError)
+          return
+        }
+      }
+
+      console.log(`Auto-populated ${totalSelected} events across ${Object.keys(eventsByDate).length} days`)
+      await this.logInfo(`Auto-populated ${totalSelected} events for campaign`, {
+        campaignId,
+        totalSelected,
+        daysWithEvents: Object.keys(eventsByDate).length,
+        dateRange: dates
+      })
+
+    } catch (error) {
+      console.error('Error in populateEventsForCampaign:', error)
+      await this.logError('Failed to auto-populate events for campaign', {
+        campaignId,
+        error: error instanceof Error ? error.message : 'Unknown error'
+      })
+    }
+  }
+
+  private async logInfo(message: string, context: Record<string, any> = {}) {
+    await supabaseAdmin
+      .from('system_logs')
+      .insert([{
+        level: 'info',
+        message,
+        context,
+        source: 'rss_processor'
+      }])
+  }
+
   private async logError(message: string, context: Record<string, any> = {}) {
     await supabaseAdmin
       .from('system_logs')

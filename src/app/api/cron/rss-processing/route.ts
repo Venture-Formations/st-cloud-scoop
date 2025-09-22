@@ -98,6 +98,11 @@ export async function POST(request: NextRequest) {
 
     console.log('=== RSS PROCESSING COMPLETED ===')
 
+    // Auto-populate events for the campaign
+    console.log('=== STARTING EVENT POPULATION ===')
+    await rssProcessor.populateEventsForCampaign(campaignId)
+    console.log('=== EVENT POPULATION COMPLETED ===')
+
     // Wait 60 seconds to ensure all processing is complete
     console.log('Waiting 60 seconds before generating subject line...')
     await new Promise(resolve => setTimeout(resolve, 60000))
@@ -291,6 +296,11 @@ export async function GET(request: NextRequest) {
     await rssProcessor.processAllFeedsForCampaign(campaignId)
 
     console.log('=== RSS PROCESSING COMPLETED ===')
+
+    // Auto-populate events for the campaign
+    console.log('=== STARTING EVENT POPULATION ===')
+    await rssProcessor.populateEventsForCampaign(campaignId)
+    console.log('=== EVENT POPULATION COMPLETED ===')
 
     // Wait 60 seconds to ensure all processing is complete
     console.log('Waiting 60 seconds before generating subject line...')

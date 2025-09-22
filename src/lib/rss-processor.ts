@@ -899,28 +899,16 @@ export class RSSProcessor {
       console.log('Generating AI subject line...')
       const aiResponse = await callOpenAI(subjectPrompt, 100, 0.8)
 
-      // The AI returns JSON with subject_line and character_count
+      // The AI now returns plain text, not JSON
       let generatedSubject = ''
 
-      if (typeof aiResponse === 'object' && aiResponse && 'subject_line' in aiResponse) {
-        // Direct JSON object response
-        generatedSubject = (aiResponse as any).subject_line
+      if (typeof aiResponse === 'string') {
+        generatedSubject = aiResponse
       } else if (typeof aiResponse === 'object' && aiResponse && 'raw' in aiResponse) {
-        // JSON string in raw property - parse it
-        try {
-          const parsed = JSON.parse((aiResponse as any).raw)
-          generatedSubject = parsed.subject_line || (aiResponse as any).raw
-        } catch {
-          generatedSubject = (aiResponse as any).raw
-        }
-      } else if (typeof aiResponse === 'string') {
-        // JSON string response - parse it
-        try {
-          const parsed = JSON.parse(aiResponse)
-          generatedSubject = parsed.subject_line || aiResponse
-        } catch {
-          generatedSubject = aiResponse
-        }
+        generatedSubject = (aiResponse as any).raw
+      } else if (typeof aiResponse === 'object') {
+        // Fallback: convert to string
+        generatedSubject = JSON.stringify(aiResponse)
       }
 
       if (generatedSubject && generatedSubject.trim()) {

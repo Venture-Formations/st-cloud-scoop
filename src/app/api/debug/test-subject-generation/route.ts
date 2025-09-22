@@ -107,35 +107,19 @@ export async function POST(request: NextRequest) {
     console.log('AI Response type:', typeof aiResponse)
     console.log('AI Response:', aiResponse)
 
-    // The AI returns JSON with subject_line and character_count
+    // The AI now returns plain text, not JSON
     let generatedSubject = ''
 
-    if (typeof aiResponse === 'object' && aiResponse && 'subject_line' in aiResponse) {
-      // Direct JSON object response
-      generatedSubject = (aiResponse as any).subject_line
-      console.log('Using direct object subject_line property')
+    if (typeof aiResponse === 'string') {
+      generatedSubject = aiResponse
+      console.log('Using string response directly')
     } else if (typeof aiResponse === 'object' && aiResponse && 'raw' in aiResponse) {
-      // JSON string in raw property - parse it
-      console.log('Parsing JSON from raw property')
-      try {
-        const parsed = JSON.parse((aiResponse as any).raw)
-        generatedSubject = parsed.subject_line || (aiResponse as any).raw
-        console.log('Extracted subject_line from parsed JSON:', generatedSubject)
-      } catch (e) {
-        generatedSubject = (aiResponse as any).raw
-        console.log('Failed to parse JSON, using raw content')
-      }
-    } else if (typeof aiResponse === 'string') {
-      // JSON string response - parse it
-      console.log('Parsing JSON from string response')
-      try {
-        const parsed = JSON.parse(aiResponse)
-        generatedSubject = parsed.subject_line || aiResponse
-        console.log('Extracted subject_line from parsed string JSON:', generatedSubject)
-      } catch (e) {
-        generatedSubject = aiResponse
-        console.log('Failed to parse string as JSON, using as-is')
-      }
+      generatedSubject = (aiResponse as any).raw
+      console.log('Using raw property from object response')
+    } else if (typeof aiResponse === 'object') {
+      // Fallback: convert to string
+      generatedSubject = JSON.stringify(aiResponse)
+      console.log('Converting object to string as fallback')
     } else {
       console.log('Unknown response type:', typeof aiResponse, aiResponse)
       return NextResponse.json({

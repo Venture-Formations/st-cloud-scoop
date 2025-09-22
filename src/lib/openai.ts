@@ -207,11 +207,7 @@ STYLE GUIDANCE: Write the headline as if the event just happened, not as a histo
 
 CREATIVITY REQUIREMENT: Each generation should produce a unique headline variation. Explore different angles, power verbs, and emotional hooks. Consider multiple ways to frame the same story - focus on different aspects, beneficiaries, or impacts. Never repeat previous generations.
 
-Respond with valid JSON in this exact format:
-{
-  "subject_line": "<subject line>",
-  "character_count": <exact character count>
-}`
+Respond with ONLY the headline text - no JSON, no quotes, no extra formatting. Just the headline itself.`
 }
 
 export async function callOpenAI(prompt: string, maxTokens = 1000, temperature = 0.3) {

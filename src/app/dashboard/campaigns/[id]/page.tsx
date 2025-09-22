@@ -487,6 +487,9 @@ export default function CampaignDetailPage() {
   const [generatingSubject, setGeneratingSubject] = useState(false)
   const [updatingStatus, setUpdatingStatus] = useState(false)
   const [deleteModal, setDeleteModal] = useState(false)
+  const [editingSubject, setEditingSubject] = useState(false)
+  const [editSubjectValue, setEditSubjectValue] = useState('')
+  const [savingSubject, setSavingSubject] = useState(false)
 
   // Events state
   const [campaignEvents, setCampaignEvents] = useState<CampaignEvent[]>([])
@@ -828,6 +831,48 @@ export default function CampaignDetailPage() {
     }
   }
 
+  const startEditingSubject = () => {
+    setEditSubjectValue(campaign?.subject_line || '')
+    setEditingSubject(true)
+  }
+
+  const cancelEditingSubject = () => {
+    setEditingSubject(false)
+    setEditSubjectValue('')
+  }
+
+  const saveSubjectLine = async () => {
+    if (!campaign) return
+
+    setSavingSubject(true)
+    try {
+      const response = await fetch(`/api/campaigns/${campaign.id}/subject-line`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          subject_line: editSubjectValue.trim()
+        })
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Failed to update subject line')
+      }
+
+      const data = await response.json()
+      setCampaign(prev => prev ? { ...prev, subject_line: data.subject_line } : null)
+      setEditingSubject(false)
+      setEditSubjectValue('')
+
+    } catch (error) {
+      alert('Failed to save subject line: ' + (error instanceof Error ? error.message : 'Unknown error'))
+    } finally {
+      setSavingSubject(false)
+    }
+  }
+
   const updateEventSelections = async (eventDate: string, selectedEvents: string[], featuredEvent?: string) => {
     if (!campaign) return
 
@@ -1164,19 +1209,68 @@ export default function CampaignDetailPage() {
             <div className="flex justify-between items-start">
               <div className="flex-1">
                 <div className="text-sm text-gray-600 mb-1">Subject Line:</div>
-                {campaign.subject_line ? (
-                  <div className="font-medium text-gray-900">{campaign.subject_line}</div>
+                {editingSubject ? (
+                  <div className="space-y-2">
+                    <input
+                      type="text"
+                      value={editSubjectValue}
+                      onChange={(e) => setEditSubjectValue(e.target.value)}
+                      placeholder="Enter subject line..."
+                      maxLength={35}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                    <div className="flex items-center justify-between">
+                      <div className="text-xs text-gray-500">
+                        {editSubjectValue.length}/35 characters
+                      </div>
+                      <div className="flex space-x-2">
+                        <button
+                          onClick={cancelEditingSubject}
+                          disabled={savingSubject}
+                          className="px-3 py-1 text-sm text-gray-600 bg-white border border-gray-300 rounded hover:bg-gray-50 disabled:opacity-50"
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          onClick={saveSubjectLine}
+                          disabled={savingSubject || !editSubjectValue.trim()}
+                          className="px-3 py-1 text-sm text-white bg-green-600 border border-green-600 rounded hover:bg-green-700 disabled:opacity-50"
+                        >
+                          {savingSubject ? 'Saving...' : 'Save'}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
                 ) : (
-                  <div className="text-gray-500 italic">No subject line generated yet</div>
+                  <>
+                    {campaign.subject_line ? (
+                      <div className="font-medium text-gray-900">{campaign.subject_line}</div>
+                    ) : (
+                      <div className="text-gray-500 italic">No subject line generated yet</div>
+                    )}
+                  </>
                 )}
               </div>
-              <button
-                onClick={generateSubjectLine}
-                disabled={generatingSubject || processing || sendingReview}
-                className="ml-4 bg-purple-600 hover:bg-purple-700 disabled:opacity-50 text-white px-3 py-1 rounded text-sm font-medium"
-              >
-                {generatingSubject ? 'Generating...' : campaign.subject_line ? 'Regenerate' : 'Generate'}
-              </button>
+              {!editingSubject && (
+                <div className="ml-4 flex space-x-2">
+                  {campaign.subject_line && (
+                    <button
+                      onClick={startEditingSubject}
+                      disabled={generatingSubject || processing || sendingReview || savingSubject}
+                      className="bg-gray-600 hover:bg-gray-700 disabled:opacity-50 text-white px-3 py-1 rounded text-sm font-medium"
+                    >
+                      Edit
+                    </button>
+                  )}
+                  <button
+                    onClick={generateSubjectLine}
+                    disabled={generatingSubject || processing || sendingReview || savingSubject}
+                    className="bg-purple-600 hover:bg-purple-700 disabled:opacity-50 text-white px-3 py-1 rounded text-sm font-medium"
+                  >
+                    {generatingSubject ? 'Generating...' : campaign.subject_line ? 'Regenerate' : 'Generate'}
+                  </button>
+                </div>
+              )}
             </div>
           </div>
 

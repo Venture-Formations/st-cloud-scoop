@@ -60,8 +60,16 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized - secret required' }, { status: 401 })
     }
 
-    // Call the POST method
-    return POST(request)
+    // Call the POST method with proper authorization header
+    const fakeRequest = new Request(request.url, {
+      method: 'POST',
+      headers: {
+        'authorization': `Bearer ${process.env.CRON_SECRET}`,
+        'content-type': 'application/json'
+      }
+    })
+
+    return POST(fakeRequest as NextRequest)
 
   } catch (error) {
     return NextResponse.json({

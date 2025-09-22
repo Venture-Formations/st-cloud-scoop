@@ -15,6 +15,8 @@ export async function generateWeatherImage(html: string): Promise<string | null>
     return null
   }
 
+  console.log('API key found, length:', apiKey.length)
+
   try {
     // Prepare the HTML for image generation
     const imageHtml = `
@@ -72,13 +74,16 @@ export async function generateWeatherImage(html: string): Promise<string | null>
       })
     })
 
+    console.log('Image API response status:', response.status)
+
     if (!response.ok) {
       const errorText = await response.text()
+      console.error('Image API error response:', errorText)
       throw new Error(`Image API failed: ${response.status} - ${errorText}`)
     }
 
     const result: ImageGenerationResponse = await response.json()
-    console.log('Weather image generated:', result.url)
+    console.log('Weather image generated successfully:', result.url)
 
     return result.url
 

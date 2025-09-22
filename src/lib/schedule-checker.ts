@@ -67,12 +67,43 @@ export class ScheduleChecker {
       const scheduledMinutes = scheduled.hours * 60 + scheduled.minutes
       const timeDiff = Math.abs(currentMinutes - scheduledMinutes)
 
-      // Remove daily limit - allow running whenever time matches
-      if (timeDiff <= 15) {
-        console.log(`Time window matched for ${lastRunKey}: current ${currentTime}, scheduled ${scheduledTime}, diff ${timeDiff} minutes`)
-        resolve(true)
-      } else {
+      if (timeDiff > 15) {
         console.log(`Time window not matched for ${lastRunKey}: current ${currentTime}, scheduled ${scheduledTime}, diff ${timeDiff} minutes`)
+        resolve(false)
+        return
+      }
+
+      console.log(`Time window matched for ${lastRunKey}: current ${currentTime}, scheduled ${scheduledTime}, diff ${timeDiff} minutes`)
+
+      // Check if we already ran today
+      try {
+        const today = new Date().toISOString().split('T')[0]
+        const { data: setting } = await supabaseAdmin
+          .from('app_settings')
+          .select('value')
+          .eq('key', lastRunKey)
+          .single()
+
+        if (setting?.value === today) {
+          console.log(`${lastRunKey} already ran today (${today}), skipping`)
+          resolve(false)
+          return
+        }
+
+        // Update the last run date to today
+        await supabaseAdmin
+          .from('app_settings')
+          .upsert({
+            key: lastRunKey,
+            value: today,
+            description: `Last run date for ${lastRunKey}`,
+            updated_at: new Date().toISOString()
+          })
+
+        console.log(`${lastRunKey} updating last run date to ${today}`)
+        resolve(true)
+      } catch (error) {
+        console.error(`Error checking/updating last run for ${lastRunKey}:`, error)
         resolve(false)
       }
     })

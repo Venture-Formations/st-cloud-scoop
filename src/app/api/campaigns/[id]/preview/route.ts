@@ -146,11 +146,15 @@ function generateLocalScoopSection(articles: any[]): string {
     console.log(`Has image: ${hasImage}, Is GitHub: ${isGithubImage}, Is legacy hosted: ${isLegacyHostedImage}`)
 
     // Use GitHub image if available, legacy hosted image, or external image
+    // Skip Facebook URLs that are likely expired (contain expiration parameters)
+    const isFacebookUrl = hasImage && article.rss_post.image_url.includes('fbcdn.net')
+    const hasFacebookExpiration = isFacebookUrl && article.rss_post.image_url.includes('&oe=')
+
     const imageUrl = isGithubImage
       ? article.rss_post.image_url  // GitHub URLs are already complete
       : isLegacyHostedImage
         ? `https://stcscoop.com${article.rss_post.image_url}`
-        : hasImage
+        : (hasImage && !hasFacebookExpiration)
           ? article.rss_post.image_url
           : null
 

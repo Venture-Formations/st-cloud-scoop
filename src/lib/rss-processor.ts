@@ -255,6 +255,23 @@ export class RSSProcessor {
             continue // Skip if already processed
           }
 
+          // Attempt to download and re-host image immediately if it's a Facebook URL
+          let finalImageUrl = imageUrl
+          if (imageUrl && imageUrl.includes('fbcdn.net')) {
+            console.log(`Attempting to re-host Facebook image immediately: ${imageUrl}`)
+            try {
+              const githubUrl = await this.githubStorage.uploadImage(imageUrl, item.title || 'Untitled')
+              if (githubUrl) {
+                finalImageUrl = githubUrl
+                console.log(`Successfully re-hosted Facebook image: ${githubUrl}`)
+              } else {
+                console.warn(`Failed to re-host Facebook image, keeping original URL: ${imageUrl}`)
+              }
+            } catch (error) {
+              console.warn(`Error re-hosting Facebook image: ${error}`)
+            }
+          }
+
           // Insert new post
           const { data: newPost, error: postError } = await supabaseAdmin
             .from('rss_posts')
@@ -268,7 +285,7 @@ export class RSSProcessor {
               author: item.creator || (item as any)['dc:creator'] || null,
               publication_date: item.pubDate,
               source_url: item.link,
-              image_url: imageUrl,
+              image_url: finalImageUrl,
             }])
             .select('id')
             .single()

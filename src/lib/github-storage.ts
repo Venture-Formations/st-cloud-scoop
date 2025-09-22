@@ -35,7 +35,9 @@ export class GitHubImageStorage {
       const response = await fetch(imageUrl, {
         signal: controller.signal,
         headers: {
-          'User-Agent': 'StCloudScoop-Newsletter/1.0'
+          'User-Agent': 'StCloudScoop-Newsletter/1.0',
+          'Accept': 'image/*',
+          'Cache-Control': 'no-cache'
         }
       })
 
@@ -43,6 +45,13 @@ export class GitHubImageStorage {
 
       if (!response.ok) {
         console.error(`Failed to download image: HTTP ${response.status} ${response.statusText}`)
+        console.error(`Response headers:`, Object.fromEntries(response.headers.entries()))
+
+        // Log specific error for Facebook URLs
+        if (imageUrl.includes('fbcdn.net')) {
+          console.error(`Facebook CDN URL failed - likely expired or restricted: ${imageUrl}`)
+        }
+
         return null
       }
 

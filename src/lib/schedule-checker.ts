@@ -67,33 +67,12 @@ export class ScheduleChecker {
       const scheduledMinutes = scheduled.hours * 60 + scheduled.minutes
       const timeDiff = Math.abs(currentMinutes - scheduledMinutes)
 
+      // Remove daily limit - allow running whenever time matches
       if (timeDiff <= 15) {
-        // Check if we've already run today for this task
-        const today = new Date().toISOString().split('T')[0]
-        const { data: lastRun } = await supabaseAdmin
-          .from('app_settings')
-          .select('value')
-          .eq('key', lastRunKey)
-          .single()
-
-        const lastRunDate = lastRun?.value || ''
-
-        if (lastRunDate !== today) {
-          // Update last run date and return true
-          await supabaseAdmin
-            .from('app_settings')
-            .upsert({
-              key: lastRunKey,
-              value: today
-            }, {
-              onConflict: 'key'
-            })
-
-          resolve(true)
-        } else {
-          resolve(false)
-        }
+        console.log(`Time window matched for ${lastRunKey}: current ${currentTime}, scheduled ${scheduledTime}, diff ${timeDiff} minutes`)
+        resolve(true)
       } else {
+        console.log(`Time window not matched for ${lastRunKey}: current ${currentTime}, scheduled ${scheduledTime}, diff ${timeDiff} minutes`)
         resolve(false)
       }
     })

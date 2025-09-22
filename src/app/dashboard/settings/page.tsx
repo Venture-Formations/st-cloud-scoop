@@ -973,7 +973,7 @@ function EmailSettings() {
           <h4 className="font-medium text-blue-900 mb-2">Review Workflow Overview</h4>
           <div className="text-sm text-blue-800 space-y-1">
             <div>1. <strong>{settings.rssProcessingTime}</strong> - Create tomorrow's campaign, process RSS feeds, and generate AI subject line</div>
-            <div>2. <strong>{settings.campaignCreationTime}</strong> - Create review campaign, schedule for 9pm</div>
+            <div>2. <strong>{settings.campaignCreationTime}</strong> - Create review campaign and schedule for delivery</div>
             <div>3. <strong>{settings.scheduledSendTime}</strong> - MailerLite sends review to review group only</div>
           </div>
         </div>

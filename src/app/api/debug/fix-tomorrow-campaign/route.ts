@@ -57,7 +57,7 @@ export async function POST(request: NextRequest) {
 
     // Fix 2: Generate subject line if missing
     let generatedSubject = campaign.subject_line
-    if (!campaign.subject_line || campaign.subject_line.trim() === '') {
+    if (!campaign.subject_line || (typeof campaign.subject_line === 'string' && campaign.subject_line.trim() === '')) {
       console.log('Generating missing subject line...')
 
       // Get active articles sorted by AI score

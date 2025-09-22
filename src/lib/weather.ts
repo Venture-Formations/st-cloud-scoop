@@ -84,23 +84,17 @@ export async function fetchWeatherData(): Promise<WeatherDay[]> {
       dayData[dateKey].periods.push(period)
 
       // Track high and low temperatures
-      console.log(`Processing period: ${period.name} (${dateKey}) - ${period.temperature}°${period.temperatureUnit}, isDaytime: ${period.isDaytime}`)
-
       // For high temperatures, prefer daytime but fall back to any period if needed
       if (period.isDaytime && (dayData[dateKey].high === null || period.temperature > dayData[dateKey].high)) {
-        console.log(`  Setting high temp: ${period.temperature}° (daytime)`)
         dayData[dateKey].high = period.temperature
       } else if (dayData[dateKey].high === null) {
-        console.log(`  Setting high temp: ${period.temperature}° (fallback)`)
         dayData[dateKey].high = period.temperature
       }
 
       // For low temperatures, prefer nighttime but fall back to any period if needed
       if (!period.isDaytime && (dayData[dateKey].low === null || period.temperature < dayData[dateKey].low)) {
-        console.log(`  Setting low temp: ${period.temperature}° (nighttime)`)
         dayData[dateKey].low = period.temperature
       } else if (dayData[dateKey].low === null) {
-        console.log(`  Setting low temp: ${period.temperature}° (fallback)`)
         dayData[dateKey].low = period.temperature
       }
     }
@@ -150,10 +144,6 @@ export async function fetchWeatherData(): Promise<WeatherDay[]> {
       })
     }
 
-    // Debug output for temperature issues
-    weatherDays.forEach((day, index) => {
-      console.log(`Day ${index + 1}: ${day.day} ${day.dateLabel} - High: ${day.high}°, Low: ${day.low}° - ${day.condition}`)
-    })
 
     console.log(`Processed ${weatherDays.length} weather days`)
     return weatherDays

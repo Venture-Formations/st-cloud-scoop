@@ -81,13 +81,13 @@ export async function POST(request: NextRequest) {
       eventsByDate[eventDate].push(event)
     })
 
-    // Limit to 6 events per day and sort by time
+    // Limit to 8 events per day and randomize selection
     Object.keys(eventsByDate).forEach(date => {
       const eventsForDate = eventsByDate[date]
-      if (eventsForDate.length > 6) {
-        eventsByDate[date] = eventsForDate
-          .sort((a, b) => new Date(a.start_date).getTime() - new Date(b.start_date).getTime())
-          .slice(0, 6)
+      if (eventsForDate.length > 8) {
+        // Randomly shuffle and select up to 8 events
+        const shuffled = [...eventsForDate].sort(() => Math.random() - 0.5)
+        eventsByDate[date] = shuffled.slice(0, 8)
       }
     })
 
@@ -96,13 +96,16 @@ export async function POST(request: NextRequest) {
     let totalSelected = 0
 
     Object.entries(eventsByDate).forEach(([date, events]) => {
+      // Randomly select one event to be featured for this date
+      const featuredIndex = Math.floor(Math.random() * events.length)
+
       events.forEach((event, index) => {
         campaignEventsData.push({
           campaign_id: campaign.id,
           event_id: event.id,
           event_date: date,
           is_selected: true,
-          is_featured: index === 0, // First event of each day is featured
+          is_featured: index === featuredIndex, // Random event is featured
           display_order: index + 1
         })
         totalSelected++

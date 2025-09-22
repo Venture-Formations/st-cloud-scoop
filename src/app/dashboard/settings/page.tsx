@@ -887,14 +887,85 @@ function EmailSettings() {
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Scheduled Send Time
             </label>
-            <input
-              type="time"
-              value={settings.scheduledSendTime}
-              onChange={(e) => handleChange('scheduledSendTime', e.target.value)}
-              disabled={!settings.reviewScheduleEnabled}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-brand-primary disabled:bg-gray-100"
-            />
-            <p className="text-xs text-gray-500 mt-1">Review newsletter delivery</p>
+            <div className="flex space-x-2 items-center">
+              <select
+                value={(() => {
+                  const hour24 = parseInt(settings.scheduledSendTime.split(':')[0])
+                  return hour24 === 0 ? '12' : hour24 > 12 ? (hour24 - 12).toString() : hour24.toString()
+                })()}
+                onChange={(e) => {
+                  const minutes = settings.scheduledSendTime.split(':')[1] || '00'
+                  const hour12 = parseInt(e.target.value)
+                  const currentHour24 = parseInt(settings.scheduledSendTime.split(':')[0])
+                  const isAM = currentHour24 < 12
+                  let hour24
+                  if (hour12 === 12) {
+                    hour24 = isAM ? 0 : 12
+                  } else {
+                    hour24 = isAM ? hour12 : hour12 + 12
+                  }
+                  handleChange('scheduledSendTime', `${hour24.toString().padStart(2, '0')}:${minutes}`)
+                }}
+                disabled={!settings.reviewScheduleEnabled}
+                className="w-16 px-2 py-2 pr-8 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-brand-primary disabled:bg-gray-100 appearance-none bg-white"
+                style={{backgroundImage: "url(\"data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m6 8 4 4 4-4'/%3e%3c/svg%3e\")", backgroundPosition: "right 0.5rem center", backgroundRepeat: "no-repeat", backgroundSize: "1.5em 1.5em"}}
+              >
+                {Array.from({ length: 12 }, (_, i) => {
+                  const hour = i + 1
+                  return (
+                    <option key={hour} value={hour.toString()}>
+                      {hour}
+                    </option>
+                  )
+                })}
+              </select>
+              <span>:</span>
+              <select
+                value={settings.scheduledSendTime.split(':')[1] || '00'}
+                onChange={(e) => {
+                  const hour24 = parseInt(settings.scheduledSendTime.split(':')[0])
+                  handleChange('scheduledSendTime', `${hour24.toString().padStart(2, '0')}:${e.target.value}`)
+                }}
+                disabled={!settings.reviewScheduleEnabled}
+                className="w-16 px-2 py-2 pr-8 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-brand-primary disabled:bg-gray-100 appearance-none bg-white"
+                style={{backgroundImage: "url(\"data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m6 8 4 4 4-4'/%3e%3c/svg%3e\")", backgroundPosition: "right 0.5rem center", backgroundRepeat: "no-repeat", backgroundSize: "1.5em 1.5em"}}
+              >
+                <option value="00">00</option>
+                <option value="05">05</option>
+                <option value="10">10</option>
+                <option value="15">15</option>
+                <option value="20">20</option>
+                <option value="25">25</option>
+                <option value="30">30</option>
+                <option value="35">35</option>
+                <option value="40">40</option>
+                <option value="45">45</option>
+                <option value="50">50</option>
+                <option value="55">55</option>
+              </select>
+              <select
+                value={parseInt(settings.scheduledSendTime.split(':')[0]) < 12 ? 'AM' : 'PM'}
+                onChange={(e) => {
+                  const minutes = settings.scheduledSendTime.split(':')[1] || '00'
+                  const currentHour24 = parseInt(settings.scheduledSendTime.split(':')[0])
+                  const currentHour12 = currentHour24 === 0 ? 12 : currentHour24 > 12 ? currentHour24 - 12 : currentHour24
+                  let newHour24
+                  if (e.target.value === 'AM') {
+                    newHour24 = currentHour12 === 12 ? 0 : currentHour12
+                  } else {
+                    newHour24 = currentHour12 === 12 ? 12 : currentHour12 + 12
+                  }
+                  handleChange('scheduledSendTime', `${newHour24.toString().padStart(2, '0')}:${minutes}`)
+                }}
+                disabled={!settings.reviewScheduleEnabled}
+                className="w-16 px-2 py-2 pr-8 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-brand-primary disabled:bg-gray-100 appearance-none bg-white"
+                style={{backgroundImage: "url(\"data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m6 8 4 4 4-4'/%3e%3c/svg%3e\")", backgroundPosition: "right 0.5rem center", backgroundRepeat: "no-repeat", backgroundSize: "1.5em 1.5em"}}
+              >
+                <option value="AM">AM</option>
+                <option value="PM">PM</option>
+              </select>
+            </div>
+            <p className="text-xs text-gray-500 mt-1">Review newsletter delivery (5-minute increments)</p>
           </div>
         </div>
 

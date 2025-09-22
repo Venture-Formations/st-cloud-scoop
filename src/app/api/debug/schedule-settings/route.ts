@@ -3,13 +3,6 @@ import { supabaseAdmin } from '@/lib/supabase'
 
 export async function GET(request: NextRequest) {
   try {
-    // Check if secret parameter is provided
-    const { searchParams } = new URL(request.url)
-    const secret = searchParams.get('secret')
-
-    if (secret !== process.env.CRON_SECRET) {
-      return NextResponse.json({ error: 'Unauthorized - secret required' }, { status: 401 })
-    }
 
     // Get all email schedule settings
     const { data: settings } = await supabaseAdmin

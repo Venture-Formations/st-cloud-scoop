@@ -1192,7 +1192,7 @@ export class RSSProcessor {
         console.warn('Warning: Failed to clear existing campaign events:', deleteError)
       }
 
-      // Group events by date and auto-select up to 6 events per day
+      // Group events by date and auto-select up to 8 events per day
       const eventsByDate: { [key: string]: any[] } = {}
 
       dates.forEach(date => {
@@ -1206,10 +1206,9 @@ export class RSSProcessor {
         })
 
         if (eventsForDate.length > 0) {
-          // Auto-select up to 6 events per day, prioritizing by start time
-          eventsByDate[date] = eventsForDate
-            .sort((a, b) => new Date(a.start_date).getTime() - new Date(b.start_date).getTime())
-            .slice(0, 6)
+          // Auto-select up to 8 events per day, randomly selected
+          const shuffled = [...eventsForDate].sort(() => Math.random() - 0.5)
+          eventsByDate[date] = shuffled.slice(0, Math.min(8, eventsForDate.length))
         }
       })
 

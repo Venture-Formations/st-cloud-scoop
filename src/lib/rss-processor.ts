@@ -624,6 +624,11 @@ export class RSSProcessor {
           .from('articles')
           .update({ is_active: true })
           .in('id', top5ArticleIds)
+
+        // Generate subject line immediately after top articles are activated
+        console.log('=== GENERATING SUBJECT LINE (After Top Articles Activated) ===')
+        await this.generateSubjectLineForCampaign(campaignId)
+        console.log('=== SUBJECT LINE GENERATION COMPLETED ===')
       }
 
       // Set remaining as inactive
@@ -830,6 +835,102 @@ export class RSSProcessor {
         context,
         source: 'rss_processor'
       }])
+  }
+
+  async generateSubjectLineForCampaign(campaignId: string) {
+    try {
+      console.log('Starting subject line generation for campaign:', campaignId)
+
+      // Get the campaign with its articles for subject line generation
+      const { data: campaignWithArticles, error: campaignError } = await supabaseAdmin
+        .from('newsletter_campaigns')
+        .select(`
+          id,
+          date,
+          status,
+          subject_line,
+          articles:articles(
+            headline,
+            content,
+            is_active,
+            rss_post:rss_posts(
+              post_rating:post_ratings(total_score)
+            )
+          )
+        `)
+        .eq('id', campaignId)
+        .single()
+
+      if (campaignError || !campaignWithArticles) {
+        console.error('Failed to fetch campaign for subject generation:', campaignError)
+        throw new Error(`Campaign not found: ${campaignError?.message}`)
+      }
+
+      // Check if subject line already exists
+      if (campaignWithArticles.subject_line && campaignWithArticles.subject_line.trim()) {
+        console.log('Subject line already exists:', campaignWithArticles.subject_line)
+        return
+      }
+
+      // Get active articles sorted by AI score
+      const activeArticles = campaignWithArticles.articles
+        ?.filter((article: any) => article.is_active)
+        ?.sort((a: any, b: any) => {
+          const scoreA = a.rss_post?.post_rating?.[0]?.total_score || 0
+          const scoreB = b.rss_post?.post_rating?.[0]?.total_score || 0
+          return scoreB - scoreA
+        }) || []
+
+      if (activeArticles.length === 0) {
+        console.log('No active articles found for subject line generation')
+        return
+      }
+
+      // Use the highest scored article for subject line generation
+      const topArticle = activeArticles[0] as any
+      console.log(`Using top article for subject line generation:`)
+      console.log(`- Headline: ${topArticle.headline}`)
+      console.log(`- AI Score: ${topArticle.rss_post?.post_rating?.[0]?.total_score || 0}`)
+
+      // Generate subject line using AI
+      const timestamp = new Date().toISOString()
+      const subjectPrompt = AI_PROMPTS.subjectLineGenerator([topArticle]) + `\n\nTimestamp: ${timestamp}`
+
+      console.log('Generating AI subject line...')
+      const aiResponse = await callOpenAI(subjectPrompt, 100, 0.8)
+
+      if (aiResponse && aiResponse.trim()) {
+        const generatedSubject = aiResponse.trim()
+        console.log('Generated subject line:', generatedSubject)
+
+        // Update campaign with generated subject line
+        const { error: updateError } = await supabaseAdmin
+          .from('newsletter_campaigns')
+          .update({
+            subject_line: generatedSubject,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', campaignId)
+
+        if (updateError) {
+          console.error('Failed to update campaign with subject line:', updateError)
+          throw updateError
+        } else {
+          console.log('Successfully updated campaign with AI-generated subject line')
+        }
+      } else {
+        console.error('AI failed to generate subject line - empty response')
+        throw new Error('AI returned empty subject line')
+      }
+
+    } catch (error) {
+      console.error('Subject line generation failed:', error)
+      await this.logError('Failed to generate subject line for campaign', {
+        campaignId,
+        error: error instanceof Error ? error.message : 'Unknown error'
+      })
+      // Don't throw error - continue with RSS processing even if subject generation fails
+    }
   }
 
   async populateEventsForCampaignSmart(campaignId: string) {

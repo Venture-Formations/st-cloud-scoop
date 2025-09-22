@@ -40,7 +40,8 @@
       "mcp__vercel__getDeployment",
       "mcp__vercel__getDeploymentEvents",
       "Bash(set CRON_SECRET=your_cron_secret_here)",
-      "Bash(git reset:*)"
+      "Bash(git reset:*)",
+      "Bash(git pull:*)"
     ],
     "deny": [],
     "ask": []

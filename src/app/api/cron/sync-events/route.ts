@@ -12,11 +12,10 @@ export async function POST(request: NextRequest) {
     console.log('Time:', new Date().toISOString())
 
     // Call the events sync endpoint
-    const syncResponse = await fetch(`${process.env.NEXTAUTH_URL}/api/events/sync`, {
+    const syncResponse = await fetch(`${process.env.NEXTAUTH_URL}/api/events/sync?secret=${process.env.CRON_SECRET}`, {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json',
-        'Cookie': request.headers.get('cookie') || ''
+        'Content-Type': 'application/json'
       }
     })
 

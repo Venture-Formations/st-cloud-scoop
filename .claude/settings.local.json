@@ -20,9 +20,31 @@
       "Bash(npm uninstall:*)",
       "Bash(git tag:*)",
       "WebFetch(domain:www.visitstcloud.com)",
-      "Bash(git checkout:*)"
+      "Bash(git checkout:*)",
+      "Bash(dir:*)",
+      "Bash(npx:*)",
+      "WebSearch",
+      "Bash(npm search:*)",
+      "Bash(vercel env:*)",
+      "WebFetch(domain:vercel.com)",
+      "Bash(VERCEL_API_KEY=b2rRlFmL9kPxMPl6ZA7pgGDX npx vercel-mcp)",
+      "Bash(VERCEL_API_KEY=b2rRlFmL9kPxMPl6ZA7pgGDX npx -y vercel-mcp --help)",
+      "Bash(POSTGRES_CONNECTION_STRING=\"postgresql://postgres.zvyzhmhsubazkvcsxbjs:StoringData247!@aws-0-us-west-1.pooler.supabase.com:6543/postgres\" npx -y @modelcontextprotocol/server-postgres)",
+      "Bash(run/doctor:*)",
+      "mcp__postgres__query",
+      "mcp__vercel__getDeployments",
+      "mcp__memory__read_graph",
+      "Bash(VERCEL_API_KEY=b2rRlFmL9kPxMPl6ZA7pgGDX npx vercel env add NEXTAUTH_URL production)",
+      "Bash(VERCEL_API_KEY=b2rRlFmL9kPxMPl6ZA7pgGDX npx vercel env add NEXTAUTH_URL production --token=b2rRlFmL9kPxMPl6ZA7pgGDX)",
+      "Bash(VERCEL_API_KEY=b2rRlFmL9kPxMPl6ZA7pgGDX npx -y vercel-mcp)",
+      "mcp__vercel__getDeployment"
     ],
     "deny": [],
     "ask": []
-  }
+  },
+  "enableAllProjectMcpServers": true,
+  "enabledMcpjsonServers": [
+    "supabase",
+    "vercel"
+  ]
 }

@@ -394,6 +394,7 @@ function NewsletterSectionComponent({
             onClick={() => {
               if (section.name === 'Local Weather' && onWeatherExpand) {
                 onWeatherExpand()
+                onToggleExpanded()
               } else if (section.name === 'Dining Deals' && onDiningDealsExpand) {
                 onDiningDealsExpand()
                 onToggleExpanded()

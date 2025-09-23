@@ -233,7 +233,12 @@ function NewsletterSectionComponent({
   onToggleExpanded,
   weatherData,
   loadingWeather,
-  onWeatherExpand
+  onWeatherExpand,
+  availableDiningDeals,
+  campaignDiningDeals,
+  onDiningDealsExpand,
+  onUpdateDiningDeals,
+  updatingDiningDeals
 }: {
   section: NewsletterSection
   campaign: CampaignWithArticles | null
@@ -242,6 +247,11 @@ function NewsletterSectionComponent({
   weatherData?: any
   loadingWeather?: boolean
   onWeatherExpand?: () => void
+  availableDiningDeals?: any[]
+  campaignDiningDeals?: any[]
+  onDiningDealsExpand?: () => void
+  onUpdateDiningDeals?: (selectedDealIds: string[], featuredDealId?: string) => void
+  updatingDiningDeals?: boolean
 }) {
   if (!campaign) return null
 
@@ -315,8 +325,20 @@ function NewsletterSectionComponent({
         return <MinnesotaGetawaysSection campaign={campaign} />
       case 'Dining Deals':
         return (
-          <div className="text-center py-8 text-gray-500">
-            Dining deals management is handled in the dedicated Dining Deals section above
+          <div className="p-6">
+            {campaign && availableDiningDeals && campaignDiningDeals && onUpdateDiningDeals ? (
+              <DiningDealsManager
+                campaign={campaign}
+                availableDeals={availableDiningDeals}
+                campaignDeals={campaignDiningDeals}
+                onUpdateDeals={onUpdateDiningDeals}
+                updating={updatingDiningDeals || false}
+              />
+            ) : (
+              <div className="text-center py-8 text-gray-500">
+                Click "View Dining Deals" to load management interface
+              </div>
+            )}
           </div>
         )
       case 'The Local Scoop':
@@ -346,7 +368,16 @@ function NewsletterSectionComponent({
             {section.name}
           </h2>
           <button
-            onClick={section.name === 'Local Weather' && onWeatherExpand ? onWeatherExpand : onToggleExpanded}
+            onClick={() => {
+              if (section.name === 'Local Weather' && onWeatherExpand) {
+                onWeatherExpand()
+              } else if (section.name === 'Dining Deals' && onDiningDealsExpand) {
+                onDiningDealsExpand()
+                onToggleExpanded()
+              } else {
+                onToggleExpanded()
+              }
+            }}
             className="flex items-center space-x-2 text-sm text-brand-primary hover:text-blue-700"
           >
             <span>{expanded ? 'Minimize' : `View ${section.name}`}</span>
@@ -2105,163 +2136,6 @@ export default function CampaignDetailPage() {
           )}
         </div>
 
-        {/* Dining Deals Section */}
-        <div className="bg-white shadow rounded-lg mt-6">
-          <div className="px-6 py-4 border-b border-gray-200">
-            <div className="flex items-center justify-between">
-              <h2 className="text-lg font-medium text-gray-900">
-                Dining Deals
-              </h2>
-              <button
-                onClick={handleDiningDealsExpand}
-                className="flex items-center space-x-2 text-sm text-brand-primary hover:text-blue-700"
-              >
-                <span>{diningDealsExpanded ? 'Minimize' : 'Manage Deals'}</span>
-                <svg
-                  className={`w-4 h-4 transform transition-transform ${diningDealsExpanded ? 'rotate-180' : ''}`}
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                </svg>
-              </button>
-            </div>
-          </div>
-
-          {diningDealsExpanded && (
-            <div className="p-6">
-              {loadingDiningDeals ? (
-                <div className="flex items-center justify-center py-8">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-primary"></div>
-                  <span className="ml-3 text-gray-600">Loading dining deals...</span>
-                </div>
-              ) : (
-                <DiningDealsManager
-                  campaign={campaign}
-                  availableDeals={availableDiningDeals}
-                  campaignDeals={campaignDiningDeals}
-                  onUpdateDeals={updateDiningDealsSelections}
-                  updating={updatingDiningDeals}
-                />
-              )}
-            </div>
-          )}
-
-          {!diningDealsExpanded && campaignDiningDeals.length > 0 && (
-            <div className="px-6 pb-4">
-              <div className="text-sm text-gray-500">
-                {campaignDiningDeals.filter(d => d.is_selected).length} deals selected for {campaign?.date ? new Date(campaign.date).toLocaleDateString('en-US', {
-                  weekday: 'long',
-                  month: 'short',
-                  day: 'numeric'
-                }) : 'campaign date'}
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Weather Section */}
-        <div className="bg-white shadow rounded-lg mt-6">
-          <div className="px-6 py-4 border-b border-gray-200">
-            <div className="flex items-center justify-between">
-              <h2 className="text-lg font-medium text-gray-900">
-                Weather Forecast
-              </h2>
-              <button
-                onClick={handleWeatherExpand}
-                className="flex items-center space-x-2 text-sm text-brand-primary hover:text-blue-700"
-              >
-                <span>{weatherExpanded ? 'Minimize' : 'View Weather'}</span>
-                <svg
-                  className={`w-4 h-4 transform transition-transform ${weatherExpanded ? 'rotate-180' : ''}`}
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                </svg>
-              </button>
-            </div>
-            {!weatherExpanded && (
-              <div className="mt-2">
-                <div className="text-sm text-gray-500">
-                  3-day forecast starting {campaign?.date ? new Date(campaign.date).toLocaleDateString('en-US', {
-                    weekday: 'long',
-                    month: 'short',
-                    day: 'numeric'
-                  }) : 'campaign date'}
-                </div>
-              </div>
-            )}
-          </div>
-
-          {weatherExpanded && (
-            <div className="p-6">
-              {loadingWeather ? (
-                <div className="flex items-center justify-center py-8">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-primary"></div>
-                  <span className="ml-3 text-gray-600">Loading weather data...</span>
-                </div>
-              ) : weatherData ? (
-                weatherData.success === false ? (
-                  <div className="text-center py-8">
-                    <div className="text-gray-500 mb-2">
-                      {weatherData.message || 'Weather forecast not available'}
-                    </div>
-                    <div className="text-sm text-gray-400">
-                      Weather data will be generated during the next scheduled RSS processing
-                    </div>
-                  </div>
-                ) : (
-                <div className="space-y-4">
-                  {weatherData.cached && (
-                    <div className="mb-4 text-center text-sm text-blue-600 bg-blue-50 p-2 rounded">
-                      📋 Showing cached weather forecast (generated at {new Date(weatherData.generatedAt).toLocaleString()})
-                    </div>
-                  )}
-                  {weatherData.imageUrl ? (
-                    <div className="mb-4">
-                      <img
-                        src={weatherData.imageUrl}
-                        alt="Weather Forecast"
-                        className="w-full max-w-md mx-auto rounded-lg border"
-                      />
-                    </div>
-                  ) : (
-                    <div className="mb-4 text-center text-sm text-gray-500">
-                      Weather image generation is not configured
-                    </div>
-                  )}
-
-                  <div className="bg-gray-50 p-4 rounded-lg">
-                    <h4 className="font-medium text-gray-900 mb-3">3-Day Forecast</h4>
-                    <div className="grid grid-cols-3 gap-4">
-                      {weatherData.weatherData && weatherData.weatherData.map((day: any, index: number) => (
-                        <div key={index} className="text-center">
-                          <div className="font-semibold text-gray-900">{day.day}</div>
-                          <div className="text-sm text-gray-500 mb-2">{day.dateLabel}</div>
-                          <div className="text-2xl mb-2">{day.icon === 'sunny' ? '☀️' : day.icon === 'cloudy' ? '☁️' : day.icon === 'rainy' ? '🌧️' : '☀️'}</div>
-                          <div className="text-sm">
-                            <div className="font-semibold">{day.high}° / {day.low}°</div>
-                            <div className="text-gray-500">{day.precipitation}% rain</div>
-                            <div className="text-xs text-gray-500 mt-1">{day.condition}</div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                </div>
-                )
-              ) : (
-                <div className="text-center py-8 text-gray-500">
-                  Click "View Weather" to load forecast data
-                </div>
-              )}
-            </div>
-          )}
-        </div>
 
         {/* Dynamic Newsletter Sections */}
         {newsletterSections
@@ -2281,6 +2155,11 @@ export default function CampaignDetailPage() {
               weatherData={section.name === 'Local Weather' ? weatherData : null}
               loadingWeather={section.name === 'Local Weather' ? loadingWeather : false}
               onWeatherExpand={section.name === 'Local Weather' ? handleWeatherExpand : undefined}
+              availableDiningDeals={section.name === 'Dining Deals' ? availableDiningDeals : undefined}
+              campaignDiningDeals={section.name === 'Dining Deals' ? campaignDiningDeals : undefined}
+              onDiningDealsExpand={section.name === 'Dining Deals' ? handleDiningDealsExpand : undefined}
+              onUpdateDiningDeals={section.name === 'Dining Deals' ? updateDiningDealsSelections : undefined}
+              updatingDiningDeals={section.name === 'Dining Deals' ? updatingDiningDeals : false}
             />
           ))}
 

@@ -8,10 +8,10 @@ async function initializeRandomEventSelection(campaignId: string) {
   try {
     console.log(`Initializing random event selection for campaign ${campaignId}`)
 
-    // Get the campaign's created_at timestamp
+    // Get the campaign's date and created_at timestamp
     const { data: campaign, error: campaignError } = await supabaseAdmin
       .from('newsletter_campaigns')
-      .select('created_at')
+      .select('date, created_at')
       .eq('id', campaignId)
       .single()
 

@@ -1140,16 +1140,14 @@ export class RSSProcessor {
         return
       }
 
-      // Calculate date range (3 days from campaign creation, same logic as preview)
-      const campaignCreated = new Date(campaign.created_at)
-      const centralTimeOffset = -5 * 60 * 60 * 1000 // -5 hours in milliseconds
-      const campaignCreatedCentral = new Date(campaignCreated.getTime() + centralTimeOffset)
-      const startDateTime = new Date(campaignCreatedCentral.getTime() + (12 * 60 * 60 * 1000))
+      // Calculate 3-day range starting from the newsletter date (campaign.date)
+      // Day 1: Newsletter date, Day 2: Next day, Day 3: Day after that
+      const newsletterDate = new Date(campaign.date + 'T00:00:00') // Parse as local date
 
       const dates = []
       for (let i = 0; i <= 2; i++) {
-        const date = new Date(startDateTime)
-        date.setDate(startDateTime.getDate() + i)
+        const date = new Date(newsletterDate)
+        date.setDate(newsletterDate.getDate() + i)
         dates.push(date.toISOString().split('T')[0])
       }
 

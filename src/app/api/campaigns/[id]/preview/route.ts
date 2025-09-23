@@ -193,20 +193,14 @@ function generateLocalScoopSection(articles: any[]): string {
 }
 
 async function generateLocalEventsSection(campaign: any): Promise<string> {
-  // Calculate the same 3-day range as the dashboard using Central Time
-  const campaignCreated = new Date(campaign.created_at)
-
-  // Convert to Central Time (-5 hours from UTC)
-  const centralTimeOffset = -5 * 60 * 60 * 1000 // -5 hours in milliseconds
-  const campaignCreatedCentral = new Date(campaignCreated.getTime() + centralTimeOffset)
-
-  // Add 12 hours to get start time in Central Time
-  const startDateTime = new Date(campaignCreatedCentral.getTime() + (12 * 60 * 60 * 1000))
+  // Calculate 3-day range starting from the newsletter date (campaign.date)
+  // Day 1: Newsletter date, Day 2: Next day, Day 3: Day after that
+  const newsletterDate = new Date(campaign.date + 'T00:00:00') // Parse as local date
 
   const dates = []
   for (let i = 0; i <= 2; i++) {
-    const date = new Date(startDateTime)
-    date.setDate(startDateTime.getDate() + i)
+    const date = new Date(newsletterDate)
+    date.setDate(newsletterDate.getDate() + i)
     dates.push(date.toISOString().split('T')[0])
   }
 

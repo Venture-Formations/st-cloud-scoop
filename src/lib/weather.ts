@@ -23,8 +23,17 @@ export async function fetchWeatherData(): Promise<WeatherDay[]> {
     console.log('Fetching weather data for St. Cloud, MN')
 
     // Calculate target start date (start from tomorrow - weather is for next day)
+    // Use Central Time for proper date calculation
     const now = new Date()
-    const targetStartDate = new Date(now.getTime() + (24 * 60 * 60 * 1000))
+    const centralFormatter = new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'America/Chicago',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit'
+    })
+    const centralDateStr = centralFormatter.format(now) // YYYY-MM-DD in Central Time
+    const centralToday = new Date(centralDateStr + 'T00:00:00')
+    const targetStartDate = new Date(centralToday.getTime() + (24 * 60 * 60 * 1000))
 
     // Get NWS grid info for St. Cloud
     const pointsResponse = await fetch(

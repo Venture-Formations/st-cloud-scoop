@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { supabaseAdmin } from '@/lib/supabase'
 import { getWeatherForCampaign } from '@/lib/weather-manager'
+import { selectPropertiesForCampaign, getSelectedPropertiesForCampaign } from '@/lib/vrbo-selector'
 
 export async function GET(
   request: NextRequest,
@@ -465,6 +466,111 @@ async function generateWordleSection(campaign: any): Promise<string> {
   }
 }
 
+async function generateMinnesotaGetawaysSection(campaign: any): Promise<string> {
+  try {
+    console.log('Generating Minnesota Getaways section for campaign:', campaign?.id)
+
+    // Get selected properties for this campaign (or select them if not done yet)
+    let selectedProperties = await getSelectedPropertiesForCampaign(campaign.id)
+
+    if (selectedProperties.length === 0) {
+      console.log('No properties selected yet, selecting now...')
+      const selectionResult = await selectPropertiesForCampaign(campaign.id)
+      selectedProperties = selectionResult.selected
+      console.log(selectionResult.message)
+    }
+
+    if (selectedProperties.length === 0) {
+      console.log('No VRBO properties available for Minnesota Getaways section')
+      return '' // Don't include section if no properties
+    }
+
+    console.log(`Found ${selectedProperties.length} selected properties for Minnesota Getaways`)
+
+    // Generate HTML for each property using the provided template
+    let propertyCards = ''
+
+    selectedProperties.forEach((property, index) => {
+      // Clean and validate data
+      const title = property.title || ''
+      const imageUrl = property.adjusted_image_url || property.main_image_url || ''
+      const city = property.city || ''
+      const bedrooms = property.bedrooms || 0
+      const bathrooms = property.bathrooms || 0
+      const sleeps = property.sleeps || 0
+      const link = property.link || ''
+
+      // Skip if essential data is missing
+      if (!title || !link) {
+        console.log(`Skipping property ${index + 1} - missing title or link`)
+        return
+      }
+
+      propertyCards += `
+    <!-- CARD ${index + 1} -->
+    <td class="column" width="33.33%" style="padding:8px;vertical-align:top;">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0"
+             style="table-layout:fixed;border:1px solid #ddd;border-radius:8px;background:#fff;height:100%;font-size:16px;line-height:26px;box-shadow:0 4px 12px rgba(0,0,0,.15);">
+        <!-- Image -->
+        <tr>
+          <!-- remove any gap above image -->
+          <td style="padding:0;line-height:0;font-size:0;mso-line-height-rule:exactly;border-top-left-radius:8px;border-top-right-radius:8px;">
+            <a href="${link}" style="display:block;text-decoration:none;">
+              <img src="${imageUrl}"
+                   alt="${title}, ${city}" border="0"
+                   style="display:block;width:100%;height:auto;border:0;outline:none;text-decoration:none;border-top-left-radius:8px;border-top-right-radius:8px;">
+            </a>
+          </td>
+        </tr>
+        <!-- Body -->
+        <tr>
+          <td style="padding:6px 10px 6px;">
+            <!-- 2-line clamp on desktop; mobile unlocks below -->
+            <div class="vrbo-title" style="font-size:16px;line-height:20px;height:auto;overflow:hidden;font-weight:bold;margin:0 0 4px;">
+              <a href="${link}" style="color:#0A66C2;text-decoration:none;">${title}</a>
+            </div>
+            <div style="font-size:13px;line-height:18px;color:#555;margin:0 0 8px;">${city}</div>
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-top:1px solid #eee;table-layout:fixed;">
+              <tr>
+                <td align="center" style="padding:4px 0;font-size:12px;color:#222;white-space:nowrap;"><strong>${bedrooms}</strong> BR</td>
+                <td align="center" style="padding:4px 0;font-size:12px;color:#222;border-left:1px solid #eee;border-right:1px solid #eee;white-space:nowrap;"><strong>${bathrooms}</strong> BA</td>
+                <td align="center" style="padding:4px 0;font-size:12px;color:#222;white-space:nowrap;">Sleeps <strong>${sleeps}</strong></td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+      </table>
+    </td>`
+    })
+
+    return `
+<table width="100%" cellpadding="0" cellspacing="0" style="border: 1px solid #f7f7f7; border-radius: 10px; margin-top: 10px; max-width: 990px; margin: 0 auto; background-color: #f7f7f7; font-family: Arial, sans-serif;">
+  <tr>
+    <td style="padding: 5px;">
+      <h2 style="font-size: 1.625em; line-height: 1.16em; font-family: Arial, sans-serif; color: #1877F2; margin: 0; padding: 0;">Minnesota Getaways</h2>
+    </td>
+  </tr>
+  <tr>
+<tr class="row">${propertyCards}
+</tr>
+</table>
+<!--[if mso]></td></tr></table><![endif]-->
+
+<!-- Mobile helpers: stack columns + allow long titles -->
+<style>
+@media only screen and (max-width:600px){
+  .row .column{display:block !important;width:100% !important;max-width:100% !important;}
+}
+</style>
+<!-- ===== /Minnesota Vrbo ===== -->
+<br>`
+
+  } catch (error) {
+    console.error('Error generating Minnesota Getaways section:', error)
+    return '' // Return empty string on error to not break the newsletter
+  }
+}
+
 async function generateNewsletterHtml(campaign: any): Promise<string> {
   try {
     console.log('Generating HTML for campaign:', campaign?.id)
@@ -531,13 +637,19 @@ async function generateNewsletterHtml(campaign: any): Promise<string> {
           if (wordleHtml) {
             sectionsHtml += wordleHtml
           }
+        } else if (section.name === 'Minnesota Getaways') {
+          const getawaysHtml = await generateMinnesotaGetawaysSection(campaign)
+          if (getawaysHtml) {
+            sectionsHtml += getawaysHtml
+          }
         }
       }
     } else {
       // Fallback to default order if no sections configured
       console.log('No sections found, using default order')
       const wordleHtml = await generateWordleSection(campaign)
-      sectionsHtml = generateLocalScoopSection(activeArticles) + await generateLocalEventsSection(campaign) + (wordleHtml || '')
+      const getawaysHtml = await generateMinnesotaGetawaysSection(campaign)
+      sectionsHtml = generateLocalScoopSection(activeArticles) + await generateLocalEventsSection(campaign) + (wordleHtml || '') + (getawaysHtml || '')
     }
 
     // Combine all sections

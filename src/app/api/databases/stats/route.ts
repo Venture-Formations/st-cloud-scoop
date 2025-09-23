@@ -19,12 +19,27 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to fetch events count' }, { status: 500 })
     }
 
+    const { data: vrboCount, error: vrboError } = await supabaseAdmin
+      .from('vrbo_listings')
+      .select('id', { count: 'exact' })
+
+    if (vrboError) {
+      console.error('Error fetching VRBO count:', vrboError)
+      // Don't fail the request if VRBO table doesn't exist yet
+    }
+
     const databases = [
       {
         name: 'Local Events',
         description: 'Events pulled from Visit St. Cloud API',
         count: eventsCount?.length || 0,
         href: '/dashboard/databases/events'
+      },
+      {
+        name: 'VRBO Listings',
+        description: 'Minnesota Getaways properties for newsletters',
+        count: vrboCount?.length || 0,
+        href: '/dashboard/databases/vrbo'
       }
     ]
 

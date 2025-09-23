@@ -275,3 +275,37 @@ export interface Wordle {
   created_at: string
   updated_at: string
 }
+
+export interface VrboListing {
+  id: string
+  title: string
+  main_image_url: string | null
+  adjusted_image_url: string | null  // GitHub hosted resized image URL
+  city: string | null
+  bedrooms: number | null
+  bathrooms: number | null
+  sleeps: number | null
+  link: string  // Tracked affiliate link
+  non_tracked_link: string | null  // Original VRBO link
+  listing_type: 'Local' | 'Greater'
+  is_active: boolean
+  created_at: string
+  updated_at: string
+}
+
+export interface CampaignVrboSelection {
+  id: string
+  campaign_id: string
+  listing_id: string
+  selection_order: number  // 1, 2, 3 for display order
+  created_at: string
+  listing?: VrboListing
+}
+
+export interface VrboSelectionState {
+  id: string
+  listing_type: 'Local' | 'Greater'
+  current_index: number
+  shuffle_order: string[]  // Array of listing IDs in shuffled order
+  last_updated: string
+}

@@ -23,7 +23,7 @@ export async function GET(request: NextRequest) {
       const response = await openai.chat.completions.create({
         model: 'gpt-5',
         messages: [{ role: 'user', content: testPrompt }],
-        max_tokens: 50,
+        max_completion_tokens: 50, // GPT-5 uses max_completion_tokens instead of max_tokens
         temperature: 0.1,
       })
 

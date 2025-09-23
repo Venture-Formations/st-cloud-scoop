@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
-import { callOpenAI } from '@/lib/openai'
+import OpenAI from 'openai'
+
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
+})
 
 export async function GET(request: NextRequest) {
   try {
@@ -10,28 +14,39 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    console.log('🤖 Testing GPT-5 availability...')
+    console.log('🤖 Testing GPT-5 directly...')
 
-    const testPrompt = "Respond with exactly this: 'GPT-5 is working'"
+    const testPrompt = "Respond with exactly: GPT-5 is working"
 
     try {
-      const result = await callOpenAI(testPrompt, 100, 0.1)
-      console.log('GPT-5 test successful:', result)
+      console.log('Making direct GPT-5 API call...')
+      const response = await openai.chat.completions.create({
+        model: 'gpt-5',
+        messages: [{ role: 'user', content: testPrompt }],
+        max_tokens: 50,
+        temperature: 0.1,
+      })
+
+      const content = response.choices[0]?.message?.content
+      console.log('GPT-5 direct test successful:', content)
 
       return NextResponse.json({
         success: true,
         model: 'gpt-5',
-        response: result,
-        message: 'GPT-5 is available and working'
+        response: content,
+        message: 'GPT-5 is available and working',
+        usage: response.usage
       })
-    } catch (openaiError) {
-      console.error('GPT-5 test failed:', openaiError)
+    } catch (openaiError: any) {
+      console.error('GPT-5 direct test failed:', openaiError)
 
       return NextResponse.json({
         success: false,
         model: 'gpt-5',
-        error: openaiError instanceof Error ? openaiError.message : 'Unknown OpenAI error',
-        message: 'GPT-5 test failed - check if model is available'
+        error: openaiError?.message || 'Unknown OpenAI error',
+        error_type: openaiError?.type || 'unknown',
+        error_code: openaiError?.code || 'unknown',
+        message: 'GPT-5 test failed - see error details'
       })
     }
 

@@ -151,8 +151,18 @@ export async function fetchWeatherData(): Promise<WeatherDay[]> {
       if (high === null) high = low || 70 // Default to reasonable temp
       if (low === null) low = high || 50   // Default to reasonable temp
 
+      // Get day label based on position: TODAY, TOMORROW, then actual day names
+      let dayLabel: string
+      if (weatherDays.length === 0) {
+        dayLabel = "TODAY"
+      } else if (weatherDays.length === 1) {
+        dayLabel = "TOMORROW"
+      } else {
+        dayLabel = dayNames[date.getDay()].toUpperCase()
+      }
+
       weatherDays.push({
-        day: dayNames[date.getDay()],
+        day: dayLabel,
         dateLabel: `${monthNames[date.getMonth()]} ${date.getDate()}`,
         icon,
         precipitation,

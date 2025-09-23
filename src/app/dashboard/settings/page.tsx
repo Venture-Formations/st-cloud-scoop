@@ -540,7 +540,7 @@ function SystemStatus() {
           <div className="flex justify-between items-center py-2">
             <div>
               <div className="font-medium">Health Checks</div>
-              <div className="text-sm text-gray-600">Every 15 minutes (8 AM - 10 PM CT)</div>
+              <div className="text-sm text-gray-600">Every 5 minutes (8 AM - 10 PM CT)</div>
             </div>
             <span className="text-green-600 text-sm">Active</span>
           </div>
@@ -850,7 +850,7 @@ function EmailSettings() {
                 <option value="PM">PM</option>
               </select>
             </div>
-            <p className="text-xs text-gray-500 mt-1">Daily RSS feed processing and article rating (15-minute increments)</p>
+            <p className="text-xs text-gray-500 mt-1">Daily RSS feed processing and article rating (5-minute increments)</p>
           </div>
 
           <div>
@@ -927,7 +927,7 @@ function EmailSettings() {
                 <option value="PM">PM</option>
               </select>
             </div>
-            <p className="text-xs text-gray-500 mt-1">Newsletter campaign setup and review (15-minute increments)</p>
+            <p className="text-xs text-gray-500 mt-1">Newsletter campaign setup and review (5-minute increments)</p>
           </div>
 
           <div>
@@ -1130,7 +1130,7 @@ function EmailSettings() {
                 <option value="PM">PM</option>
               </select>
             </div>
-            <p className="text-xs text-gray-500 mt-1">Final newsletter campaign creation with any review changes (15-minute increments)</p>
+            <p className="text-xs text-gray-500 mt-1">Final newsletter campaign creation with any review changes (5-minute increments)</p>
           </div>
 
           <div>

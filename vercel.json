@@ -2,11 +2,11 @@
   "crons": [
     {
       "path": "/api/cron/rss-processing",
-      "schedule": "*/15 * * * *"
+      "schedule": "*/5 * * * *"
     },
     {
       "path": "/api/cron/create-campaign",
-      "schedule": "*/15 * * * *"
+      "schedule": "*/5 * * * *"
     },
     {
       "path": "/api/cron/process-rss",
@@ -14,7 +14,7 @@
     },
     {
       "path": "/api/cron/send-final",
-      "schedule": "*/15 * * * *"
+      "schedule": "*/5 * * * *"
     },
     {
       "path": "/api/cron/import-metrics",
@@ -22,7 +22,7 @@
     },
     {
       "path": "/api/cron/health-check",
-      "schedule": "*/15 8-22 * * *"
+      "schedule": "*/5 8-22 * * *"
     },
     {
       "path": "/api/cron/sync-events",

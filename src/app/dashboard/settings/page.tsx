@@ -126,7 +126,7 @@ function SortableSection({
         {/* Section info */}
         <div>
           <h4 className="font-medium text-gray-900">{section.name}</h4>
-          <p className="text-sm text-gray-500">Display Order: {section.display_order}</p>
+          <p className="text-sm text-gray-500">Display Order: {Math.floor(section.display_order / 10)}</p>
         </div>
       </div>
 

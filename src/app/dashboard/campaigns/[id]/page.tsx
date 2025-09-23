@@ -451,21 +451,21 @@ function DiningDealsManager({
   // Filter deals for this day of week
   const dealsForDay = availableDeals.filter(deal => deal.day_of_week === dayOfWeek)
 
-  const selectedDeals = campaignDeals.filter(cd => cd.is_selected)
-  const featuredDealId = campaignDeals.find(cd => cd.is_featured)?.deal_id
+  const selectedDeals = campaignDeals // All items in campaignDeals are selected by definition
+  const featuredDealId = campaignDeals.find(cd => cd.is_featured_in_campaign)?.deal_id
 
   const handleDealToggle = (dealId: string, isSelected: boolean) => {
     let newSelected: string[]
     if (isSelected) {
       // Add deal if under limit (8 deals max)
-      if (selectedDeals.length < 8) {
-        newSelected = [...selectedDeals.map(cd => cd.deal_id), dealId]
+      if (campaignDeals.length < 8) {
+        newSelected = [...campaignDeals.map(cd => cd.deal_id), dealId]
       } else {
         return // Don't add if at limit
       }
     } else {
       // Remove deal
-      newSelected = selectedDeals.map(cd => cd.deal_id).filter(id => id !== dealId)
+      newSelected = campaignDeals.map(cd => cd.deal_id).filter(id => id !== dealId)
     }
 
     // Clear featured if we're removing the featured deal
@@ -475,7 +475,7 @@ function DiningDealsManager({
   }
 
   const handleFeaturedToggle = (dealId: string) => {
-    const currentSelected = selectedDeals.map(cd => cd.deal_id)
+    const currentSelected = campaignDeals.map(cd => cd.deal_id)
     const newFeatured = featuredDealId === dealId ? undefined : dealId
     onUpdateDeals(currentSelected, newFeatured)
   }
@@ -488,7 +488,7 @@ function DiningDealsManager({
             {dateLabel} Dining Deals
           </h3>
           <div className="text-sm text-gray-500">
-            {selectedDeals.length}/8 deals selected
+            {campaignDeals.length}/8 deals selected
           </div>
         </div>
 
@@ -501,7 +501,7 @@ function DiningDealsManager({
         ) : (
           <div className="space-y-3">
             {dealsForDay.map(deal => {
-              const isSelected = selectedDeals.some(cd => cd.deal_id === deal.id)
+              const isSelected = campaignDeals.some(cd => cd.deal_id === deal.id)
               const isFeatured = featuredDealId === deal.id
 
               return (

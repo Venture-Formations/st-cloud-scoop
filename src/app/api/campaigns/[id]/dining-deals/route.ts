@@ -99,9 +99,8 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       const insertData = deal_ids.map((dealId: string, index: number) => ({
         campaign_id: campaignId,
         deal_id: dealId,
-        is_selected: true,
-        is_featured: dealId === featured_deal_id,
-        display_order: index + 1
+        selection_order: index + 1,
+        is_featured_in_campaign: dealId === featured_deal_id
       }))
 
       console.log('💾 Attempting to insert data:', insertData)

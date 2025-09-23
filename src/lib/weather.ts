@@ -22,9 +22,9 @@ export async function fetchWeatherData(): Promise<WeatherDay[]> {
   try {
     console.log('Fetching weather data for St. Cloud, MN')
 
-    // Calculate target start date (start from today to ensure we don't miss periods)
+    // Calculate target start date (start from tomorrow - weather is for next day)
     const now = new Date()
-    const targetStartDate = new Date(now.getTime())
+    const targetStartDate = new Date(now.getTime() + (24 * 60 * 60 * 1000))
 
     // Get NWS grid info for St. Cloud
     const pointsResponse = await fetch(

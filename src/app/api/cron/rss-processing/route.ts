@@ -32,65 +32,58 @@ export async function POST(request: NextRequest) {
     }
 
     console.log('=== RSS PROCESSING STARTED (Time Matched) ===')
-    console.log('Central Time:', new Date().toLocaleString("en-US", {timeZone: "America/Chicago"}))
+    const currentCentralTime = new Date().toLocaleString("en-US", {timeZone: "America/Chicago"})
+    console.log('Central Time:', currentCentralTime)
 
     // Get tomorrow's date for campaign creation (RSS processing is for next day)
-    const tomorrow = new Date()
-    tomorrow.setDate(tomorrow.getDate() + 1)
-    const campaignDate = tomorrow.toISOString().split('T')[0]
+    // IMPORTANT: Calculate tomorrow based on Central Time, not UTC
+    // Fix for issue where RSS runs 8:15 PM CT Sept 22 but created campaign for Sept 24 instead of Sept 23
+    const now = new Date()
+
+    // Create a date in Central Time using Intl.DateTimeFormat
+    const centralFormatter = new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'America/Chicago',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit'
+    })
+
+    const centralDate = centralFormatter.format(now) // Returns YYYY-MM-DD in Central Time
+
+    // Add one day to get tomorrow in Central Time
+    const centralToday = new Date(centralDate + 'T00:00:00')
+    const centralTomorrow = new Date(centralToday)
+    centralTomorrow.setDate(centralToday.getDate() + 1)
+
+    const campaignDate = centralTomorrow.toISOString().split('T')[0]
 
     console.log('Processing RSS for tomorrow\'s campaign date:', campaignDate)
+    console.log('Debug: UTC now:', now.toISOString())
+    console.log('Debug: Central date today:', centralDate)
+    console.log('Debug: Central tomorrow:', campaignDate)
 
-    // STEP 1: Create tomorrow's campaign first
-    console.log('Creating campaign for tomorrow before processing RSS...')
-
-    // Check if campaign already exists for tomorrow
-    const { data: existingCampaign } = await supabaseAdmin
-      .from('newsletter_campaigns')
-      .select('id, status')
-      .eq('date', campaignDate)
-      .single()
-
-    if (existingCampaign) {
-      console.log('Campaign already exists for tomorrow:', existingCampaign.id, 'Status:', existingCampaign.status)
-
-      // Only process if campaign is in draft status
-      if (existingCampaign.status !== 'draft') {
-        return NextResponse.json({
-          success: true,
-          message: `Campaign for ${campaignDate} already exists with status: ${existingCampaign.status}`,
-          campaignId: existingCampaign.id,
-          skipped: true
-        })
-      }
-    }
+    // STEP 1: Create new campaign for tomorrow (allow duplicate dates)
+    console.log('Creating new campaign for tomorrow...')
 
     // Initialize RSS processor
     const rssProcessor = new RSSProcessor()
 
-    let campaignId: string
+    // Always create a new campaign (duplicate dates are now allowed)
+    const { data: newCampaign, error: campaignError } = await supabaseAdmin
+      .from('newsletter_campaigns')
+      .insert([{
+        date: campaignDate,
+        status: 'draft'
+      }])
+      .select()
+      .single()
 
-    if (existingCampaign) {
-      campaignId = existingCampaign.id
-      console.log('Using existing campaign:', campaignId)
-    } else {
-      // Create new campaign for tomorrow
-      const { data: newCampaign, error: campaignError } = await supabaseAdmin
-        .from('newsletter_campaigns')
-        .insert([{
-          date: campaignDate,
-          status: 'draft'
-        }])
-        .select()
-        .single()
-
-      if (campaignError || !newCampaign) {
-        throw new Error(`Failed to create campaign: ${campaignError?.message}`)
-      }
-
-      campaignId = newCampaign.id
-      console.log('Created new campaign for tomorrow:', campaignId)
+    if (campaignError || !newCampaign) {
+      throw new Error(`Failed to create campaign: ${campaignError?.message}`)
     }
+
+    const campaignId = newCampaign.id
+    console.log('Created new campaign:', campaignId, 'for date:', campaignDate)
 
     // Process RSS feeds for the specific campaign
     console.log('Starting RSS processing...')
@@ -153,51 +146,58 @@ export async function GET(request: NextRequest) {
     }
 
     console.log('=== RSS PROCESSING STARTED (Time Matched) ===')
-    console.log('Central Time:', new Date().toLocaleString("en-US", {timeZone: "America/Chicago"}))
+    const currentCentralTime = new Date().toLocaleString("en-US", {timeZone: "America/Chicago"})
+    console.log('Central Time:', currentCentralTime)
 
     // Get tomorrow's date for campaign creation (RSS processing is for next day)
-    const tomorrow = new Date()
-    tomorrow.setDate(tomorrow.getDate() + 1)
-    const campaignDate = tomorrow.toISOString().split('T')[0]
+    // IMPORTANT: Calculate tomorrow based on Central Time, not UTC
+    // Fix for issue where RSS runs 8:15 PM CT Sept 22 but created campaign for Sept 24 instead of Sept 23
+    const now = new Date()
+
+    // Create a date in Central Time using Intl.DateTimeFormat
+    const centralFormatter = new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'America/Chicago',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit'
+    })
+
+    const centralDate = centralFormatter.format(now) // Returns YYYY-MM-DD in Central Time
+
+    // Add one day to get tomorrow in Central Time
+    const centralToday = new Date(centralDate + 'T00:00:00')
+    const centralTomorrow = new Date(centralToday)
+    centralTomorrow.setDate(centralToday.getDate() + 1)
+
+    const campaignDate = centralTomorrow.toISOString().split('T')[0]
 
     console.log('Processing RSS for tomorrow\'s campaign date:', campaignDate)
+    console.log('Debug: UTC now:', now.toISOString())
+    console.log('Debug: Central date today:', centralDate)
+    console.log('Debug: Central tomorrow:', campaignDate)
 
-    // STEP 1: Create tomorrow's campaign first
-    console.log('Creating campaign for tomorrow before processing RSS...')
+    // STEP 1: Create new campaign for tomorrow (allow duplicate dates)
+    console.log('Creating new campaign for tomorrow...')
 
-    // Check if campaign already exists for tomorrow
-    const { data: existingCampaign } = await supabaseAdmin
+    // Always create a new campaign (duplicate dates are now allowed)
+    const { data: newCampaign, error: campaignError } = await supabaseAdmin
       .from('newsletter_campaigns')
-      .select('id, status')
-      .eq('date', campaignDate)
+      .insert([{
+        date: campaignDate,
+        subject_line: '', // Will be generated later
+        status: 'draft',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      }])
+      .select('id')
       .single()
 
-    let campaignId: string
-
-    if (existingCampaign) {
-      console.log('Campaign already exists for tomorrow:', existingCampaign.id, 'Status:', existingCampaign.status)
-      campaignId = existingCampaign.id
-    } else {
-      // Create new campaign for tomorrow
-      const { data: newCampaign, error: campaignError } = await supabaseAdmin
-        .from('newsletter_campaigns')
-        .insert([{
-          date: campaignDate,
-          subject_line: '', // Will be generated later
-          status: 'draft',
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        }])
-        .select('id')
-        .single()
-
-      if (campaignError || !newCampaign) {
-        throw new Error(`Failed to create campaign: ${campaignError?.message}`)
-      }
-
-      campaignId = newCampaign.id
-      console.log('Created new campaign for tomorrow:', campaignId)
+    if (campaignError || !newCampaign) {
+      throw new Error(`Failed to create campaign: ${campaignError?.message}`)
     }
+
+    const campaignId = newCampaign.id
+    console.log('Created new campaign:', campaignId, 'for date:', campaignDate)
 
     // Process RSS feeds for the specific campaign
     console.log('Starting RSS processing...')

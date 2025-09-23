@@ -137,6 +137,34 @@ export async function getLatestWeatherForecast(): Promise<WeatherForecast | null
 }
 
 /**
+ * Get weather forecast for a specific date
+ */
+export async function getWeatherForecastByDate(forecastDate: string): Promise<WeatherForecast | null> {
+  try {
+    const supabase = getSupabaseClient()
+    const { data, error } = await supabase
+      .from('weather_forecasts')
+      .select('*')
+      .eq('forecast_date', forecastDate)
+      .eq('is_active', true)
+      .order('generated_at', { ascending: false })
+      .limit(1)
+      .single()
+
+    if (error) {
+      console.log(`No weather forecast found for date ${forecastDate}:`, error.message)
+      return null
+    }
+
+    return data
+
+  } catch (error) {
+    console.error(`Error fetching weather forecast for date ${forecastDate}:`, error)
+    return null
+  }
+}
+
+/**
  * Mark old forecasts as inactive (cleanup)
  */
 export async function cleanupOldForecasts(): Promise<void> {
@@ -156,6 +184,16 @@ export async function cleanupOldForecasts(): Promise<void> {
     }
 
     console.log('Old weather forecasts cleaned up')
+
+    // Also cleanup old weather images from GitHub (keep 30 days)
+    try {
+      const { GitHubImageStorage } = await import('./github-storage')
+      const githubStorage = new GitHubImageStorage()
+      const deletedCount = await githubStorage.cleanupOldWeatherImages(30)
+      console.log(`Cleaned up ${deletedCount} old weather images from GitHub`)
+    } catch (githubError) {
+      console.log('GitHub weather image cleanup skipped:', githubError instanceof Error ? githubError.message : 'Unknown error')
+    }
 
   } catch (error) {
     console.error('Error cleaning up old forecasts:', error)

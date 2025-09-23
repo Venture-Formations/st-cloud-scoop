@@ -1,4 +1,6 @@
-// Weather image generation using HTML/CSS to Image API
+// Weather image generation using HTML/CSS to Image API with GitHub hosting
+
+import { GitHubImageStorage } from './github-storage'
 
 interface ImageGenerationResponse {
   url: string
@@ -6,6 +8,7 @@ interface ImageGenerationResponse {
 
 /**
  * Generate weather image from HTML using HTML/CSS to Image API
+ * Downloads the generated image and uploads to GitHub for our own hosting
  * Uses the format specified in WeatherScript.txt
  */
 export async function generateWeatherImage(weatherData: any[]): Promise<string | null> {
@@ -27,7 +30,7 @@ export async function generateWeatherImage(weatherData: any[]): Promise<string |
     console.log('Generated weather widget HTML, length:', imageHtml.length)
     console.log('First 200 chars of HTML:', imageHtml.substring(0, 200))
 
-    console.log('Generating weather image...')
+    console.log('Generating weather image via HTML/CSS to Image API...')
 
     const response = await fetch('https://hcti.io/v1/image', {
       method: 'POST',
@@ -54,9 +57,24 @@ export async function generateWeatherImage(weatherData: any[]): Promise<string |
     }
 
     const result: ImageGenerationResponse = await response.json()
-    console.log('Weather image generated successfully:', result.url)
+    console.log('Weather image generated at external URL:', result.url)
 
-    return result.url
+    // Now download the image and upload to GitHub for our own hosting
+    console.log('Downloading weather image and uploading to GitHub...')
+
+    const githubStorage = new GitHubImageStorage()
+    const forecastDate = new Date().toISOString().split('T')[0]
+    const weatherTitle = `Weather forecast for ${forecastDate}`
+
+    const githubImageUrl = await githubStorage.uploadWeatherImage(result.url, forecastDate)
+
+    if (githubImageUrl) {
+      console.log('Weather image successfully hosted on GitHub:', githubImageUrl)
+      return githubImageUrl
+    } else {
+      console.log('GitHub upload failed, falling back to external URL:', result.url)
+      return result.url
+    }
 
   } catch (error) {
     console.error('Weather image generation failed:', error)

@@ -181,18 +181,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Date is required' }, { status: 400 })
     }
 
-    // Check if campaign already exists for this date
-    const { data: existing } = await supabaseAdmin
-      .from('newsletter_campaigns')
-      .select('id')
-      .eq('date', date)
-      .single()
-
-    if (existing) {
-      return NextResponse.json({ error: 'Campaign already exists for this date' }, { status: 409 })
-    }
-
-    // Create new campaign
+    // Create new campaign (duplicate dates are now allowed)
     const { data: campaign, error } = await supabaseAdmin
       .from('newsletter_campaigns')
       .insert([{

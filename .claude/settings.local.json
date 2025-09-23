@@ -47,7 +47,8 @@
       "Bash(timeout 60 curl -X GET \"https://st-cloud-scoop.vercel.app/api/debug/test-weather\" -H \"Content-Type: application/json\" -v)",
       "Bash(timeout 60 curl -X GET \"https://st-cloud-scoop.vercel.app/api/debug/test-weather\" -H \"Content-Type: application/json\")",
       "Bash(timeout:*)",
-      "WebFetch(domain:hcti.io)"
+      "WebFetch(domain:hcti.io)",
+      "Bash(node:*)"
     ],
     "deny": [],
     "ask": []

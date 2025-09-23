@@ -265,3 +265,13 @@ export interface SubjectLineGeneration {
   subject_line: string
   character_count: number
 }
+
+export interface Wordle {
+  id: string
+  date: string  // YYYY-MM-DD format
+  word: string
+  definition: string
+  interesting_fact: string
+  created_at: string
+  updated_at: string
+}

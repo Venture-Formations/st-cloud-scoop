@@ -412,6 +412,59 @@ function generateNewsletterFooter(): string {
 </html>`
 }
 
+async function generateWordleSection(campaign: any): Promise<string> {
+  try {
+    console.log('Generating Wordle section for campaign:', campaign?.id)
+
+    // Get yesterday's date (since this is for "Yesterday's Wordle")
+    const yesterday = new Date()
+    yesterday.setDate(yesterday.getDate() - 1)
+    const yesterdayDate = yesterday.toISOString().split('T')[0]
+
+    console.log('Looking for Wordle data for date:', yesterdayDate)
+
+    // Fetch Wordle data for yesterday
+    const { data: wordleData, error } = await supabaseAdmin
+      .from('wordle')
+      .select('*')
+      .eq('date', yesterdayDate)
+      .single()
+
+    if (error || !wordleData) {
+      console.log('No Wordle data found for yesterday:', yesterdayDate)
+      return '' // Don't include section if no data
+    }
+
+    console.log('Found Wordle data:', wordleData.word)
+
+    // Generate the HTML using the template structure
+    const wordleCard = `<table width='100%' cellpadding='0' cellspacing='0' style='border: 1px solid #ddd; border-radius: 12px; background-color: #fff; box-shadow: 0 4px 12px rgba(0,0,0,.15); font-family: Arial, sans-serif; font-size: 16px; color: #333; line-height: 26px;'>
+      <tr><td style='background-color: #F8F9FA; text-align: center; padding: 8px; font-weight: bold; font-size: 24px; color: #3C4043; text-transform: uppercase;'>${wordleData.word}</td></tr>
+      <tr><td style='padding: 16px;'>
+        <div style='margin-bottom: 12px;'><strong>Definition:</strong> ${wordleData.definition}</div>
+        <div><strong>Interesting Fact:</strong> ${wordleData.interesting_fact}</div>
+      </td></tr>
+    </table>`
+
+    const wordleColumn = `<td class='column' style='padding:8px; vertical-align: top;'>${wordleCard}</td>`
+
+    return `
+<table width="100%" cellpadding="0" cellspacing="0" style="border: 1px solid #f7f7f7; border-radius: 10px; margin-top: 10px; max-width: 990px; margin: 0 auto; background-color: #f7f7f7; font-family: Arial, sans-serif;">
+  <tr>
+    <td style="padding: 5px;">
+      <h2 style="font-size: 1.625em; line-height: 1.16em; font-family: Arial, sans-serif; color: #1877F2; margin: 0; padding: 0;">Yesterday's Wordle</h2>
+    </td>
+  </tr>
+  <tr class="row">${wordleColumn}</tr>
+</table>
+<br>`
+
+  } catch (error) {
+    console.error('Error generating Wordle section:', error)
+    return '' // Return empty string on error to not break the newsletter
+  }
+}
+
 async function generateNewsletterHtml(campaign: any): Promise<string> {
   try {
     console.log('Generating HTML for campaign:', campaign?.id)
@@ -473,12 +526,18 @@ async function generateNewsletterHtml(campaign: any): Promise<string> {
           if (weatherHtml) {
             sectionsHtml += weatherHtml
           }
+        } else if (section.name === "Yesterday's Wordle") {
+          const wordleHtml = await generateWordleSection(campaign)
+          if (wordleHtml) {
+            sectionsHtml += wordleHtml
+          }
         }
       }
     } else {
       // Fallback to default order if no sections configured
       console.log('No sections found, using default order')
-      sectionsHtml = generateLocalScoopSection(activeArticles) + await generateLocalEventsSection(campaign)
+      const wordleHtml = await generateWordleSection(campaign)
+      sectionsHtml = generateLocalScoopSection(activeArticles) + await generateLocalEventsSection(campaign) + (wordleHtml || '')
     }
 
     // Combine all sections

@@ -157,6 +157,7 @@ function NewsletterSettings() {
   const [sections, setSections] = useState<NewsletterSection[]>([])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [migrating, setMigrating] = useState(false)
   const [message, setMessage] = useState('')
 
   // Drag and drop sensors
@@ -242,6 +243,29 @@ function NewsletterSettings() {
     }
   }
 
+  const runMigration = async () => {
+    setMigrating(true)
+    setMessage('')
+
+    try {
+      const response = await fetch('/api/debug/migrate-newsletter-sections')
+      if (response.ok) {
+        const data = await response.json()
+        setMessage(`Migration successful! ${data.message}`)
+        await fetchSections() // Refresh the sections
+      } else {
+        const errorData = await response.json()
+        setMessage(`Migration failed: ${errorData.message || 'Unknown error'}`)
+      }
+    } catch (error) {
+      setMessage('Migration failed: Network error. Please try again.')
+      console.error('Migration error:', error)
+    } finally {
+      setMigrating(false)
+      setTimeout(() => setMessage(''), 5000)
+    }
+  }
+
   const toggleSection = async (sectionId: string, isActive: boolean) => {
     setSaving(true)
     try {
@@ -282,13 +306,26 @@ function NewsletterSettings() {
     <div className="space-y-6">
       {/* Section Order Management */}
       <div className="bg-white shadow rounded-lg p-6">
-        <div className="flex justify-between items-center mb-4">
-          <div>
+        <div className="flex justify-between items-start mb-4">
+          <div className="flex-1">
             <h3 className="text-lg font-medium text-gray-900">Newsletter Section Order</h3>
             <p className="text-sm text-gray-600 mt-1">
               Drag sections to reorder them in the newsletter. Toggle sections on/off to control what appears.
             </p>
           </div>
+          {sections.length < 6 && (
+            <button
+              onClick={runMigration}
+              disabled={migrating}
+              className={`ml-4 px-4 py-2 text-sm font-medium rounded-md border ${
+                migrating
+                  ? 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed'
+                  : 'bg-blue-600 text-white border-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2'
+              }`}
+            >
+              {migrating ? 'Adding Sections...' : 'Add Missing Sections'}
+            </button>
+          )}
         </div>
 
         {sections.length === 0 ? (
@@ -323,12 +360,21 @@ function NewsletterSettings() {
         )}
 
         <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-          <h4 className="font-medium text-blue-900 mb-2">Newsletter Section Information</h4>
-          <div className="text-sm text-blue-800 space-y-1">
-            <div>• <strong>The Local Scoop</strong> - Main news articles section</div>
-            <div>• <strong>Local Events</strong> - Community events and activities</div>
-            <div>• Sections appear in newsletters in the order shown above</div>
-            <div>• Inactive sections are hidden from newsletters but can be reactivated</div>
+          <h4 className="font-medium text-blue-900 mb-3">Newsletter Section Information</h4>
+          <div className="text-sm text-blue-800 space-y-2">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mb-3">
+              <div>• <strong>The Local Scoop</strong> - Main news articles from RSS feeds</div>
+              <div>• <strong>Local Events</strong> - Community events and activities (3-day span)</div>
+              <div>• <strong>Local Weather</strong> - 3-day weather forecast with image charts</div>
+              <div>• <strong>Yesterday's Wordle</strong> - Previous day's Wordle word with definition</div>
+              <div>• <strong>Minnesota Getaways</strong> - Featured VRBO vacation rental properties</div>
+              <div>• <strong>Dining Deals</strong> - Restaurant specials based on day of the week</div>
+            </div>
+            <div className="border-t border-blue-300 pt-2">
+              <div>📋 <strong>Management:</strong> Sections appear in newsletters in the order shown above</div>
+              <div>🔄 <strong>Status:</strong> Inactive sections are hidden but can be reactivated anytime</div>
+              <div>⚠️ <strong>Missing sections?</strong> Run database migration to add all supported sections</div>
+            </div>
           </div>
         </div>
       </div>

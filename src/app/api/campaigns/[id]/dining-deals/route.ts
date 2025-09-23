@@ -23,6 +23,18 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
 
     if (error) {
       console.error('Error fetching campaign dining selections:', error)
+
+      // If table doesn't exist, return empty selections instead of error
+      if (error.message && error.message.includes('relation "campaign_dining_selections" does not exist')) {
+        console.log('campaign_dining_selections table does not exist, returning empty selections')
+        return NextResponse.json({
+          success: true,
+          campaign_id: campaignId,
+          selections: [],
+          notice: 'Dining deals selection table not yet created'
+        })
+      }
+
       return NextResponse.json({ error: 'Failed to fetch selections' }, { status: 500 })
     }
 
@@ -66,6 +78,18 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
 
     if (deleteError) {
       console.error('Error deleting existing selections:', deleteError)
+
+      // If table doesn't exist, log warning but continue
+      if (deleteError.message && deleteError.message.includes('relation "campaign_dining_selections" does not exist')) {
+        console.log('⚠️ campaign_dining_selections table does not exist - dining deals selection will not be saved')
+        return NextResponse.json({
+          success: false,
+          error: 'Dining deals selection table not yet created',
+          message: 'Please create the campaign_dining_selections table in Supabase to enable dining deals selection',
+          notice: 'Selections cannot be saved without the database table'
+        }, { status: 400 })
+      }
+
       return NextResponse.json({ error: 'Failed to clear existing selections' }, { status: 500 })
     }
 

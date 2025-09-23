@@ -48,8 +48,10 @@ function WordleSection({ campaign }: { campaign: any }) {
       }
     }
 
-    fetchWordleData()
-  }, [])
+    if (campaign?.date) {
+      fetchWordleData()
+    }
+  }, [campaign?.date])
 
   if (loading) {
     return (

@@ -17,7 +17,12 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({
         success: false,
         error: 'No weather forecast available',
-        message: 'No cached weather data found. Run weather generation first.'
+        message: 'No cached weather data found. Weather forecasts are automatically generated daily at 8:00 PM Central Time. The next generation will occur tonight.',
+        scheduleInfo: {
+          cronSchedule: '0 20 * * *',
+          timezone: 'America/Chicago',
+          description: 'Daily at 8:00 PM Central'
+        }
       }, { status: 404 })
     }
 

@@ -1631,14 +1631,6 @@ export default function CampaignDetailPage() {
                     </div>
                   </div>
 
-                  {weatherData.html && (
-                    <div className="mt-4">
-                      <h4 className="font-medium text-gray-900 mb-2">Newsletter Preview</h4>
-                      <div className="border rounded-lg p-4 bg-white max-h-64 overflow-auto">
-                        <div dangerouslySetInnerHTML={{ __html: weatherData.html }} />
-                      </div>
-                    </div>
-                  )}
                 </div>
                 )
               ) : (

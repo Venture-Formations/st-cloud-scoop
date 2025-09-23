@@ -976,17 +976,28 @@ export default function CampaignDetailPage() {
     if (!weatherExpanded && campaign) {
       setLoadingWeather(true)
       try {
-        // Fetch weather data starting from the campaign date
-        const response = await fetch('/api/debug/test-weather')
+        // Fetch cached weather data for the campaign date
+        const response = await fetch(`/api/weather/forecast?date=${campaign.date}`)
         const data = await response.json()
 
         if (data.success) {
           setWeatherData(data)
         } else {
-          console.error('Failed to fetch weather data:', data.error)
+          console.error('Failed to fetch cached weather data:', data.error)
+          // If no cached data, show message about weather generation
+          setWeatherData({
+            success: false,
+            error: data.error,
+            message: data.message || 'Weather forecast not available'
+          })
         }
       } catch (error) {
         console.error('Error fetching weather data:', error)
+        setWeatherData({
+          success: false,
+          error: 'Network error',
+          message: 'Failed to load weather forecast'
+        })
       } finally {
         setLoadingWeather(false)
       }
@@ -1572,7 +1583,22 @@ export default function CampaignDetailPage() {
                   <span className="ml-3 text-gray-600">Loading weather data...</span>
                 </div>
               ) : weatherData ? (
+                weatherData.success === false ? (
+                  <div className="text-center py-8">
+                    <div className="text-gray-500 mb-2">
+                      {weatherData.message || 'Weather forecast not available'}
+                    </div>
+                    <div className="text-sm text-gray-400">
+                      Weather data will be generated during the next scheduled RSS processing
+                    </div>
+                  </div>
+                ) : (
                 <div className="space-y-4">
+                  {weatherData.cached && (
+                    <div className="mb-4 text-center text-sm text-blue-600 bg-blue-50 p-2 rounded">
+                      📋 Showing cached weather forecast (generated at {new Date(weatherData.generatedAt).toLocaleString()})
+                    </div>
+                  )}
                   {weatherData.imageUrl ? (
                     <div className="mb-4">
                       <img
@@ -1614,6 +1640,7 @@ export default function CampaignDetailPage() {
                     </div>
                   )}
                 </div>
+                )
               ) : (
                 <div className="text-center py-8 text-gray-500">
                   Click "View Weather" to load forecast data

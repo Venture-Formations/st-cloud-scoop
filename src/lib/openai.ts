@@ -217,12 +217,12 @@ export async function callOpenAI(prompt: string, maxTokens = 1000, temperature =
 
     // Add timeout to prevent hanging
     const controller = new AbortController()
-    const timeoutId = setTimeout(() => controller.abort(), 60000) // 60 second timeout for GPT-5
+    const timeoutId = setTimeout(() => controller.abort(), 30000) // 30 second timeout
 
     try {
-      console.log('Using GPT-5 model...')
+      console.log('Using GPT-4o model...')
       const response = await openai.chat.completions.create({
-        model: 'gpt-5',
+        model: 'gpt-4o',
         messages: [{ role: 'user', content: prompt }],
         max_tokens: maxTokens,
         temperature: temperature,

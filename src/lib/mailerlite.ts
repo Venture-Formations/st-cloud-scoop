@@ -70,13 +70,10 @@ export class MailerLiteService {
 
         // Step 2: Schedule the campaign using the campaign ID
         try {
-          const deliveryTime = await this.getReviewDeliveryTime(campaign.date)
-          console.log('Scheduling campaign for delivery at:', deliveryTime)
+          const scheduleData = await this.getReviewScheduleData(campaign.date)
+          console.log('Scheduling campaign with data:', scheduleData)
 
-          const scheduleResponse = await mailerliteClient.post(`/campaigns/${campaignId}/schedule`, {
-            delivery: deliveryTime,
-            timezone: 'UTC' // Since we're sending UTC time
-          })
+          const scheduleResponse = await mailerliteClient.post(`/campaigns/${campaignId}/schedule`, scheduleData)
 
           console.log('MailerLite schedule response:', {
             status: scheduleResponse.status,
@@ -481,18 +478,8 @@ ${sectionsHtml}
 </html>`
   }
 
-  private getScheduledDeliveryTime(date: string): string {
-    // Schedule for 4:55 AM CT on the campaign date
-    const deliveryDate = new Date(date)
-    deliveryDate.setHours(4, 55, 0, 0)
 
-    // Convert to UTC (CT is UTC-6 or UTC-5 depending on DST)
-    const utcTime = new Date(deliveryDate.getTime() + (6 * 60 * 60 * 1000))
-
-    return utcTime.toISOString()
-  }
-
-  private async getReviewDeliveryTime(date: string): Promise<string> {
+  private async getReviewScheduleData(date: string): Promise<any> {
     try {
       // Get scheduled send time from database settings
       const { data: setting } = await supabaseAdmin
@@ -504,24 +491,35 @@ ${sectionsHtml}
       const scheduledTime = setting?.value || '21:00' // Default to 9:00 PM if not found
       console.log('Using scheduled send time from settings:', scheduledTime)
 
-      // Create proper Central Time datetime string and convert to UTC
-      // This method properly handles DST
-      const centralTimeString = `${date}T${scheduledTime}:00.000-05:00`
-      const utcTime = new Date(centralTimeString)
+      // Parse the time (format: "HH:MM")
+      const [hours, minutes] = scheduledTime.split(':')
 
-      console.log('Review delivery scheduled for:', utcTime.toISOString(), `(${scheduledTime} Central Time)`)
-      console.log('MailerLite delivery_schedule payload:', JSON.stringify({
-        type: 'scheduled',
-        delivery: utcTime.toISOString()
-      }))
+      // MailerLite scheduling format
+      const scheduleData = {
+        delivery: 'scheduled',
+        schedule: {
+          date: date, // YYYY-MM-DD format
+          hours: hours, // HH format
+          minutes: minutes, // MM format
+          timezone_id: 157 // Central Time zone ID (based on your Make.com example)
+        }
+      }
 
-      return utcTime.toISOString()
+      console.log('MailerLite schedule data:', JSON.stringify(scheduleData, null, 2))
+      return scheduleData
+
     } catch (error) {
-      console.error('Error getting review delivery time, using default:', error)
+      console.error('Error getting review schedule data, using default:', error)
       // Fallback to 9:00 PM CT
-      const fallbackTime = `${date}T21:00:00.000-05:00`
-      const utcTime = new Date(fallbackTime)
-      return utcTime.toISOString()
+      return {
+        delivery: 'scheduled',
+        schedule: {
+          date: date,
+          hours: '21',
+          minutes: '00',
+          timezone_id: 157
+        }
+      }
     }
   }
 

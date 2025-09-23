@@ -50,7 +50,8 @@
       "WebFetch(domain:hcti.io)",
       "Bash(node:*)",
       "Bash(git fetch:*)",
-      "Bash(grep:*)"
+      "Bash(grep:*)",
+      "WebFetch(domain:developers.mailerlite.com)"
     ],
     "deny": [],
     "ask": []

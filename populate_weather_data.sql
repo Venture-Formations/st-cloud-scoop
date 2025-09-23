@@ -10,10 +10,10 @@ SELECT COUNT(*) as current_count FROM weather_forecasts;
 
 INSERT INTO weather_forecasts (forecast_date, weather_data, html_content, image_url) VALUES
   ('2025-09-24', '[
-    {"day": "Tuesday", "dateLabel": "Sep 24", "icon": "partly-cloudy-day", "precipitation": 15, "high": 72, "low": 58},
-    {"day": "Wednesday", "dateLabel": "Sep 25", "icon": "sunny", "precipitation": 5, "high": 75, "low": 61},
-    {"day": "Thursday", "dateLabel": "Sep 26", "icon": "cloudy", "precipitation": 25, "high": 68, "low": 55}
-  ]', '<div class="weather-forecast">3-day forecast: Partly cloudy to cloudy, highs 68-75°F</div>', 'https://via.placeholder.com/600x300/87CEEB/000000?text=Weather+Forecast'),
+    {"day": "TODAY", "dateLabel": "Sep 24", "icon": "sunny", "precipitation": 0, "high": 74, "low": 54, "condition": "Widespread Fog then Mostly Sunny"},
+    {"day": "TOMORROW", "dateLabel": "Sep 25", "icon": "sunny", "precipitation": 0, "high": 80, "low": 53, "condition": "Areas Of Fog then Sunny"},
+    {"day": "FRIDAY", "dateLabel": "Sep 26", "icon": "sunny", "precipitation": 0, "high": 80, "low": 55, "condition": "Sunny"}
+  ]', '<div class="weather-forecast">3-day forecast: Sunny conditions, highs 74-80°F</div>', 'https://raw.githubusercontent.com/VFDavid/st-cloud-scoop/main/weather-images/weather-2025-09-23.png'),
   ('2025-09-25', '[
     {"day": "Wednesday", "dateLabel": "Sep 25", "icon": "sunny", "precipitation": 5, "high": 75, "low": 61},
     {"day": "Thursday", "dateLabel": "Sep 26", "icon": "cloudy", "precipitation": 25, "high": 68, "low": 55},

@@ -314,7 +314,11 @@ function NewsletterSectionComponent({
       case 'Minnesota Getaways':
         return <MinnesotaGetawaysSection campaign={campaign} />
       case 'Dining Deals':
-        return <DiningDealsSection campaign={campaign} />
+        return (
+          <div className="text-center py-8 text-gray-500">
+            Dining deals management is handled in the dedicated Dining Deals section above
+          </div>
+        )
       case 'The Local Scoop':
         return (
           <div className="text-center py-8 text-gray-500">
@@ -367,6 +371,146 @@ function NewsletterSectionComponent({
 }
 
 // Events Manager Component
+function DiningDealsManager({
+  campaign,
+  availableDeals,
+  campaignDeals,
+  onUpdateDeals,
+  updating
+}: {
+  campaign: CampaignWithArticles | null
+  availableDeals: any[]
+  campaignDeals: any[]
+  onUpdateDeals: (selectedDealIds: string[], featuredDealId?: string) => void
+  updating: boolean
+}) {
+  if (!campaign) return null
+
+  const campaignDate = new Date(campaign.date + 'T00:00:00')
+  const dayOfWeek = campaignDate.toLocaleDateString('en-US', { weekday: 'long' })
+  const dateLabel = campaignDate.toLocaleDateString('en-US', {
+    weekday: 'long',
+    month: 'short',
+    day: 'numeric'
+  })
+
+  // Filter deals for this day of week
+  const dealsForDay = availableDeals.filter(deal => deal.day_of_week === dayOfWeek)
+
+  const selectedDeals = campaignDeals.filter(cd => cd.is_selected)
+  const featuredDealId = campaignDeals.find(cd => cd.is_featured)?.deal_id
+
+  const handleDealToggle = (dealId: string, isSelected: boolean) => {
+    let newSelected: string[]
+    if (isSelected) {
+      // Add deal if under limit (let's say 5 deals max)
+      if (selectedDeals.length < 5) {
+        newSelected = [...selectedDeals.map(cd => cd.deal_id), dealId]
+      } else {
+        return // Don't add if at limit
+      }
+    } else {
+      // Remove deal
+      newSelected = selectedDeals.map(cd => cd.deal_id).filter(id => id !== dealId)
+    }
+
+    // Clear featured if we're removing the featured deal
+    const newFeatured = newSelected.includes(featuredDealId || '') ? featuredDealId : undefined
+
+    onUpdateDeals(newSelected, newFeatured)
+  }
+
+  const handleFeaturedToggle = (dealId: string) => {
+    const currentSelected = selectedDeals.map(cd => cd.deal_id)
+    const newFeatured = featuredDealId === dealId ? undefined : dealId
+    onUpdateDeals(currentSelected, newFeatured)
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="bg-gray-50 rounded-lg p-4">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-medium text-gray-900">
+            {dateLabel} Dining Deals
+          </h3>
+          <div className="text-sm text-gray-500">
+            {selectedDeals.length}/5 deals selected
+          </div>
+        </div>
+
+        {dealsForDay.length === 0 ? (
+          <div className="text-center py-8">
+            <div className="text-gray-500 mb-2">
+              No dining deals available for {dayOfWeek}
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {dealsForDay.map(deal => {
+              const isSelected = selectedDeals.some(cd => cd.deal_id === deal.id)
+              const isFeatured = featuredDealId === deal.id
+
+              return (
+                <div
+                  key={deal.id}
+                  className={`p-3 rounded-lg border-2 transition-all ${
+                    isFeatured
+                      ? 'border-blue-500 bg-blue-50 shadow-md'
+                      : isSelected
+                        ? 'border-green-300 bg-green-50'
+                        : 'border-gray-200 hover:border-gray-300'
+                  }`}
+                >
+                  {/* Deal Header with Checkbox */}
+                  <div className="flex items-start justify-between mb-2">
+                    <div className="flex items-start space-x-3">
+                      <input
+                        type="checkbox"
+                        checked={isSelected}
+                        onChange={(e) => handleDealToggle(deal.id, e.target.checked)}
+                        disabled={updating}
+                        className="mt-1 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                      />
+                      <div className="flex-1">
+                        <h4 className="font-semibold text-gray-900">
+                          {deal.business_name}
+                        </h4>
+                        <p className="text-gray-600 text-sm mt-1">
+                          {deal.special_description}
+                        </p>
+                        {deal.special_time && (
+                          <p className="text-gray-500 text-xs mt-1">
+                            {deal.special_time}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Featured Toggle */}
+                    {isSelected && (
+                      <button
+                        onClick={() => handleFeaturedToggle(deal.id)}
+                        disabled={updating}
+                        className={`ml-2 px-2 py-1 text-xs font-medium rounded transition-colors ${
+                          isFeatured
+                            ? 'bg-blue-100 text-blue-800 border border-blue-300'
+                            : 'bg-gray-100 text-gray-600 border border-gray-300 hover:bg-gray-200'
+                        }`}
+                      >
+                        {isFeatured ? '★ Featured' : 'Make Featured'}
+                      </button>
+                    )}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
 function EventsManager({
   campaign,
   availableEvents,
@@ -837,6 +981,11 @@ export default function CampaignDetailPage() {
   const [weatherExpanded, setWeatherExpanded] = useState(false)
   const [weatherData, setWeatherData] = useState<any>(null)
   const [loadingWeather, setLoadingWeather] = useState(false)
+  const [diningDealsExpanded, setDiningDealsExpanded] = useState(false)
+  const [availableDiningDeals, setAvailableDiningDeals] = useState<any[]>([])
+  const [campaignDiningDeals, setCampaignDiningDeals] = useState<any[]>([])
+  const [loadingDiningDeals, setLoadingDiningDeals] = useState(false)
+  const [updatingDiningDeals, setUpdatingDiningDeals] = useState(false)
 
   // Newsletter sections state
   const [newsletterSections, setNewsletterSections] = useState<NewsletterSection[]>([])
@@ -1354,6 +1503,69 @@ export default function CampaignDetailPage() {
       }
     }
     setWeatherExpanded(!weatherExpanded)
+  }
+
+  const handleDiningDealsExpand = async () => {
+    if (!diningDealsExpanded && campaign) {
+      setLoadingDiningDeals(true)
+      try {
+        // Fetch available dining deals for the campaign date's day of week
+        const campaignDate = new Date(campaign.date + 'T00:00:00')
+        const dayOfWeek = campaignDate.toLocaleDateString('en-US', { weekday: 'long' })
+
+        const response = await fetch(`/api/dining-deals/available?day=${dayOfWeek}`)
+        if (response.ok) {
+          const data = await response.json()
+          setAvailableDiningDeals(data.deals || [])
+        }
+
+        // Fetch existing campaign dining selections
+        const selectionsResponse = await fetch(`/api/campaigns/${campaign.id}/dining-deals`)
+        if (selectionsResponse.ok) {
+          const selectionsData = await selectionsResponse.json()
+          setCampaignDiningDeals(selectionsData.selections || [])
+        }
+      } catch (error) {
+        console.error('Error fetching dining deals data:', error)
+      } finally {
+        setLoadingDiningDeals(false)
+      }
+    }
+    setDiningDealsExpanded(!diningDealsExpanded)
+  }
+
+  const updateDiningDealsSelections = async (selectedDealIds: string[], featuredDealId?: string) => {
+    if (!campaign) return
+
+    setUpdatingDiningDeals(true)
+    try {
+      const response = await fetch(`/api/campaigns/${campaign.id}/dining-deals`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          deal_ids: selectedDealIds,
+          featured_deal_id: featuredDealId
+        })
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to update dining deals selections')
+      }
+
+      // Refresh dining deals data
+      const updatedResponse = await fetch(`/api/campaigns/${campaign.id}/dining-deals`)
+      if (updatedResponse.ok) {
+        const updatedData = await updatedResponse.json()
+        setCampaignDiningDeals(updatedData.selections || [])
+      }
+
+    } catch (error) {
+      console.error('Error updating dining deals:', error)
+    } finally {
+      setUpdatingDiningDeals(false)
+    }
   }
 
   const getScoreColor = (score: number) => {
@@ -1888,6 +2100,62 @@ export default function CampaignDetailPage() {
                     </div>
                   </div>
                 ))}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Dining Deals Section */}
+        <div className="bg-white shadow rounded-lg mt-6">
+          <div className="px-6 py-4 border-b border-gray-200">
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-medium text-gray-900">
+                Dining Deals
+              </h2>
+              <button
+                onClick={handleDiningDealsExpand}
+                className="flex items-center space-x-2 text-sm text-brand-primary hover:text-blue-700"
+              >
+                <span>{diningDealsExpanded ? 'Minimize' : 'Manage Deals'}</span>
+                <svg
+                  className={`w-4 h-4 transform transition-transform ${diningDealsExpanded ? 'rotate-180' : ''}`}
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          {diningDealsExpanded && (
+            <div className="p-6">
+              {loadingDiningDeals ? (
+                <div className="flex items-center justify-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-primary"></div>
+                  <span className="ml-3 text-gray-600">Loading dining deals...</span>
+                </div>
+              ) : (
+                <DiningDealsManager
+                  campaign={campaign}
+                  availableDeals={availableDiningDeals}
+                  campaignDeals={campaignDiningDeals}
+                  onUpdateDeals={updateDiningDealsSelections}
+                  updating={updatingDiningDeals}
+                />
+              )}
+            </div>
+          )}
+
+          {!diningDealsExpanded && campaignDiningDeals.length > 0 && (
+            <div className="px-6 pb-4">
+              <div className="text-sm text-gray-500">
+                {campaignDiningDeals.filter(d => d.is_selected).length} deals selected for {campaign?.date ? new Date(campaign.date).toLocaleDateString('en-US', {
+                  weekday: 'long',
+                  month: 'short',
+                  day: 'numeric'
+                }) : 'campaign date'}
               </div>
             </div>
           )}

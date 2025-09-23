@@ -480,26 +480,23 @@ ${sectionsHtml}
       const scheduledTime = setting?.value || '21:00' // Default to 9:00 PM if not found
       console.log('Using scheduled send time from settings:', scheduledTime)
 
-      // Parse the time (format: "HH:mm")
-      const [hours, minutes] = scheduledTime.split(':').map(Number)
-
-      // Schedule for the specified time CT on the campaign date
-      const deliveryDate = new Date(date)
-      deliveryDate.setHours(hours, minutes, 0, 0)
-
-      // Convert Central Time to UTC properly accounting for DST
-      const centralTimeString = deliveryDate.toLocaleString("en-US", {timeZone: "America/Chicago"})
-      const centralDate = new Date(centralTimeString)
-      const utcTime = new Date(deliveryDate.getTime() + (deliveryDate.getTimezoneOffset() * 60 * 1000))
+      // Create proper Central Time datetime string and convert to UTC
+      // This method properly handles DST
+      const centralTimeString = `${date}T${scheduledTime}:00.000-05:00`
+      const utcTime = new Date(centralTimeString)
 
       console.log('Review delivery scheduled for:', utcTime.toISOString(), `(${scheduledTime} Central Time)`)
+      console.log('MailerLite delivery_schedule payload:', JSON.stringify({
+        type: 'scheduled',
+        delivery: utcTime.toISOString()
+      }))
+
       return utcTime.toISOString()
     } catch (error) {
       console.error('Error getting review delivery time, using default:', error)
       // Fallback to 9:00 PM CT
-      const deliveryDate = new Date(date)
-      deliveryDate.setHours(21, 0, 0, 0)
-      const utcTime = new Date(deliveryDate.getTime() + (6 * 60 * 60 * 1000))
+      const fallbackTime = `${date}T21:00:00.000-05:00`
+      const utcTime = new Date(fallbackTime)
       return utcTime.toISOString()
     }
   }

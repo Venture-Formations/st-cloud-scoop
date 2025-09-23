@@ -11,6 +11,12 @@ export async function POST(request: NextRequest) {
     // Wordle data for recent dates
     const wordleData = [
       {
+        date: '2025-09-22',
+        word: 'BLEND',
+        definition: 'To mix together thoroughly and inseparably.',
+        interesting_fact: 'The word "blend" originally meant "to deceive" in Old Norse, but evolved to mean "mixing" by the 14th century.'
+      },
+      {
         date: '2025-09-23',
         word: 'TOAST',
         definition: 'Sliced bread browned by exposure to radiant heat.',

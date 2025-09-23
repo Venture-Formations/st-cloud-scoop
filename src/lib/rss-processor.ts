@@ -120,11 +120,8 @@ export class RSSProcessor {
       // Process posts with AI
       await this.processPostsWithAI(campaignId)
 
-      // Update campaign status
-      await supabaseAdmin
-        .from('newsletter_campaigns')
-        .update({ status: 'in_review' })
-        .eq('id', campaignId)
+      // Campaign remains in 'draft' status for MailerLite cron to process
+      // Status will be updated to 'in_review' by create-campaign cron after MailerLite send
 
       await this.errorHandler.logInfo('RSS processing completed successfully', { campaignId }, 'rss_processor')
       await this.slack.sendRSSProcessingAlert(true, campaignId)

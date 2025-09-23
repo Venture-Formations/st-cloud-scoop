@@ -103,13 +103,17 @@ export async function fetchWeatherData(): Promise<WeatherDay[]> {
     // Convert to WeatherDay format (limit to 3 days)
     const sortedDates = Object.keys(dayData).sort((a, b) => new Date(a).getTime() - new Date(b).getTime())
 
-    for (let i = 0; i < Math.min(3, sortedDates.length); i++) {
+    for (let i = 0; i < sortedDates.length && weatherDays.length < 3; i++) {
       const dateKey = sortedDates[i]
       const data = dayData[dateKey]
       const date = data.date
 
-      // Find daytime period for main conditions
-      const daytimePeriod = data.periods.find((p: any) => p.isDaytime) || data.periods[0]
+      // Find daytime period for main conditions - skip days without daytime data
+      const daytimePeriod = data.periods.find((p: any) => p.isDaytime)
+      if (!daytimePeriod) {
+        console.log(`Skipping ${dateKey} - no daytime period available (incomplete forecast)`)
+        continue
+      }
 
       // Map NWS icon to simple icon names
       let icon = 'sunny'
@@ -134,13 +138,26 @@ export async function fetchWeatherData(): Promise<WeatherDay[]> {
         }
       }
 
+      // Use intelligent defaults for missing temperature data
+      let high = data.high
+      let low = data.low
+
+      // If we're missing high temp but have daytime period, use that temperature
+      if (high === null && daytimePeriod.isDaytime) {
+        high = daytimePeriod.temperature
+      }
+
+      // If still missing data, use reasonable fallbacks
+      if (high === null) high = low || 70 // Default to reasonable temp
+      if (low === null) low = high || 50   // Default to reasonable temp
+
       weatherDays.push({
         day: dayNames[date.getDay()],
         dateLabel: `${monthNames[date.getMonth()]} ${date.getDate()}`,
         icon,
         precipitation,
-        high: data.high || 0,
-        low: data.low || 0,
+        high: high || 0,
+        low: low || 0,
         condition: daytimePeriod.shortForecast || 'Unknown'
       })
     }

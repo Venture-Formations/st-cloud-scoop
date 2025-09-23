@@ -958,7 +958,7 @@ ${sectionsHtml}
       const campaignDate = new Date(campaign.date + 'T00:00:00')
       const dayOfWeek = campaignDate.toLocaleDateString('en-US', { weekday: 'long' })
 
-      console.log(`MailerLite - Selecting dining deals for ${dayOfWeek}`)
+      console.log('MailerLite - Campaign date:', campaign.date, 'Day of week:', dayOfWeek)
 
       // Select or get existing dining deals for this campaign
       const result = await selectDiningDealsForCampaign(campaign.id, campaignDate)
@@ -969,33 +969,63 @@ ${sectionsHtml}
         return ''
       }
 
-      // Generate HTML for the deals
-      const cardHtml = result.deals.map((deal: any, index: number) => `
-        <div style='background-color: #fff; border-radius: 8px; padding: 16px; margin-bottom: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); border-left: 4px solid ${deal.is_featured ? '#1877F2' : '#28a745'};'>
-          ${deal.is_featured ? '<div style="color: #1877F2; font-weight: bold; font-size: 12px; text-transform: uppercase; margin-bottom: 8px;">⭐ Featured Deal</div>' : ''}
-          <h3 style='margin: 0 0 8px; color: #1877F2; font-size: 18px;'>${deal.business_name}</h3>
-          <div style='color: #666; font-size: 14px; margin-bottom: 8px;'>${deal.business_address || 'Address not provided'}</div>
-          <div style='color: #333; font-weight: 500; margin-bottom: 8px;'>${deal.special_description}</div>
-          <div style='color: #666; font-size: 14px;'>
-            <strong>Time:</strong> ${deal.special_time || 'Check with restaurant'}
-          </div>
-          ${deal.google_profile ? `<div style='margin-top: 12px;'><a href='${deal.google_profile}' target='_blank' style='color: #1877F2; text-decoration: none; font-weight: 500;'>→ View on Google</a></div>` : ''}
-        </div>
-      `).join('')
+      // Format the campaign date for display
+      const formattedDate = campaignDate.toLocaleDateString('en-US', {
+        weekday: 'long',
+        month: 'long',
+        day: 'numeric'
+      })
 
+      console.log('MailerLite - Generating HTML for', result.deals.length, 'dining deals')
+
+      // Generate deals HTML - EXACT SAME FORMAT AS PREVIEW
+      let dealsHtml = ''
+
+      result.deals.forEach((deal: any, index: number) => {
+        const isFeatured = deal.is_featured || deal.is_featured_in_campaign || index === 0
+        const businessName = deal.business_name || ''
+        const specialDescription = deal.special_description || ''
+        const specialTime = deal.special_time || ''
+        const googleProfile = deal.google_profile || '#'
+
+        if (isFeatured) {
+          // Featured deal format (first_special)
+          dealsHtml += `
+            <tr><td style='padding: 8px 16px; background:#E8F0FE; border:2px solid #1877F2; border-radius:6px;'>
+              <div style='font-weight: bold;'>${businessName}</div>
+              <div>${specialDescription}</div>
+              <div style='font-size: 14px;'><a href='${googleProfile}' style='text-decoration: underline; color: inherit;'>${specialTime}</a></div>
+            </td></tr>`
+        } else {
+          // Subsequent deals format
+          dealsHtml += `
+            <tr><td style='padding: 8px 16px 4px; font-weight: bold; border-top: 1px solid #eee;'>${businessName}</td></tr>
+            <tr><td style='padding: 0 16px 2px;'>${specialDescription}</td></tr>
+            <tr><td style='padding: 0 16px 8px; font-size: 14px;'><a href='${googleProfile}' style='text-decoration: underline; color: inherit;'>${specialTime}</a></td></tr>`
+        }
+      })
+
+      // Wrap in card format - EXACT SAME AS PREVIEW
+      const cardHtml = `
+        <table width='100%' cellpadding='0' cellspacing='0' style='table-layout: fixed; border: 1px solid #ddd; border-radius: 8px; background: #fff; font-family: Arial, sans-serif; font-size: 16px; line-height: 20px; box-shadow: 0 4px 12px rgba(0,0,0,.15);'>
+          <tr><td style='background: #F8F9FA; padding: 8px; text-align: center; font-size: 16px; font-weight: normal; color: #3C4043; border-top-left-radius: 8px; border-top-right-radius: 8px;'>${formattedDate}</td></tr>
+          ${dealsHtml}
+        </table>`
+
+      // Wrap in section format - EXACT SAME AS PREVIEW
       const sectionHtml = `
-      <table width="100%" cellpadding="0" cellspacing="0" style="border: 1px solid #f7f7f7; border-radius: 10px; margin-top: 10px; max-width: 990px; margin: 0 auto; background-color: #f7f7f7; font-family: Arial, sans-serif;">
-        <tr>
-          <td style="padding: 5px;">
-            <h2 style="font-size: 1.625em; line-height: 1.16em; font-family: Arial, sans-serif; color: #1877F2; margin: 0; padding: 0;">Dining Deals</h2>
-          </td>
-        </tr>
-        <tr class="row">
-          <td class='column' style='padding:8px; vertical-align: top;'>
-            ${cardHtml}
-          </td>
-        </tr>
-      </table><br>`
+        <table width="100%" cellpadding="0" cellspacing="0" style="border: 1px solid #f7f7f7; border-radius: 10px; margin-top: 10px; max-width: 990px; margin: 0 auto; background-color: #f7f7f7; font-family: Arial, sans-serif;">
+          <tr>
+            <td style="padding: 5px;">
+              <h2 style="font-size: 1.625em; line-height: 1.16em; font-family: Arial, sans-serif; color: #1877F2; margin: 0; padding: 0;">Dining Deals</h2>
+            </td>
+          </tr>
+          <tr class="row">
+            <td class='column' style='padding:8px; vertical-align: top;'>
+              ${cardHtml}
+            </td>
+          </tr>
+        </table><br>`
 
       console.log('MailerLite - Generated Dining Deals HTML, length:', sectionHtml.length)
       return sectionHtml

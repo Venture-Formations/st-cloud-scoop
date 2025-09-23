@@ -457,8 +457,8 @@ function DiningDealsManager({
   const handleDealToggle = (dealId: string, isSelected: boolean) => {
     let newSelected: string[]
     if (isSelected) {
-      // Add deal if under limit (let's say 5 deals max)
-      if (selectedDeals.length < 5) {
+      // Add deal if under limit (8 deals max)
+      if (selectedDeals.length < 8) {
         newSelected = [...selectedDeals.map(cd => cd.deal_id), dealId]
       } else {
         return // Don't add if at limit
@@ -488,7 +488,7 @@ function DiningDealsManager({
             {dateLabel} Dining Deals
           </h3>
           <div className="text-sm text-gray-500">
-            {selectedDeals.length}/5 deals selected
+            {selectedDeals.length}/8 deals selected
           </div>
         </div>
 
@@ -1584,6 +1584,29 @@ export default function CampaignDetailPage() {
           const selectionsData = await selectionsResponse.json()
           console.log('📋 Campaign dining selections:', selectionsData)
           setCampaignDiningDeals(selectionsData.selections || [])
+
+          // Auto-populate dining deals if none are selected yet
+          if ((!selectionsData.selections || selectionsData.selections.length === 0) && data?.deals?.length > 0) {
+            console.log('🎲 Auto-selecting 8 random dining deals for campaign')
+
+            // Filter deals for the campaign's day of week
+            const campaignDate = new Date(campaign.date + 'T00:00:00')
+            const dayOfWeek = campaignDate.toLocaleDateString('en-US', { weekday: 'long' })
+            const dealsForDay = data.deals.filter((deal: any) => deal.day_of_week === dayOfWeek)
+
+            // Randomly select up to 8 deals
+            const shuffled = [...dealsForDay].sort(() => 0.5 - Math.random())
+            const selectedDeals = shuffled.slice(0, Math.min(8, dealsForDay.length))
+            const selectedDealIds = selectedDeals.map((deal: any) => deal.id)
+            const featuredDealId = selectedDeals.length > 0 ? selectedDeals[0].id : undefined
+
+            console.log('🎯 Auto-selected deals:', selectedDealIds, 'featured:', featuredDealId)
+
+            // Save the auto-selected deals
+            if (selectedDealIds.length > 0) {
+              await updateDiningDealsSelections(selectedDealIds, featuredDealId)
+            }
+          }
         } else {
           console.error('❌ Failed to fetch campaign dining selections:', selectionsResponse.status, selectionsResponse.statusText)
         }

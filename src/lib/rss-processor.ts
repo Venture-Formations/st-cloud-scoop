@@ -123,6 +123,12 @@ export class RSSProcessor {
       // Campaign remains in 'draft' status for MailerLite cron to process
       // Status will be updated to 'in_review' by create-campaign cron after MailerLite send
 
+      // Update campaign status from processing to draft
+      await supabaseAdmin
+        .from('newsletter_campaigns')
+        .update({ status: 'draft' })
+        .eq('id', campaignId)
+
       await this.errorHandler.logInfo('RSS processing completed successfully', { campaignId }, 'rss_processor')
       await this.slack.sendRSSProcessingAlert(true, campaignId)
 
@@ -150,10 +156,10 @@ export class RSSProcessor {
       return existing.id
     }
 
-    // Create new campaign
+    // Create new campaign with processing status
     const { data: newCampaign, error } = await supabaseAdmin
       .from('newsletter_campaigns')
-      .insert([{ date: today, status: 'draft' }])
+      .insert([{ date: today, status: 'processing' }])
       .select('id')
       .single()
 

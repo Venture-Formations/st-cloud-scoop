@@ -73,7 +73,7 @@ export async function POST(request: NextRequest) {
       .from('newsletter_campaigns')
       .insert([{
         date: campaignDate,
-        status: 'draft'
+        status: 'processing'
       }])
       .select()
       .single()

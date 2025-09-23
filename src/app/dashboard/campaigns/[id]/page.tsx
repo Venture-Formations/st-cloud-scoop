@@ -1153,6 +1153,7 @@ export default function CampaignDetailPage() {
 
   const formatStatus = (status: string) => {
     switch (status) {
+      case 'processing': return 'Processing'
       case 'draft': return 'Draft'
       case 'in_review': return 'In Review'
       case 'ready_to_send': return 'Ready to Send'
@@ -1338,6 +1339,7 @@ export default function CampaignDetailPage() {
               </h1>
               <div className="flex items-center space-x-4">
                 <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                  campaign.status === 'processing' ? 'bg-purple-100 text-purple-800' :
                   campaign.status === 'draft' ? 'bg-gray-100 text-gray-800' :
                   campaign.status === 'in_review' ? 'bg-yellow-100 text-yellow-800' :
                   campaign.status === 'ready_to_send' ? 'bg-blue-100 text-blue-800' :
@@ -1368,7 +1370,7 @@ export default function CampaignDetailPage() {
               </button>
               <button
                 onClick={sendForReview}
-                disabled={saving || sendingReview || generatingSubject || campaign.status === 'sent' || campaign.status === 'ready_to_send'}
+                disabled={saving || sendingReview || generatingSubject || campaign.status === 'processing' || campaign.status === 'sent' || campaign.status === 'ready_to_send'}
                 className="bg-brand-primary hover:bg-blue-700 disabled:opacity-50 text-white px-4 py-2 rounded text-sm font-medium"
               >
                 {sendingReview ? (generatingSubject ? 'Generating Subject...' : 'Sending...') : 'Send for Review'}

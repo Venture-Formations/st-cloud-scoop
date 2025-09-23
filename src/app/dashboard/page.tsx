@@ -74,7 +74,7 @@ export default function Dashboard() {
           </div>
 
           {/* Quick Stats */}
-          <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-8">
+          <div className="grid grid-cols-1 md:grid-cols-6 gap-4 mb-8">
             <div className="bg-white p-6 rounded-lg shadow">
               <div className="text-2xl font-bold text-brand-primary mb-1">
                 {campaigns.filter(c => c.status === 'sent').length}
@@ -98,6 +98,12 @@ export default function Dashboard() {
                 {campaigns.filter(c => c.status === 'draft').length}
               </div>
               <div className="text-sm text-gray-600">Drafts</div>
+            </div>
+            <div className="bg-white p-6 rounded-lg shadow">
+              <div className="text-2xl font-bold text-purple-600 mb-1">
+                {campaigns.filter(c => c.status === 'processing').length}
+              </div>
+              <div className="text-sm text-gray-600">Processing</div>
             </div>
             <div className="bg-white p-6 rounded-lg shadow">
               <div className="text-2xl font-bold text-red-600 mb-1">

@@ -99,6 +99,15 @@ export async function fetchWeatherData(): Promise<WeatherDay[]> {
       }
     }
 
+    // Debug: Check what data we collected for each day
+    Object.keys(dayData).forEach(dateKey => {
+      const data = dayData[dateKey]
+      console.log(`Date ${dateKey}: high=${data.high}, low=${data.low}, periods=${data.periods.length}`)
+      data.periods.forEach((p: any) => {
+        console.log(`  - ${p.name}: ${p.temperature}°F (isDaytime: ${p.isDaytime})`)
+      })
+    })
+
     // Convert to WeatherDay format (limit to 3 days)
     const sortedDates = Object.keys(dayData).sort((a, b) => new Date(a).getTime() - new Date(b).getTime())
 

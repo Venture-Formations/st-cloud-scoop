@@ -412,8 +412,9 @@ async function generateWordleSection(campaign: any): Promise<string> {
   try {
     console.log('Generating Wordle section for campaign:', campaign?.id)
 
-    // Get yesterday's date (since this is for "Yesterday's Wordle")
-    const yesterday = new Date()
+    // Get yesterday's date from the newsletter date (since this is for "Yesterday's Wordle")
+    const newsletterDate = new Date(campaign.date + 'T00:00:00')
+    const yesterday = new Date(newsletterDate)
     yesterday.setDate(yesterday.getDate() - 1)
     const yesterdayDate = yesterday.toISOString().split('T')[0]
 

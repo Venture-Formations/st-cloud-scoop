@@ -34,11 +34,7 @@ function WordleSection({ campaign }: { campaign: any }) {
   useEffect(() => {
     const fetchWordleData = async () => {
       try {
-        const yesterday = new Date()
-        yesterday.setDate(yesterday.getDate() - 1)
-        const yesterdayDate = yesterday.toISOString().split('T')[0]
-
-        const response = await fetch(`/api/test/wordle`)
+        const response = await fetch(`/api/test/wordle?campaign_date=${campaign.date}`)
         if (response.ok) {
           const data = await response.json()
           if (data.success && data.wordle) {

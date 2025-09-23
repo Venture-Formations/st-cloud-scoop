@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { supabaseAdmin } from '@/lib/supabase'
 import { VrboListing } from '@/types/database'
+import { processVrboImage } from '@/lib/vrbo-image-processor'
 
 export async function GET(request: NextRequest) {
   try {
@@ -63,11 +64,31 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // Process image if provided
+    let adjusted_image_url = null
+    if (main_image_url) {
+      console.log('Processing VRBO image for new listing:', title)
+      try {
+        const imageResult = await processVrboImage(main_image_url, title)
+        if (imageResult.success && imageResult.adjusted_image_url) {
+          adjusted_image_url = imageResult.adjusted_image_url
+          console.log('Image processed successfully:', adjusted_image_url)
+        } else {
+          console.warn('Image processing failed:', imageResult.error)
+          // Continue with creation - image processing failure shouldn't block listing creation
+        }
+      } catch (imageError) {
+        console.error('Image processing error:', imageError)
+        // Continue with creation - image processing failure shouldn't block listing creation
+      }
+    }
+
     const { data: listing, error } = await supabaseAdmin
       .from('vrbo_listings')
       .insert([{
         title,
         main_image_url,
+        adjusted_image_url,
         city,
         bedrooms: bedrooms ? parseInt(bedrooms) : null,
         bathrooms: bathrooms ? parseFloat(bathrooms) : null,
@@ -85,7 +106,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to create listing' }, { status: 500 })
     }
 
-    return NextResponse.json({ listing }, { status: 201 })
+    return NextResponse.json({
+      listing,
+      image_processing: adjusted_image_url ? 'completed' : 'failed_or_skipped'
+    }, { status: 201 })
   } catch (error) {
     console.error('VRBO listings creation error:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })

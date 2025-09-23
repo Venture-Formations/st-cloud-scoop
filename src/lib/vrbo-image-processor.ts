@@ -1,3 +1,4 @@
+import { GitHubImageStorage } from './github-storage'
 import crypto from 'crypto'
 
 interface ImageProcessingResult {
@@ -7,12 +8,13 @@ interface ImageProcessingResult {
 }
 
 /**
- * Process a VRBO listing image by resizing it and uploading to GitHub
- * This follows the pattern from the build-images.js script in the directions
+ * Process a VRBO listing image by downloading, optimizing, and uploading to GitHub
+ * This creates properly sized images for newsletter use and hosts them reliably
  */
 export async function processVrboImage(
   originalImageUrl: string,
-  listingId: string
+  listingTitle: string,
+  listingId?: string
 ): Promise<ImageProcessingResult> {
   try {
     console.log('Processing VRBO image:', originalImageUrl)
@@ -21,54 +23,59 @@ export async function processVrboImage(
       return { success: false, error: 'No image URL provided' }
     }
 
-    // Generate a hash-based filename (similar to build-images.js)
-    const hash = crypto.createHash('sha1').update(originalImageUrl).digest('hex').slice(0, 16)
-    const filename = `${hash}.jpg`
+    // Use the existing GitHub storage to upload the image
+    const githubStorage = new GitHubImageStorage()
+    const githubUrl = await githubStorage.uploadImage(originalImageUrl, `VRBO: ${listingTitle}`)
 
-    // Check if the image already exists in GitHub
-    const githubImageUrl = `https://cdn.jsdelivr.net/gh/VFDavid/STCScoop@Vrbo/images/vrbo/${filename}`
-
-    // For now, we'll use a simple check to see if the image exists
-    // In a full implementation, this would:
-    // 1. Download the original image
-    // 2. Resize it to 575x325 using Sharp
-    // 3. Upload to GitHub via API
-    // 4. Return the GitHub CDN URL
-
-    try {
-      // Test if the image exists on GitHub CDN
-      const response = await fetch(githubImageUrl, { method: 'HEAD' })
-      if (response.ok) {
-        console.log('Image already exists on GitHub:', githubImageUrl)
-        return {
-          success: true,
-          adjusted_image_url: githubImageUrl
-        }
+    if (githubUrl) {
+      console.log(`VRBO image uploaded to GitHub: ${githubUrl}`)
+      return {
+        success: true,
+        adjusted_image_url: githubUrl
       }
-    } catch (error) {
-      console.log('Image not found on GitHub, would need to process:', error)
-    }
-
-    // For now, return a placeholder or trigger the GitHub Action workflow
-    // In the actual implementation, this would:
-    // 1. Trigger the GitHub Action workflow to process images
-    // 2. Or implement server-side image processing with Sharp
-
-    console.log('Image processing would be triggered for:', originalImageUrl)
-
-    // Return success with a note that processing is needed
-    return {
-      success: true,
-      adjusted_image_url: githubImageUrl, // Optimistic - will be available after processing
-      error: 'Image processing initiated'
+    } else {
+      console.error('VRBO image upload failed')
+      return {
+        success: false,
+        error: 'Failed to upload image to GitHub'
+      }
     }
 
   } catch (error) {
-    console.error('Error processing VRBO image:', error)
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : 'Unknown error'
+    if (error instanceof Error && error.name === 'AbortError') {
+      console.error(`VRBO image download timeout for: ${originalImageUrl}`)
+      return {
+        success: false,
+        error: 'Download timeout (20 seconds)'
+      }
+    } else {
+      console.error(`Error processing VRBO image:`, error)
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error'
+      }
     }
+  }
+}
+
+/**
+ * Get appropriate file extension from image URL
+ */
+function getImageExtension(url: string): string {
+  try {
+    const parsedUrl = new URL(url)
+    const pathname = parsedUrl.pathname.toLowerCase()
+
+    if (pathname.includes('.jpg') || pathname.includes('.jpeg')) return '.jpg'
+    if (pathname.includes('.png')) return '.png'
+    if (pathname.includes('.gif')) return '.gif'
+    if (pathname.includes('.webp')) return '.webp'
+    if (pathname.includes('.svg')) return '.svg'
+
+    // Default to .jpg if no extension found
+    return '.jpg'
+  } catch {
+    return '.jpg'
   }
 }
 

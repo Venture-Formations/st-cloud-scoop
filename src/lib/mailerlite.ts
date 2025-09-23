@@ -2,6 +2,9 @@ import axios from 'axios'
 import { supabaseAdmin } from './supabase'
 import { ErrorHandler, SlackNotificationService } from './slack'
 import type { CampaignWithArticles, CampaignWithEvents, Article } from '@/types/database'
+import { getWeatherForCampaign } from './weather-manager'
+import { selectPropertiesForCampaign, getSelectedPropertiesForCampaign } from './vrbo-selector'
+import { selectDiningDealsForCampaign, getDiningDealsForCampaign } from './dining-selector'
 
 const MAILERLITE_API_BASE = 'https://connect.mailerlite.com/api'
 
@@ -282,7 +285,25 @@ export class MailerLiteService {
         } else if (section.name === 'Local Events') {
           sectionsHtml += eventsHtml
         } else if (section.name === 'Local Weather') {
-          // Weather section will be added when weather system is integrated
+          const weatherHtml = await getWeatherForCampaign(campaign.id)
+          if (weatherHtml) {
+            sectionsHtml += weatherHtml
+          }
+        } else if (section.name === "Yesterday's Wordle") {
+          const wordleHtml = await this.generateWordleSection(campaign)
+          if (wordleHtml) {
+            sectionsHtml += wordleHtml
+          }
+        } else if (section.name === 'Minnesota Getaways') {
+          const getawaysHtml = await this.generateMinnesotaGetawaysSection(campaign)
+          if (getawaysHtml) {
+            sectionsHtml += getawaysHtml
+          }
+        } else if (section.name === 'Dining Deals') {
+          const diningHtml = await this.generateDiningDealsSection(campaign)
+          if (diningHtml) {
+            sectionsHtml += diningHtml
+          }
         }
       }
     } else {
@@ -775,5 +796,198 @@ ${sectionsHtml}
   </tr><tr class="row">${dayColumns}
 </td></table>
 <br>`
+  }
+
+  async generateWordleSection(campaign: any): Promise<string> {
+    try {
+      console.log('MailerLite - Generating Wordle section for campaign:', campaign?.id)
+
+      // Get yesterday's date (since this is for "Yesterday's Wordle")
+      const yesterday = new Date()
+      yesterday.setDate(yesterday.getDate() - 1)
+      const yesterdayDate = yesterday.toISOString().split('T')[0]
+
+      console.log('MailerLite - Looking for Wordle data for date:', yesterdayDate)
+
+      // Fetch Wordle data for yesterday
+      const { data: wordleData, error } = await supabaseAdmin
+        .from('wordle')
+        .select('*')
+        .eq('date', yesterdayDate)
+        .single()
+
+      if (error || !wordleData) {
+        console.log('MailerLite - No Wordle data found for yesterday:', yesterdayDate)
+        return '' // Don't include section if no data
+      }
+
+      console.log('MailerLite - Found Wordle data:', wordleData.word)
+
+      // Generate the HTML using the template structure
+      const wordleCard = `<table width='100%' cellpadding='0' cellspacing='0' style='border: 1px solid #ddd; border-radius: 12px; background-color: #fff; box-shadow: 0 4px 12px rgba(0,0,0,.15); font-family: Arial, sans-serif; font-size: 16px; color: #333; line-height: 26px;'>
+        <tr><td style='background-color: #F8F9FA; text-align: center; padding: 8px; font-weight: bold; font-size: 24px; color: #3C4043; text-transform: uppercase;'>${wordleData.word}</td></tr>
+        <tr><td style='padding: 16px;'>
+          <div style='margin-bottom: 12px;'><strong>Definition:</strong> ${wordleData.definition}</div>
+          <div><strong>Fun Fact:</strong> ${wordleData.interesting_fact}</div>
+        </td></tr>
+      </table>`
+
+      const wordleColumn = `<td class='column' style='padding:8px; vertical-align: top;'>${wordleCard}</td>`
+
+      return `
+<table width="100%" cellpadding="0" cellspacing="0" style="border: 1px solid #f7f7f7; border-radius: 10px; margin-top: 10px; max-width: 990px; margin: 0 auto; background-color: #f7f7f7; font-family: Arial, sans-serif;">
+  <tr>
+    <td style="padding: 5px;">
+      <h2 style="font-size: 1.625em; line-height: 1.16em; font-family: Arial, sans-serif; color: #1877F2; margin: 0; padding: 0;">Yesterday's Wordle</h2>
+    </td>
+  </tr>
+  <tr class="row">${wordleColumn}</tr>
+</table>
+<br>`
+
+    } catch (error) {
+      console.error('MailerLite - Error generating Wordle section:', error)
+      return '' // Return empty string on error to not break the newsletter
+    }
+  }
+
+  async generateMinnesotaGetawaysSection(campaign: any): Promise<string> {
+    try {
+      console.log('MailerLite - Generating Minnesota Getaways section for campaign:', campaign?.id)
+
+      // Get selected properties for this campaign (or select them if not done yet)
+      let selectedProperties = await getSelectedPropertiesForCampaign(campaign.id)
+
+      if (selectedProperties.length === 0) {
+        console.log('MailerLite - No existing selections, selecting properties for campaign')
+        await selectPropertiesForCampaign(campaign.id)
+        selectedProperties = await getSelectedPropertiesForCampaign(campaign.id)
+      }
+
+      if (selectedProperties.length === 0) {
+        console.log('MailerLite - No VRBO properties available for Minnesota Getaways section')
+        return '' // Don't include section if no properties
+      }
+
+      console.log(`MailerLite - Found ${selectedProperties.length} selected properties for Minnesota Getaways`)
+
+      // Generate HTML for each property using the provided template
+      let propertyCards = ''
+
+      selectedProperties.forEach((property, index) => {
+        // Clean and validate data
+        const title = property.title || ''
+        const imageUrl = property.adjusted_image_url || property.main_image_url || ''
+        const city = property.city || ''
+        const bedrooms = property.bedrooms || 0
+        const bathrooms = property.bathrooms || 0
+        const sleeps = property.sleeps || 0
+        const link = property.link || ''
+
+        // Skip if essential data is missing
+        if (!title || !link) {
+          console.log(`MailerLite - Skipping property ${index + 1} - missing title or link`)
+          return
+        }
+
+        propertyCards += `
+    <!-- CARD ${index + 1} -->
+    <td class='column' style='padding:8px; vertical-align: top;'>
+      <table cellpadding='0' cellspacing='0' style='width:100%; border: 1px solid #ddd; border-radius: 12px; background-color: #fff; box-shadow: 0 4px 12px rgba(0,0,0,.15);'>
+        <tr><td style='padding:0; border-radius: 12px 12px 0 0; overflow: hidden;'>
+          ${imageUrl ? `<a href='${link}' target='_blank'><img src='${imageUrl}' alt='${title}' style='width: 100%; height: 200px; object-fit: cover; display: block; border-radius: 12px 12px 0 0;'></a>` : ''}
+        </td></tr>
+        <tr><td style='padding: 16px; font-family: Arial, sans-serif; font-size: 16px; color: #333; line-height: 26px;'>
+          <a href='${link}' target='_blank' style='text-decoration: none; color: inherit;'>
+            <h3 style='margin: 0 0 8px; font-size: 18px; font-weight: bold; color: #1a73e8;'>${title}</h3>
+            <p style='margin: 0 0 8px; color: #666; font-size: 14px;'>${city}</p>
+            <div style='margin-bottom: 12px; font-size: 14px; color: #333;'>
+              ${bedrooms}BR | ${bathrooms}BA | Sleeps ${sleeps}
+            </div>
+          </a>
+        </td></tr>
+      </table>
+    </td>`
+      })
+
+      return `
+<table width="100%" cellpadding="0" cellspacing="0" style="border: 1px solid #f7f7f7; border-radius: 10px; margin-top: 10px; max-width: 990px; margin: 0 auto; background-color: #f7f7f7; font-family: Arial, sans-serif;">
+  <tr>
+    <td style="padding: 5px;">
+      <h2 style="font-size: 1.625em; line-height: 1.16em; font-family: Arial, sans-serif; color: #1877F2; margin: 0; padding: 0;">Minnesota Getaways</h2>
+    </td>
+  </tr>
+  <tr>
+<tr class="row">${propertyCards}
+</tr>
+</table>
+<style>
+.etsy-col{display:inline-block !important; width:25% !important; max-width:25% !important; vertical-align:top !important;}
+.etsy-pad{padding:8px !important;}
+}
+</style>
+<!-- ===== /Minnesota Vrbo ===== -->
+<br>`
+
+    } catch (error) {
+      console.error('MailerLite - Error generating Minnesota Getaways section:', error)
+      return '' // Return empty string on error to not break the newsletter
+    }
+  }
+
+  async generateDiningDealsSection(campaign: any): Promise<string> {
+    try {
+      console.log('MailerLite - Generating Dining Deals section for campaign:', campaign.id)
+
+      // Get campaign date to determine day of week
+      const campaignDate = new Date(campaign.date + 'T00:00:00')
+      const dayOfWeek = campaignDate.toLocaleDateString('en-US', { weekday: 'long' })
+
+      console.log(`MailerLite - Selecting dining deals for ${dayOfWeek}`)
+
+      // Select or get existing dining deals for this campaign
+      const result = await selectDiningDealsForCampaign(campaign.id, campaignDate)
+      console.log('MailerLite - Dining deals selection result:', result.message)
+
+      if (!result.deals || result.deals.length === 0) {
+        console.log('MailerLite - No dining deals found for', dayOfWeek)
+        return ''
+      }
+
+      // Generate HTML for the deals
+      const cardHtml = result.deals.map((deal: any, index: number) => `
+        <div style='background-color: #fff; border-radius: 8px; padding: 16px; margin-bottom: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); border-left: 4px solid ${deal.is_featured ? '#1877F2' : '#28a745'};'>
+          ${deal.is_featured ? '<div style="color: #1877F2; font-weight: bold; font-size: 12px; text-transform: uppercase; margin-bottom: 8px;">⭐ Featured Deal</div>' : ''}
+          <h3 style='margin: 0 0 8px; color: #1877F2; font-size: 18px;'>${deal.business_name}</h3>
+          <div style='color: #666; font-size: 14px; margin-bottom: 8px;'>${deal.business_address || 'Address not provided'}</div>
+          <div style='color: #333; font-weight: 500; margin-bottom: 8px;'>${deal.special_description}</div>
+          <div style='color: #666; font-size: 14px;'>
+            <strong>Time:</strong> ${deal.special_time || 'Check with restaurant'}
+          </div>
+          ${deal.google_profile ? `<div style='margin-top: 12px;'><a href='${deal.google_profile}' target='_blank' style='color: #1877F2; text-decoration: none; font-weight: 500;'>→ View on Google</a></div>` : ''}
+        </div>
+      `).join('')
+
+      const sectionHtml = `
+      <table width="100%" cellpadding="0" cellspacing="0" style="border: 1px solid #f7f7f7; border-radius: 10px; margin-top: 10px; max-width: 990px; margin: 0 auto; background-color: #f7f7f7; font-family: Arial, sans-serif;">
+        <tr>
+          <td style="padding: 5px;">
+            <h2 style="font-size: 1.625em; line-height: 1.16em; font-family: Arial, sans-serif; color: #1877F2; margin: 0; padding: 0;">Dining Deals</h2>
+          </td>
+        </tr>
+        <tr class="row">
+          <td class='column' style='padding:8px; vertical-align: top;'>
+            ${cardHtml}
+          </td>
+        </tr>
+      </table><br>`
+
+      console.log('MailerLite - Generated Dining Deals HTML, length:', sectionHtml.length)
+      return sectionHtml
+
+    } catch (error) {
+      console.error('MailerLite - Error generating Dining Deals section:', error)
+      return ''
+    }
   }
 }

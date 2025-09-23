@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Layout from '@/components/Layout'
 import DeleteCampaignModal from '@/components/DeleteCampaignModal'
-import type { CampaignWithArticles, ArticleWithPost, CampaignEvent, Event } from '@/types/database'
+import type { CampaignWithArticles, ArticleWithPost, CampaignEvent, Event, NewsletterSection } from '@/types/database'
 import {
   DndContext,
   closestCenter,
@@ -25,6 +25,135 @@ import {
   useSortable
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
+
+// Newsletter Section Component
+function NewsletterSectionComponent({
+  section,
+  campaign,
+  expanded,
+  onToggleExpanded,
+  weatherData,
+  loadingWeather,
+  onWeatherExpand
+}: {
+  section: NewsletterSection
+  campaign: CampaignWithArticles | null
+  expanded: boolean
+  onToggleExpanded: () => void
+  weatherData?: any
+  loadingWeather?: boolean
+  onWeatherExpand?: () => void
+}) {
+  if (!campaign) return null
+
+  const renderSectionContent = () => {
+    switch (section.name) {
+      case 'Local Events':
+        return (
+          <div className="text-center py-8 text-gray-500">
+            Event management is handled in the dedicated Local Events section above
+          </div>
+        )
+      case 'Local Weather':
+        return (
+          <div className="p-6">
+            {loadingWeather ? (
+              <div className="flex items-center justify-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-primary"></div>
+                <span className="ml-3 text-gray-600">Loading weather data...</span>
+              </div>
+            ) : weatherData ? (
+              weatherData.success === false ? (
+                <div className="text-center py-8">
+                  <div className="text-gray-500 mb-2">
+                    {weatherData.message || 'Weather forecast not available'}
+                  </div>
+                  <div className="text-sm text-gray-400">
+                    Weather data will be generated during the next scheduled RSS processing
+                  </div>
+                </div>
+              ) : (
+                <div>
+                  {weatherData.imageUrl ? (
+                    <div className="mb-4">
+                      <img
+                        src={weatherData.imageUrl}
+                        alt="Weather Forecast"
+                        className="w-full max-w-md mx-auto rounded-lg border"
+                      />
+                    </div>
+                  ) : (
+                    <div className="mb-4 text-center text-sm text-gray-500">
+                      Weather image generation is not configured
+                    </div>
+                  )}
+                  <div className="grid grid-cols-3 gap-4">
+                    {weatherData.weatherData && weatherData.weatherData.map((day: any, index: number) => (
+                      <div key={index} className="text-center">
+                        <div className="font-semibold text-gray-900">{day.day}</div>
+                        <div className="text-sm text-gray-500 mb-2">{day.dateLabel}</div>
+                        <div className="text-2xl mb-2">{day.icon === 'sunny' ? '☀️' : day.icon === 'cloudy' ? '☁️' : day.icon === 'rainy' ? '🌧️' : '☀️'}</div>
+                        <div className="text-sm">
+                          <div className="font-semibold">{day.high}° / {day.low}°</div>
+                          <div className="text-gray-500">{day.precipitation}% rain</div>
+                          <div className="text-xs text-gray-500 mt-1">{day.condition}</div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )
+            ) : (
+              <div className="text-center py-8 text-gray-500">
+                Click "View {section.name}" to load forecast data
+              </div>
+            )}
+          </div>
+        )
+      default:
+        return (
+          <div className="text-center py-8 text-gray-500">
+            {section.name} content will be generated automatically in the newsletter preview and sent emails.
+            <br />
+            <span className="text-sm text-gray-400">
+              This section is active and will appear in the correct order based on your settings.
+            </span>
+          </div>
+        )
+    }
+  }
+
+  return (
+    <div className="bg-white shadow rounded-lg mt-6">
+      <div className="px-6 py-4 border-b border-gray-200">
+        <div className="flex items-center justify-between">
+          <h2 className="text-lg font-medium text-gray-900">
+            {section.name}
+          </h2>
+          <button
+            onClick={section.name === 'Local Weather' && onWeatherExpand ? onWeatherExpand : onToggleExpanded}
+            className="flex items-center space-x-2 text-sm text-brand-primary hover:text-blue-700"
+          >
+            <span>{expanded ? 'Minimize' : `View ${section.name}`}</span>
+            <svg
+              className={`w-4 h-4 transform transition-transform ${expanded ? 'rotate-180' : ''}`}
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+            </svg>
+          </button>
+        </div>
+        <div className="mt-2 text-sm text-gray-600">
+          Display Order: {section.display_order} | Status: {section.is_active ? 'Active' : 'Inactive'}
+        </div>
+      </div>
+
+      {expanded && renderSectionContent()}
+    </div>
+  )
+}
 
 // Events Manager Component
 function EventsManager({
@@ -504,6 +633,11 @@ export default function CampaignDetailPage() {
   const [weatherData, setWeatherData] = useState<any>(null)
   const [loadingWeather, setLoadingWeather] = useState(false)
 
+  // Newsletter sections state
+  const [newsletterSections, setNewsletterSections] = useState<NewsletterSection[]>([])
+  const [loadingSections, setLoadingSections] = useState(false)
+  const [sectionExpandedStates, setSectionExpandedStates] = useState<{ [key: string]: boolean }>({})
+
   // Drag and drop sensors
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -517,6 +651,7 @@ export default function CampaignDetailPage() {
     if (params.id) {
       fetchCampaign(params.id as string)
       fetchCampaignEvents(params.id as string)
+      fetchNewsletterSections()
     }
   }, [params.id])
 
@@ -559,6 +694,21 @@ export default function CampaignDetailPage() {
       console.error('Failed to fetch available events:', error)
     } finally {
       setLoadingEvents(false)
+    }
+  }
+
+  const fetchNewsletterSections = async () => {
+    setLoadingSections(true)
+    try {
+      const response = await fetch('/api/settings/newsletter-sections')
+      if (response.ok) {
+        const data = await response.json()
+        setNewsletterSections(data.sections || [])
+      }
+    } catch (error) {
+      console.error('Failed to fetch newsletter sections:', error)
+    } finally {
+      setLoadingSections(false)
     }
   }
 
@@ -1641,6 +1791,27 @@ export default function CampaignDetailPage() {
             </div>
           )}
         </div>
+
+        {/* Dynamic Newsletter Sections */}
+        {newsletterSections
+          .filter(section => section.is_active && !['The Local Scoop'].includes(section.name))
+          .map(section => (
+            <NewsletterSectionComponent
+              key={section.id}
+              section={section}
+              campaign={campaign}
+              expanded={sectionExpandedStates[section.id] || false}
+              onToggleExpanded={() => {
+                setSectionExpandedStates(prev => ({
+                  ...prev,
+                  [section.id]: !prev[section.id]
+                }))
+              }}
+              weatherData={section.name === 'Local Weather' ? weatherData : null}
+              loadingWeather={section.name === 'Local Weather' ? loadingWeather : false}
+              onWeatherExpand={section.name === 'Local Weather' ? handleWeatherExpand : undefined}
+            />
+          ))}
 
         {/* Preview Modal */}
         {showPreview && (

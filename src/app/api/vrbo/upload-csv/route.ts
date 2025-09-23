@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { supabaseAdmin } from '@/lib/supabase'
+import { processVrboImage } from '@/lib/vrbo-image-processor'
 
 export async function POST(request: NextRequest) {
   try {
@@ -65,7 +66,9 @@ export async function POST(request: NextRequest) {
     const results = {
       created: 0,
       skipped: 0,
-      errors: [] as string[]
+      errors: [] as string[],
+      imagesProcessed: 0,
+      imagesFailed: 0
     }
 
     // Process each data row
@@ -119,11 +122,34 @@ export async function POST(request: NextRequest) {
           continue
         }
 
+        // Process image if provided
+        let adjusted_image_url = rowData.adjusted_image_url || null
+        if (rowData.main_image_url && !adjusted_image_url) {
+          console.log(`Processing VRBO image for CSV listing: ${rowData.title}`)
+          try {
+            const imageResult = await processVrboImage(rowData.main_image_url, rowData.title)
+            if (imageResult.success && imageResult.adjusted_image_url) {
+              adjusted_image_url = imageResult.adjusted_image_url
+              console.log('Image processed successfully:', adjusted_image_url)
+              results.imagesProcessed++
+            } else {
+              console.warn('Image processing failed:', imageResult.error)
+              results.imagesFailed++
+              // Continue with creation - image processing failure shouldn't block listing creation
+            }
+          } catch (imageError) {
+            console.error('Image processing error:', imageError)
+            results.imagesFailed++
+            // Continue with creation - image processing failure shouldn't block listing creation
+          }
+        }
+
         // Insert new listing
         const { error: insertError } = await supabaseAdmin
           .from('vrbo_listings')
           .insert([{
             ...rowData,
+            adjusted_image_url,
             is_active: true
           }])
 

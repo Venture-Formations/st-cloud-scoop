@@ -59,7 +59,7 @@ export async function POST(request: NextRequest) {
         </tr>
       </thead>
       <tbody>
-        ${weatherData.map(day => `
+        ${weatherData.map((day: any) => `
         <tr style="height: 60px;">
           <td style="text-align: center; padding: 8px; font-weight: bold; font-size: 14px; width: 80px;">
             ${day.day}<br>

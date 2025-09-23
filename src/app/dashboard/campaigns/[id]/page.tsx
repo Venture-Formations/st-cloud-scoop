@@ -26,6 +26,205 @@ import {
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 
+// Section Components
+function WordleSection({ campaign }: { campaign: any }) {
+  const [wordleData, setWordleData] = useState<any>(null)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    const fetchWordleData = async () => {
+      try {
+        const yesterday = new Date()
+        yesterday.setDate(yesterday.getDate() - 1)
+        const yesterdayDate = yesterday.toISOString().split('T')[0]
+
+        const response = await fetch(`/api/test/wordle`)
+        if (response.ok) {
+          const data = await response.json()
+          if (data.success && data.wordle) {
+            setWordleData(data.wordle)
+          }
+        }
+      } catch (error) {
+        console.error('Failed to fetch Wordle data:', error)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchWordleData()
+  }, [])
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-8">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-primary"></div>
+        <span className="ml-3 text-gray-600">Loading Wordle data...</span>
+      </div>
+    )
+  }
+
+  if (!wordleData) {
+    return (
+      <div className="text-center py-8 text-gray-500">
+        No Wordle data available for yesterday
+      </div>
+    )
+  }
+
+  return (
+    <div className="p-6">
+      <div className="border border-gray-200 rounded-lg bg-white shadow-sm">
+        <div className="bg-gray-50 text-center py-2 font-bold text-2xl text-gray-700 uppercase rounded-t-lg">
+          {wordleData.word}
+        </div>
+        <div className="p-4">
+          <div className="mb-3">
+            <strong>Definition:</strong> {wordleData.definition}
+          </div>
+          <div>
+            <strong>Interesting Fact:</strong> {wordleData.interesting_fact}
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function MinnesotaGetawaysSection({ campaign }: { campaign: any }) {
+  const [properties, setProperties] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    const fetchProperties = async () => {
+      try {
+        const response = await fetch(`/api/test/minnesota-getaways`)
+        if (response.ok) {
+          const data = await response.json()
+          if (data.success && data.properties) {
+            setProperties(data.properties)
+          }
+        }
+      } catch (error) {
+        console.error('Failed to fetch Minnesota Getaways data:', error)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchProperties()
+  }, [])
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-8">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-primary"></div>
+        <span className="ml-3 text-gray-600">Loading Minnesota Getaways...</span>
+      </div>
+    )
+  }
+
+  if (properties.length === 0) {
+    return (
+      <div className="text-center py-8 text-gray-500">
+        No Minnesota Getaways properties available
+      </div>
+    )
+  }
+
+  return (
+    <div className="p-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {properties.map((property, index) => (
+          <div key={index} className="border border-gray-200 rounded-lg bg-white shadow-sm overflow-hidden">
+            {property.adjusted_image_url && (
+              <img
+                src={property.adjusted_image_url}
+                alt={property.title}
+                className="w-full h-48 object-cover"
+              />
+            )}
+            <div className="p-4">
+              <h3 className="font-semibold text-lg mb-2">{property.title}</h3>
+              <p className="text-gray-600 text-sm mb-2">{property.city}</p>
+              <div className="flex justify-between text-sm text-gray-500">
+                <span>{property.bedrooms} bedrooms</span>
+                <span>${property.price}/night</span>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+function DiningDealsSection({ campaign }: { campaign: any }) {
+  const [deals, setDeals] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    const fetchDeals = async () => {
+      try {
+        const response = await fetch(`/api/test/dining-deals`)
+        if (response.ok) {
+          const data = await response.json()
+          if (data.success && data.deals) {
+            setDeals(data.deals)
+          }
+        }
+      } catch (error) {
+        console.error('Failed to fetch Dining Deals data:', error)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchDeals()
+  }, [])
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-8">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-primary"></div>
+        <span className="ml-3 text-gray-600">Loading Dining Deals...</span>
+      </div>
+    )
+  }
+
+  if (deals.length === 0) {
+    return (
+      <div className="text-center py-8 text-gray-500">
+        No dining deals available for this date
+      </div>
+    )
+  }
+
+  return (
+    <div className="p-6">
+      <div className="space-y-4">
+        {deals.map((deal, index) => (
+          <div key={index} className="border border-gray-200 rounded-lg bg-white shadow-sm p-4">
+            <div className="flex justify-between items-start">
+              <div>
+                <h3 className="font-semibold text-lg">{deal.business_name}</h3>
+                <p className="text-gray-600 mt-1">{deal.deal_description}</p>
+                <p className="text-sm text-gray-500 mt-2">{deal.address}</p>
+              </div>
+              <div className="text-right">
+                <div className="text-sm text-gray-500">{deal.day_of_week}</div>
+                {deal.phone && (
+                  <div className="text-sm text-gray-500">{deal.phone}</div>
+                )}
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 // Newsletter Section Component
 function NewsletterSectionComponent({
   section,
@@ -108,6 +307,18 @@ function NewsletterSectionComponent({
                 Click "View {section.name}" to load forecast data
               </div>
             )}
+          </div>
+        )
+      case 'Yesterday\'s Wordle':
+        return <WordleSection campaign={campaign} />
+      case 'Minnesota Getaways':
+        return <MinnesotaGetawaysSection campaign={campaign} />
+      case 'Dining Deals':
+        return <DiningDealsSection campaign={campaign} />
+      case 'The Local Scoop':
+        return (
+          <div className="text-center py-8 text-gray-500">
+            Article management is handled in the dedicated Articles section above
           </div>
         )
       default:

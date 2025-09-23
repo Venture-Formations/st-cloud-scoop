@@ -49,7 +49,8 @@
       "Bash(timeout:*)",
       "WebFetch(domain:hcti.io)",
       "Bash(node:*)",
-      "Bash(git fetch:*)"
+      "Bash(git fetch:*)",
+      "Bash(grep:*)"
     ],
     "deny": [],
     "ask": []

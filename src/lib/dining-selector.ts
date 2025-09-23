@@ -5,6 +5,46 @@ export interface DiningSelection {
   message: string
 }
 
+/**
+ * Select deals with business limits: max N deals per business, ensure minimum total
+ * @param deals - Available deals (should be pre-sorted by priority)
+ * @param minTotal - Minimum total deals to select (default 8)
+ * @param maxPerBusiness - Maximum deals per business (default 2)
+ */
+function selectDealsWithBusinessLimit(deals: any[], minTotal: number = 8, maxPerBusiness: number = 2): any[] {
+  const selected: any[] = []
+  const businessCounts: { [businessName: string]: number } = {}
+
+  // First pass: Apply business limits
+  for (const deal of deals) {
+    const businessName = deal.business_name || 'Unknown'
+    const currentCount = businessCounts[businessName] || 0
+
+    if (currentCount < maxPerBusiness) {
+      selected.push(deal)
+      businessCounts[businessName] = currentCount + 1
+    }
+
+    // Stop if we have enough deals
+    if (selected.length >= minTotal) {
+      break
+    }
+  }
+
+  // Second pass: If we don't have enough deals, relax the business limit
+  if (selected.length < minTotal) {
+    const remaining = deals.filter(deal => !selected.includes(deal))
+    const needed = minTotal - selected.length
+
+    // Add remaining deals regardless of business limits to reach minimum
+    for (let i = 0; i < Math.min(needed, remaining.length); i++) {
+      selected.push(remaining[i])
+    }
+  }
+
+  return selected
+}
+
 export async function selectDiningDealsForCampaign(campaignId: string, campaignDate: Date): Promise<DiningSelection> {
   try {
     // Get the day of the week for the campaign date
@@ -63,8 +103,8 @@ export async function selectDiningDealsForCampaign(campaignId: string, campaignD
       }
     }
 
-    // Select up to 8 deals with featured prioritization
-    const selectedDeals = availableDeals.slice(0, 8)
+    // Select up to 8 deals with featured prioritization and business limits
+    const selectedDeals = selectDealsWithBusinessLimit(availableDeals, 8, 2)
 
     // If no deals are featured, mark the first one as featured
     if (selectedDeals.length > 0 && !selectedDeals.some(deal => deal.is_featured)) {
@@ -90,9 +130,20 @@ export async function selectDiningDealsForCampaign(campaignId: string, campaignD
       throw new Error('Failed to save dining selections')
     }
 
+    // Count businesses to show in message
+    const businessCounts: { [businessName: string]: number } = {}
+    selectedDeals.forEach(deal => {
+      const businessName = deal.business_name || 'Unknown'
+      businessCounts[businessName] = (businessCounts[businessName] || 0) + 1
+    })
+
+    const businessesWithMultiple = Object.entries(businessCounts)
+      .filter(([_, count]) => count > 1)
+      .length
+
     return {
       deals: selectedDeals,
-      message: `Selected ${selectedDeals.length} dining deals for ${dayOfWeek} (${selectedDeals.filter(d => d.is_featured).length} featured)`
+      message: `Selected ${selectedDeals.length} dining deals for ${dayOfWeek} (${selectedDeals.filter(d => d.is_featured).length} featured, max 2 per business${businessesWithMultiple > 0 ? `, ${businessesWithMultiple} businesses with multiple deals` : ''})`
     }
 
   } catch (error) {

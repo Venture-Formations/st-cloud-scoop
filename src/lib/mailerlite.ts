@@ -50,11 +50,8 @@ export class MailerLiteService {
           from: 'scoop@stcscoop.com',
           content: emailContent,
         }],
-        groups: [process.env.MAILERLITE_REVIEW_GROUP_ID],
-        delivery_schedule: {
-          type: 'scheduled',
-          delivery: await this.getReviewDeliveryTime(campaign.date)
-        }
+        groups: [process.env.MAILERLITE_REVIEW_GROUP_ID]
+        // Note: Removed delivery_schedule - we'll schedule separately after creation
       }
 
       console.log('Sending MailerLite API request with data:', JSON.stringify(campaignData, null, 2))
@@ -69,6 +66,33 @@ export class MailerLiteService {
 
       if (response.status === 201) {
         const campaignId = response.data.data.id
+        console.log('Campaign created successfully with ID:', campaignId)
+
+        // Step 2: Schedule the campaign using the campaign ID
+        try {
+          const deliveryTime = await this.getReviewDeliveryTime(campaign.date)
+          console.log('Scheduling campaign for delivery at:', deliveryTime)
+
+          const scheduleResponse = await mailerliteClient.post(`/campaigns/${campaignId}/schedule`, {
+            delivery: deliveryTime,
+            timezone: 'UTC' // Since we're sending UTC time
+          })
+
+          console.log('MailerLite schedule response:', {
+            status: scheduleResponse.status,
+            statusText: scheduleResponse.statusText,
+            data: scheduleResponse.data
+          })
+
+          if (scheduleResponse.status === 200 || scheduleResponse.status === 201) {
+            console.log('Campaign scheduled successfully')
+          } else {
+            console.error('Failed to schedule campaign:', scheduleResponse.status, scheduleResponse.data)
+          }
+        } catch (scheduleError) {
+          console.error('Error scheduling campaign:', scheduleError)
+          // Don't fail the whole process if scheduling fails - campaign is still created
+        }
 
         // Update campaign with review sent timestamp
         await supabaseAdmin

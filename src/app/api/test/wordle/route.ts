@@ -90,19 +90,52 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    console.log('🧩 Testing Wordle section generation...')
+    console.log('🧩 Testing Wordle section for campaign page...')
 
-    const html = await generateWordleSection()
+    // Get yesterday's date (since this is for "Yesterday's Wordle")
+    const yesterday = new Date()
+    yesterday.setDate(yesterday.getDate() - 1)
+    const yesterdayDate = yesterday.toISOString().split('T')[0]
 
-    return new Response(html, {
-      headers: {
-        'Content-Type': 'text/html',
-      },
+    console.log('Looking for Wordle data for date:', yesterdayDate)
+
+    // Fetch Wordle data for yesterday
+    const { data: wordleData, error } = await supabaseAdmin
+      .from('wordle')
+      .select('*')
+      .eq('date', yesterdayDate)
+      .single()
+
+    if (error || !wordleData) {
+      console.log('No Wordle data found for yesterday:', yesterdayDate)
+
+      // Create test data for demonstration
+      const testWordleData = {
+        word: 'TESTS',
+        definition: 'Procedures intended to establish the quality, performance, or reliability of something.',
+        interesting_fact: 'The word "test" comes from the Latin "testum," meaning earthen pot, used by alchemists.',
+        date: yesterdayDate
+      }
+
+      return NextResponse.json({
+        success: true,
+        wordle: testWordleData,
+        isTestData: true
+      })
+    }
+
+    console.log('Found Wordle data:', wordleData.word)
+
+    return NextResponse.json({
+      success: true,
+      wordle: wordleData,
+      isTestData: false
     })
 
   } catch (error) {
     console.error('Wordle test endpoint error:', error)
     return NextResponse.json({
+      success: false,
       error: error instanceof Error ? error.message : 'Unknown error'
     }, { status: 500 })
   }

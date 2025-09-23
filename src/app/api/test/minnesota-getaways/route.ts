@@ -166,17 +166,85 @@ export async function GET(request: NextRequest) {
 
     console.log('🏠 Testing Minnesota Getaways section generation...')
 
-    const html = await generateMinnesotaGetawaysSection()
+    // Get active VRBO listings for display in the campaign page
+    const { data: listings, error } = await supabaseAdmin
+      .from('vrbo_listings')
+      .select('*')
+      .eq('is_active', true)
+      .order('created_at', { ascending: false })
+      .limit(3)
 
-    return new Response(html, {
-      headers: {
-        'Content-Type': 'text/html',
-      },
+    let selectedProperties: VrboListing[] = []
+
+    if (error || !listings || listings.length === 0) {
+      console.log('No VRBO listings found, creating test data...')
+
+      // Create test data for demonstration
+      selectedProperties = [
+        {
+          id: 'test-1',
+          title: 'Cozy Lake Cabin',
+          main_image_url: 'https://via.placeholder.com/575x325/4CAF50/white?text=Local+Property',
+          adjusted_image_url: 'https://via.placeholder.com/575x325/4CAF50/white?text=Local+Property',
+          city: 'St. Cloud, MN',
+          bedrooms: 3,
+          bathrooms: 2,
+          sleeps: 6,
+          link: 'https://vrbo.com/test-local',
+          non_tracked_link: null,
+          listing_type: 'Local',
+          is_active: true,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        },
+        {
+          id: 'test-2',
+          title: 'Scenic North Shore Retreat',
+          main_image_url: 'https://via.placeholder.com/575x325/2196F3/white?text=Greater+Property+1',
+          adjusted_image_url: 'https://via.placeholder.com/575x325/2196F3/white?text=Greater+Property+1',
+          city: 'Duluth, MN',
+          bedrooms: 4,
+          bathrooms: 3,
+          sleeps: 8,
+          link: 'https://vrbo.com/test-greater-1',
+          non_tracked_link: null,
+          listing_type: 'Greater',
+          is_active: true,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        },
+        {
+          id: 'test-3',
+          title: 'Historic Downtown Loft',
+          main_image_url: 'https://via.placeholder.com/575x325/FF9800/white?text=Greater+Property+2',
+          adjusted_image_url: 'https://via.placeholder.com/575x325/FF9800/white?text=Greater+Property+2',
+          city: 'Minneapolis, MN',
+          bedrooms: 2,
+          bathrooms: 1.5,
+          sleeps: 4,
+          link: 'https://vrbo.com/test-greater-2',
+          non_tracked_link: null,
+          listing_type: 'Greater',
+          is_active: true,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        }
+      ]
+    } else {
+      selectedProperties = listings.slice(0, 3)
+      console.log(`Found ${selectedProperties.length} VRBO listings for campaign page`)
+    }
+
+    return NextResponse.json({
+      success: true,
+      properties: selectedProperties,
+      count: selectedProperties.length
     })
 
   } catch (error) {
     console.error('Minnesota Getaways test endpoint error:', error)
     return NextResponse.json({
+      success: false,
       error: error instanceof Error ? error.message : 'Unknown error'
     }, { status: 500 })
   }

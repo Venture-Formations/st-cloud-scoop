@@ -108,6 +108,7 @@ export async function GET(request: NextRequest) {
 
     const response = {
       success: true,
+      deals: availableDeals || [], // For DiningDealsSection component
       test_date: todayString,
       day_of_week: dayOfWeek,
       available_deals_count: availableDeals?.length || 0,

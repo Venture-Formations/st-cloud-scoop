@@ -68,7 +68,8 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       return NextResponse.json({ error: 'deal_ids must be an array' }, { status: 400 })
     }
 
-    console.log('Updating dining deals for campaign:', campaignId, 'deals:', deal_ids, 'featured:', featured_deal_id)
+    console.log('🔧 Updating dining deals for campaign:', campaignId)
+    console.log('📝 Request data:', { deal_ids, featured_deal_id, deal_ids_type: typeof deal_ids, deal_ids_length: deal_ids?.length })
 
     // First, delete existing selections for this campaign
     const { error: deleteError } = await supabaseAdmin
@@ -103,14 +104,25 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
         display_order: index + 1
       }))
 
+      console.log('💾 Attempting to insert data:', insertData)
+
       const { error: insertError } = await supabaseAdmin
         .from('campaign_dining_selections')
         .insert(insertData)
 
       if (insertError) {
-        console.error('Error inserting new selections:', insertError)
-        return NextResponse.json({ error: 'Failed to save selections' }, { status: 500 })
+        console.error('❌ Error inserting new selections:', insertError)
+        console.error('📋 Insert data that failed:', insertData)
+        return NextResponse.json({
+          error: 'Failed to save selections',
+          details: insertError.message,
+          data: insertData
+        }, { status: 500 })
       }
+
+      console.log('✅ Successfully inserted dining deal selections')
+    } else {
+      console.log('📭 No deals to insert (empty selection)')
     }
 
     console.log('Successfully updated dining deals selections')

@@ -407,6 +407,30 @@ export default function VrboDatabasePage() {
             </div>
           )}
         </div>
+
+        {/* Add Form Modal */}
+        {showAddForm && (
+          <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+            <div className="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
+              <div className="mt-3">
+                <h3 className="text-lg font-medium text-gray-900 mb-4">Add New VRBO Listing</h3>
+                <AddListingForm onClose={() => setShowAddForm(false)} onSuccess={fetchListings} />
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* CSV Upload Modal */}
+        {showCsvUpload && (
+          <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+            <div className="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
+              <div className="mt-3">
+                <h3 className="text-lg font-medium text-gray-900 mb-4">Upload VRBO CSV</h3>
+                <CsvUploadForm onClose={() => setShowCsvUpload(false)} onSuccess={fetchListings} />
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </Layout>
   )
@@ -527,4 +551,287 @@ function EditCell({
         />
       )
   }
+}
+
+// Add Listing Form Component
+function AddListingForm({ onClose, onSuccess }: { onClose: () => void; onSuccess: () => void }) {
+  const [formData, setFormData] = useState({
+    title: '',
+    city: '',
+    bedrooms: '',
+    bathrooms: '',
+    sleeps: '',
+    link: '',
+    non_tracked_link: '',
+    listing_type: 'Local' as 'Local' | 'Greater',
+    main_image_url: ''
+  })
+  const [submitting, setSubmitting] = useState(false)
+  const [error, setError] = useState('')
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setSubmitting(true)
+    setError('')
+
+    try {
+      const response = await fetch('/api/vrbo/listings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...formData,
+          bedrooms: formData.bedrooms ? parseInt(formData.bedrooms) : null,
+          bathrooms: formData.bathrooms ? parseFloat(formData.bathrooms) : null,
+          sleeps: formData.sleeps ? parseInt(formData.sleeps) : null
+        })
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Failed to create listing')
+      }
+
+      onSuccess()
+      onClose()
+    } catch (error) {
+      setError(error instanceof Error ? error.message : 'An error occurred')
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      {error && (
+        <div className="bg-red-50 border border-red-200 text-red-700 px-3 py-2 rounded text-sm">
+          {error}
+        </div>
+      )}
+
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">Title *</label>
+        <input
+          type="text"
+          required
+          value={formData.title}
+          onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
+          className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+        />
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">City</label>
+        <input
+          type="text"
+          value={formData.city}
+          onChange={(e) => setFormData(prev => ({ ...prev, city: e.target.value }))}
+          className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+        />
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">Listing Type *</label>
+        <select
+          required
+          value={formData.listing_type}
+          onChange={(e) => setFormData(prev => ({ ...prev, listing_type: e.target.value as 'Local' | 'Greater' }))}
+          className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+        >
+          <option value="Local">Local</option>
+          <option value="Greater">Greater</option>
+        </select>
+      </div>
+
+      <div className="grid grid-cols-3 gap-3">
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Bedrooms</label>
+          <input
+            type="number"
+            min="0"
+            value={formData.bedrooms}
+            onChange={(e) => setFormData(prev => ({ ...prev, bedrooms: e.target.value }))}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Bathrooms</label>
+          <input
+            type="number"
+            step="0.5"
+            min="0"
+            value={formData.bathrooms}
+            onChange={(e) => setFormData(prev => ({ ...prev, bathrooms: e.target.value }))}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Sleeps</label>
+          <input
+            type="number"
+            min="0"
+            value={formData.sleeps}
+            onChange={(e) => setFormData(prev => ({ ...prev, sleeps: e.target.value }))}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+          />
+        </div>
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">Tracked Link *</label>
+        <input
+          type="url"
+          required
+          value={formData.link}
+          onChange={(e) => setFormData(prev => ({ ...prev, link: e.target.value }))}
+          className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+          placeholder="https://..."
+        />
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">Original VRBO Link</label>
+        <input
+          type="url"
+          value={formData.non_tracked_link}
+          onChange={(e) => setFormData(prev => ({ ...prev, non_tracked_link: e.target.value }))}
+          className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+          placeholder="https://..."
+        />
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">Main Image URL</label>
+        <input
+          type="url"
+          value={formData.main_image_url}
+          onChange={(e) => setFormData(prev => ({ ...prev, main_image_url: e.target.value }))}
+          className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+          placeholder="https://..."
+        />
+      </div>
+
+      <div className="flex justify-end space-x-3 pt-4">
+        <button
+          type="button"
+          onClick={onClose}
+          className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
+        >
+          Cancel
+        </button>
+        <button
+          type="submit"
+          disabled={submitting}
+          className="px-4 py-2 text-sm font-medium text-white bg-brand-primary border border-transparent rounded-md hover:bg-brand-dark disabled:opacity-50"
+        >
+          {submitting ? 'Adding...' : 'Add Listing'}
+        </button>
+      </div>
+    </form>
+  )
+}
+
+// CSV Upload Form Component
+function CsvUploadForm({ onClose, onSuccess }: { onClose: () => void; onSuccess: () => void }) {
+  const [file, setFile] = useState<File | null>(null)
+  const [uploading, setUploading] = useState(false)
+  const [error, setError] = useState('')
+  const [result, setResult] = useState<any>(null)
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!file) return
+
+    setUploading(true)
+    setError('')
+    setResult(null)
+
+    try {
+      const formData = new FormData()
+      formData.append('file', file)
+
+      const response = await fetch('/api/vrbo/upload-csv', {
+        method: 'POST',
+        body: formData
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Upload failed')
+      }
+
+      const result = await response.json()
+      setResult(result.results)
+      onSuccess()
+    } catch (error) {
+      setError(error instanceof Error ? error.message : 'An error occurred')
+    } finally {
+      setUploading(false)
+    }
+  }
+
+  return (
+    <div className="space-y-4">
+      {error && (
+        <div className="bg-red-50 border border-red-200 text-red-700 px-3 py-2 rounded text-sm">
+          {error}
+        </div>
+      )}
+
+      {result && (
+        <div className="bg-green-50 border border-green-200 text-green-700 px-3 py-2 rounded text-sm">
+          <div className="font-medium">Upload completed!</div>
+          <div className="text-xs mt-1">
+            Created: {result.created}, Skipped: {result.skipped}, Errors: {result.errors?.length || 0}
+          </div>
+          {result.errors && result.errors.length > 0 && (
+            <div className="mt-2">
+              <div className="font-medium">Errors:</div>
+              <ul className="list-disc list-inside text-xs">
+                {result.errors.map((error: string, index: number) => (
+                  <li key={index}>{error}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
+      )}
+
+      <form onSubmit={handleSubmit}>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Select CSV File
+          </label>
+          <input
+            type="file"
+            accept=".csv"
+            onChange={(e) => setFile(e.target.files?.[0] || null)}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+            required
+          />
+          <p className="text-xs text-gray-500 mt-1">
+            CSV should have columns: Title, City, Bedrooms, Bathrooms, Sleeps, Link, Non-tracked Link, Listing Type, Main Image URL
+          </p>
+        </div>
+
+        <div className="flex justify-end space-x-3 pt-4">
+          <button
+            type="button"
+            onClick={onClose}
+            className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
+          >
+            {result ? 'Close' : 'Cancel'}
+          </button>
+          {!result && (
+            <button
+              type="submit"
+              disabled={!file || uploading}
+              className="px-4 py-2 text-sm font-medium text-white bg-green-600 border border-transparent rounded-md hover:bg-green-700 disabled:opacity-50"
+            >
+              {uploading ? 'Uploading...' : 'Upload CSV'}
+            </button>
+          )}
+        </div>
+      </form>
+    </div>
+  )
 }

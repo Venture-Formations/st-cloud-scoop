@@ -453,6 +453,30 @@ export default function DiningDatabasePage() {
             </div>
           )}
         </div>
+
+        {/* Add Form Modal */}
+        {showAddForm && (
+          <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+            <div className="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
+              <div className="mt-3">
+                <h3 className="text-lg font-medium text-gray-900 mb-4">Add New Dining Deal</h3>
+                <AddDealForm onClose={() => setShowAddForm(false)} onSuccess={fetchDeals} />
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* CSV Upload Modal */}
+        {showCsvUpload && (
+          <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+            <div className="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
+              <div className="mt-3">
+                <h3 className="text-lg font-medium text-gray-900 mb-4">Upload Dining Deals CSV</h3>
+                <CsvUploadForm onClose={() => setShowCsvUpload(false)} onSuccess={fetchDeals} />
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </Layout>
   )
@@ -571,4 +595,258 @@ function EditCell({
         />
       )
   }
+}
+
+// Add Deal Form Component
+function AddDealForm({ onClose, onSuccess }: { onClose: () => void; onSuccess: () => void }) {
+  const [formData, setFormData] = useState({
+    business_name: '',
+    business_address: '',
+    google_profile: '',
+    day_of_week: 'Monday' as DiningDeal['day_of_week'],
+    special_description: '',
+    special_time: '',
+    is_featured: false
+  })
+  const [submitting, setSubmitting] = useState(false)
+  const [error, setError] = useState('')
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setSubmitting(true)
+    setError('')
+
+    try {
+      const response = await fetch('/api/dining/deals', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData)
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Failed to create deal')
+      }
+
+      onSuccess()
+      onClose()
+    } catch (error) {
+      setError(error instanceof Error ? error.message : 'An error occurred')
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      {error && (
+        <div className="bg-red-50 border border-red-200 text-red-700 px-3 py-2 rounded text-sm">
+          {error}
+        </div>
+      )}
+
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">Business Name *</label>
+        <input
+          type="text"
+          required
+          value={formData.business_name}
+          onChange={(e) => setFormData(prev => ({ ...prev, business_name: e.target.value }))}
+          className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+        />
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">Business Address</label>
+        <input
+          type="text"
+          value={formData.business_address}
+          onChange={(e) => setFormData(prev => ({ ...prev, business_address: e.target.value }))}
+          className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+        />
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">Google Profile URL</label>
+        <input
+          type="url"
+          value={formData.google_profile}
+          onChange={(e) => setFormData(prev => ({ ...prev, google_profile: e.target.value }))}
+          className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+          placeholder="https://..."
+        />
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">Day of Week *</label>
+        <select
+          required
+          value={formData.day_of_week}
+          onChange={(e) => setFormData(prev => ({ ...prev, day_of_week: e.target.value as DiningDeal['day_of_week'] }))}
+          className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+        >
+          {DAYS_OF_WEEK.map(day => (
+            <option key={day} value={day}>{day}</option>
+          ))}
+        </select>
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">Special Description *</label>
+        <textarea
+          required
+          value={formData.special_description}
+          onChange={(e) => setFormData(prev => ({ ...prev, special_description: e.target.value }))}
+          className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+          rows={3}
+        />
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">Special Time</label>
+        <input
+          type="text"
+          value={formData.special_time}
+          onChange={(e) => setFormData(prev => ({ ...prev, special_time: e.target.value }))}
+          className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+          placeholder="e.g., 11AM - 3PM, All day"
+        />
+      </div>
+
+      <div>
+        <label className="flex items-center space-x-2">
+          <input
+            type="checkbox"
+            checked={formData.is_featured}
+            onChange={(e) => setFormData(prev => ({ ...prev, is_featured: e.target.checked }))}
+            className="rounded border-gray-300"
+          />
+          <span className="text-sm font-medium text-gray-700">Featured Deal</span>
+        </label>
+      </div>
+
+      <div className="flex justify-end space-x-3 pt-4">
+        <button
+          type="button"
+          onClick={onClose}
+          className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
+        >
+          Cancel
+        </button>
+        <button
+          type="submit"
+          disabled={submitting}
+          className="px-4 py-2 text-sm font-medium text-white bg-brand-primary border border-transparent rounded-md hover:bg-brand-dark disabled:opacity-50"
+        >
+          {submitting ? 'Adding...' : 'Add Deal'}
+        </button>
+      </div>
+    </form>
+  )
+}
+
+// CSV Upload Form Component
+function CsvUploadForm({ onClose, onSuccess }: { onClose: () => void; onSuccess: () => void }) {
+  const [file, setFile] = useState<File | null>(null)
+  const [uploading, setUploading] = useState(false)
+  const [error, setError] = useState('')
+  const [result, setResult] = useState<any>(null)
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!file) return
+
+    setUploading(true)
+    setError('')
+    setResult(null)
+
+    try {
+      const formData = new FormData()
+      formData.append('file', file)
+
+      const response = await fetch('/api/dining/upload-csv', {
+        method: 'POST',
+        body: formData
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Upload failed')
+      }
+
+      const result = await response.json()
+      setResult(result.results)
+      onSuccess()
+    } catch (error) {
+      setError(error instanceof Error ? error.message : 'An error occurred')
+    } finally {
+      setUploading(false)
+    }
+  }
+
+  return (
+    <div className="space-y-4">
+      {error && (
+        <div className="bg-red-50 border border-red-200 text-red-700 px-3 py-2 rounded text-sm">
+          {error}
+        </div>
+      )}
+
+      {result && (
+        <div className="bg-green-50 border border-green-200 text-green-700 px-3 py-2 rounded text-sm">
+          <div className="font-medium">Upload completed!</div>
+          <div className="text-xs mt-1">
+            Created: {result.created}, Skipped: {result.skipped}, Errors: {result.errors?.length || 0}
+          </div>
+          {result.errors && result.errors.length > 0 && (
+            <div className="mt-2">
+              <div className="font-medium">Errors:</div>
+              <ul className="list-disc list-inside text-xs">
+                {result.errors.map((error: string, index: number) => (
+                  <li key={index}>{error}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
+      )}
+
+      <form onSubmit={handleSubmit}>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Select CSV File
+          </label>
+          <input
+            type="file"
+            accept=".csv"
+            onChange={(e) => setFile(e.target.files?.[0] || null)}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+            required
+          />
+          <p className="text-xs text-gray-500 mt-1">
+            CSV should have columns: Business Name, Business Address, Google Profile, Day of Week, Special Description, Special Time
+          </p>
+        </div>
+
+        <div className="flex justify-end space-x-3 pt-4">
+          <button
+            type="button"
+            onClick={onClose}
+            className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
+          >
+            {result ? 'Close' : 'Cancel'}
+          </button>
+          {!result && (
+            <button
+              type="submit"
+              disabled={!file || uploading}
+              className="px-4 py-2 text-sm font-medium text-white bg-green-600 border border-transparent rounded-md hover:bg-green-700 disabled:opacity-50"
+            >
+              {uploading ? 'Uploading...' : 'Upload CSV'}
+            </button>
+          )}
+        </div>
+      </form>
+    </div>
+  )
 }

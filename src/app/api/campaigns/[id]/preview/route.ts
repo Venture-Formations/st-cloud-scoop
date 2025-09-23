@@ -427,7 +427,7 @@ async function generateWordleSection(campaign: any): Promise<string> {
       .single()
 
     if (error || !wordleData) {
-      console.log('No Wordle data found for yesterday:', yesterdayDate)
+      console.log('No Wordle data found for yesterday:', yesterdayDate, 'excluding Wordle section')
       return '' // Don't include section if no data
     }
 

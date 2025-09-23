@@ -896,7 +896,7 @@ ${sectionsHtml}
         .single()
 
       if (error || !wordleData) {
-        console.log('MailerLite - No Wordle data found for yesterday:', yesterdayDate)
+        console.log('MailerLite - No Wordle data found for yesterday:', yesterdayDate, 'excluding Wordle section')
         return '' // Don't include section if no data
       }
 

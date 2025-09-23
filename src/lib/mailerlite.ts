@@ -841,7 +841,7 @@ ${sectionsHtml}
         <tr><td style='background-color: #F8F9FA; text-align: center; padding: 8px; font-weight: bold; font-size: 24px; color: #3C4043; text-transform: uppercase;'>${wordleData.word}</td></tr>
         <tr><td style='padding: 16px;'>
           <div style='margin-bottom: 12px;'><strong>Definition:</strong> ${wordleData.definition}</div>
-          <div><strong>Fun Fact:</strong> ${wordleData.interesting_fact}</div>
+          <div><strong>Interesting Fact:</strong> ${wordleData.interesting_fact}</div>
         </td></tr>
       </table>`
 
@@ -905,20 +905,37 @@ ${sectionsHtml}
 
         propertyCards += `
     <!-- CARD ${index + 1} -->
-    <td class='column' style='padding:8px; vertical-align: top;'>
-      <table cellpadding='0' cellspacing='0' style='width:100%; border: 1px solid #ddd; border-radius: 12px; background-color: #fff; box-shadow: 0 4px 12px rgba(0,0,0,.15);'>
-        <tr><td style='padding:0; border-radius: 12px 12px 0 0; overflow: hidden;'>
-          ${imageUrl ? `<a href='${link}' target='_blank'><img src='${imageUrl}' alt='${title}' style='width: 100%; height: 200px; object-fit: cover; display: block; border-radius: 12px 12px 0 0;'></a>` : ''}
-        </td></tr>
-        <tr><td style='padding: 16px; font-family: Arial, sans-serif; font-size: 16px; color: #333; line-height: 26px;'>
-          <a href='${link}' target='_blank' style='text-decoration: none; color: inherit;'>
-            <h3 style='margin: 0 0 8px; font-size: 18px; font-weight: bold; color: #1a73e8;'>${title}</h3>
-            <p style='margin: 0 0 8px; color: #666; font-size: 14px;'>${city}</p>
-            <div style='margin-bottom: 12px; font-size: 14px; color: #333;'>
-              ${bedrooms}BR | ${bathrooms}BA | Sleeps ${sleeps}
+    <td class="column" width="33.33%" style="padding:8px;vertical-align:top;">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0"
+             style="table-layout:fixed;border:1px solid #ddd;border-radius:8px;background:#fff;height:100%;font-size:16px;line-height:26px;box-shadow:0 4px 12px rgba(0,0,0,.15);">
+        <!-- Image -->
+        <tr>
+          <!-- remove any gap above image -->
+          <td style="padding:0;line-height:0;font-size:0;mso-line-height-rule:exactly;border-top-left-radius:8px;border-top-right-radius:8px;">
+            <a href="${link}" style="display:block;text-decoration:none;">
+              <img src="${imageUrl}"
+                   alt="${title}, ${city}" border="0"
+                   style="display:block;width:100%;height:auto;border:0;outline:none;text-decoration:none;border-top-left-radius:8px;border-top-right-radius:8px;">
+            </a>
+          </td>
+        </tr>
+        <!-- Body -->
+        <tr>
+          <td style="padding:6px 10px 6px;">
+            <!-- 2-line clamp on desktop; mobile unlocks below -->
+            <div class="vrbo-title" style="font-size:16px;line-height:20px;height:auto;overflow:hidden;font-weight:bold;margin:0 0 4px;">
+              <a href="${link}" style="color:#0A66C2;text-decoration:none;">${title}</a>
             </div>
-          </a>
-        </td></tr>
+            <div style="font-size:13px;line-height:18px;color:#555;margin:0 0 8px;">${city}</div>
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-top:1px solid #eee;table-layout:fixed;">
+              <tr>
+                <td align="center" style="padding:4px 0;font-size:12px;color:#222;white-space:nowrap;"><strong>${bedrooms}</strong> BR</td>
+                <td align="center" style="padding:4px 0;font-size:12px;color:#222;border-left:1px solid #eee;border-right:1px solid #eee;white-space:nowrap;"><strong>${bathrooms}</strong> BA</td>
+                <td align="center" style="padding:4px 0;font-size:12px;color:#222;white-space:nowrap;">Sleeps <strong>${sleeps}</strong></td>
+              </tr>
+            </table>
+          </td>
+        </tr>
       </table>
     </td>`
       })
@@ -934,9 +951,12 @@ ${sectionsHtml}
 <tr class="row">${propertyCards}
 </tr>
 </table>
+<!--[if mso]></td></tr></table><![endif]-->
+
+<!-- Mobile helpers: stack columns + allow long titles -->
 <style>
-.etsy-col{display:inline-block !important; width:25% !important; max-width:25% !important; vertical-align:top !important;}
-.etsy-pad{padding:8px !important;}
+@media only screen and (max-width:600px){
+  .row .column{display:block !important;width:100% !important;max-width:100% !important;}
 }
 </style>
 <!-- ===== /Minnesota Vrbo ===== -->

@@ -50,7 +50,7 @@ export class MailerLiteService {
         groups: [process.env.MAILERLITE_REVIEW_GROUP_ID],
         delivery_schedule: {
           type: 'scheduled',
-          delivery: this.getReviewDeliveryTime(campaign.date)
+          delivery: await this.getReviewDeliveryTime(campaign.date)
         }
       }
 
@@ -447,15 +447,40 @@ ${sectionsHtml}
     return utcTime.toISOString()
   }
 
-  private getReviewDeliveryTime(date: string): string {
-    // Schedule for 9:00 PM CT on the campaign date
-    const deliveryDate = new Date(date)
-    deliveryDate.setHours(21, 0, 0, 0) // 9:00 PM
+  private async getReviewDeliveryTime(date: string): Promise<string> {
+    try {
+      // Get scheduled send time from database settings
+      const { data: setting } = await supabaseAdmin
+        .from('app_settings')
+        .select('value')
+        .eq('key', 'email_scheduledSendTime')
+        .single()
 
-    // Convert to UTC (CT is UTC-6 or UTC-5 depending on DST)
-    const utcTime = new Date(deliveryDate.getTime() + (6 * 60 * 60 * 1000))
+      const scheduledTime = setting?.value || '21:00' // Default to 9:00 PM if not found
+      console.log('Using scheduled send time from settings:', scheduledTime)
 
-    return utcTime.toISOString()
+      // Parse the time (format: "HH:mm")
+      const [hours, minutes] = scheduledTime.split(':').map(Number)
+
+      // Schedule for the specified time CT on the campaign date
+      const deliveryDate = new Date(date)
+      deliveryDate.setHours(hours, minutes, 0, 0)
+
+      // Convert Central Time to UTC properly accounting for DST
+      const centralTimeString = deliveryDate.toLocaleString("en-US", {timeZone: "America/Chicago"})
+      const centralDate = new Date(centralTimeString)
+      const utcTime = new Date(deliveryDate.getTime() + (deliveryDate.getTimezoneOffset() * 60 * 1000))
+
+      console.log('Review delivery scheduled for:', utcTime.toISOString(), `(${scheduledTime} Central Time)`)
+      return utcTime.toISOString()
+    } catch (error) {
+      console.error('Error getting review delivery time, using default:', error)
+      // Fallback to 9:00 PM CT
+      const deliveryDate = new Date(date)
+      deliveryDate.setHours(21, 0, 0, 0)
+      const utcTime = new Date(deliveryDate.getTime() + (6 * 60 * 60 * 1000))
+      return utcTime.toISOString()
+    }
   }
 
   async createFinalCampaign(campaign: CampaignWithEvents, mainGroupId: string) {

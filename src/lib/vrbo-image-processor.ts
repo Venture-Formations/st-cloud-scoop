@@ -1,5 +1,6 @@
 import { GitHubImageStorage } from './github-storage'
 import crypto from 'crypto'
+import sharp from 'sharp'
 
 interface ImageProcessingResult {
   success: boolean
@@ -8,7 +9,7 @@ interface ImageProcessingResult {
 }
 
 /**
- * Process a VRBO listing image by downloading, optimizing, and uploading to GitHub
+ * Process a VRBO listing image by downloading, resizing to 575x325, and uploading to GitHub
  * This creates properly sized images for newsletter use and hosts them reliably
  */
 export async function processVrboImage(
@@ -23,12 +24,59 @@ export async function processVrboImage(
       return { success: false, error: 'No image URL provided' }
     }
 
-    // Use the existing GitHub storage to upload the image
+    // Download the original image
+    console.log('Downloading image from:', originalImageUrl)
+    const controller = new AbortController()
+    const timeoutId = setTimeout(() => controller.abort(), 20000) // 20 second timeout
+
+    const response = await fetch(originalImageUrl, {
+      signal: controller.signal,
+      headers: {
+        'User-Agent': 'StCloudScoop-Newsletter/1.0',
+        'Accept': 'image/*',
+        'Cache-Control': 'no-cache'
+      }
+    })
+
+    clearTimeout(timeoutId)
+
+    if (!response.ok) {
+      console.error(`Failed to download VRBO image: HTTP ${response.status} ${response.statusText}`)
+      return {
+        success: false,
+        error: `Failed to download image: HTTP ${response.status}`
+      }
+    }
+
+    // Get image buffer
+    const imageBuffer = Buffer.from(await response.arrayBuffer())
+    console.log(`Downloaded image, size: ${imageBuffer.length} bytes`)
+
+    // Resize image to 575x325 (VRBO newsletter dimensions)
+    console.log('Resizing image to 575x325...')
+    const resizedBuffer = await sharp(imageBuffer)
+      .resize(575, 325, {
+        fit: 'cover',
+        position: 'centre'
+      })
+      .jpeg({
+        quality: 85,
+        progressive: true
+      })
+      .toBuffer()
+
+    console.log(`Resized image, new size: ${resizedBuffer.length} bytes`)
+
+    // Generate filename with hash
+    const hash = crypto.createHash('sha1').update(originalImageUrl).digest('hex').slice(0, 16)
+    const filename = `vrbo-${hash}.jpg`
+
+    // Upload to GitHub
     const githubStorage = new GitHubImageStorage()
-    const githubUrl = await githubStorage.uploadImage(originalImageUrl, `VRBO: ${listingTitle}`)
+    const githubUrl = await githubStorage.uploadBuffer(resizedBuffer, filename, `VRBO: ${listingTitle}`)
 
     if (githubUrl) {
-      console.log(`VRBO image uploaded to GitHub: ${githubUrl}`)
+      console.log(`VRBO image processed and uploaded to GitHub: ${githubUrl}`)
       return {
         success: true,
         adjusted_image_url: githubUrl
@@ -37,7 +85,7 @@ export async function processVrboImage(
       console.error('VRBO image upload failed')
       return {
         success: false,
-        error: 'Failed to upload image to GitHub'
+        error: 'Failed to upload processed image to GitHub'
       }
     }
 

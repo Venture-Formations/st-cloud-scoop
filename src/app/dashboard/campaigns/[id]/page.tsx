@@ -1092,25 +1092,21 @@ export default function CampaignDetailPage() {
 
   const handleEventsExpand = () => {
     if (!eventsExpanded && campaign) {
-      // Use the same date calculation logic as EventsManager component
-      const campaignCreated = new Date(campaign.created_at)
+      // Calculate 3-day range starting from the newsletter date (campaign.date)
+      // Day 1: Newsletter date, Day 2: Next day, Day 3: Day after that
+      const newsletterDate = new Date(campaign.date + 'T00:00:00') // Parse as local date
 
-      // Convert to Central Time (-5 hours from UTC)
-      const centralTimeOffset = -5 * 60 * 60 * 1000 // -5 hours in milliseconds
-      const campaignCreatedCentral = new Date(campaignCreated.getTime() + centralTimeOffset)
+      const dates = []
+      for (let i = 0; i <= 2; i++) {
+        const date = new Date(newsletterDate)
+        date.setDate(newsletterDate.getDate() + i)
+        dates.push(date.toISOString().split('T')[0])
+      }
 
-      // Add 12 hours to get start time in Central Time
-      const startDateTime = new Date(campaignCreatedCentral.getTime() + (12 * 60 * 60 * 1000))
+      const startDateStr = dates[0]
+      const endDateStr = dates[dates.length - 1]
 
-      // Calculate 3-day range (0, 1, 2 = 3 days total)
-      const startDate = new Date(startDateTime)
-      const endDate = new Date(startDateTime)
-      endDate.setDate(startDateTime.getDate() + 2) // +2 days for 3-day range
-
-      const startDateStr = startDate.toISOString().split('T')[0]
-      const endDateStr = endDate.toISOString().split('T')[0]
-
-      console.log('Fetching events with date range:', startDateStr, 'to', endDateStr)
+      console.log('Fetching events with date range:', startDateStr, 'to', endDateStr, 'for newsletter date:', campaign.date)
       fetchAvailableEvents(startDateStr, endDateStr)
     }
     setEventsExpanded(!eventsExpanded)

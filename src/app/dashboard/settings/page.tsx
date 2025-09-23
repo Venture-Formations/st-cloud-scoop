@@ -266,6 +266,31 @@ function NewsletterSettings() {
     }
   }
 
+  const cleanupDuplicates = async () => {
+    setMigrating(true)
+    setMessage('')
+
+    try {
+      const response = await fetch('/api/debug/cleanup-duplicate-sections', {
+        method: 'POST'
+      })
+      if (response.ok) {
+        const data = await response.json()
+        setMessage(`Cleanup successful! ${data.message}`)
+        await fetchSections() // Refresh the sections
+      } else {
+        const errorData = await response.json()
+        setMessage(`Cleanup failed: ${errorData.message || 'Unknown error'}`)
+      }
+    } catch (error) {
+      setMessage('Cleanup failed: Network error. Please try again.')
+      console.error('Cleanup error:', error)
+    } finally {
+      setMigrating(false)
+      setTimeout(() => setMessage(''), 5000)
+    }
+  }
+
   const toggleSection = async (sectionId: string, isActive: boolean) => {
     setSaving(true)
     try {
@@ -313,19 +338,32 @@ function NewsletterSettings() {
               Drag sections to reorder them in the newsletter. Toggle sections on/off to control what appears.
             </p>
           </div>
-          {sections.length < 6 && (
+          <div className="flex space-x-2">
+            {sections.length < 6 && (
+              <button
+                onClick={runMigration}
+                disabled={migrating}
+                className={`px-4 py-2 text-sm font-medium rounded-md border ${
+                  migrating
+                    ? 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed'
+                    : 'bg-blue-600 text-white border-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2'
+                }`}
+              >
+                {migrating ? 'Adding Sections...' : 'Add Missing Sections'}
+              </button>
+            )}
             <button
-              onClick={runMigration}
+              onClick={cleanupDuplicates}
               disabled={migrating}
-              className={`ml-4 px-4 py-2 text-sm font-medium rounded-md border ${
+              className={`px-4 py-2 text-sm font-medium rounded-md border ${
                 migrating
                   ? 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed'
-                  : 'bg-blue-600 text-white border-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2'
+                  : 'bg-red-600 text-white border-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2'
               }`}
             >
-              {migrating ? 'Adding Sections...' : 'Add Missing Sections'}
+              {migrating ? 'Cleaning Up...' : 'Remove Duplicates'}
             </button>
-          )}
+          </div>
         </div>
 
         {sections.length === 0 ? (

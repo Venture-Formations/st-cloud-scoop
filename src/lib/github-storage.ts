@@ -336,4 +336,66 @@ export class GitHubImageStorage {
       return 0
     }
   }
+
+  /**
+   * Upload a buffer directly to GitHub with a custom filename
+   * Used for VRBO images that have already been processed/resized
+   */
+  async uploadBuffer(buffer: Buffer, fileName: string, description: string): Promise<string | null> {
+    try {
+      console.log(`Uploading buffer to GitHub: ${fileName}`)
+
+      // Check file size (limit to 5MB)
+      if (buffer.length > 5 * 1024 * 1024) {
+        console.error(`Buffer too large: ${buffer.length} bytes (max 5MB)`)
+        return null
+      }
+
+      const filePath = `newsletter-images/${fileName}`
+
+      // Check if file already exists in repository
+      try {
+        const { data: existingFile } = await this.octokit.repos.getContent({
+          owner: this.owner,
+          repo: this.repo,
+          path: filePath,
+        })
+
+        if (existingFile && 'download_url' in existingFile && existingFile.download_url) {
+          console.log(`File already exists in GitHub: ${fileName}`)
+          return existingFile.download_url
+        }
+      } catch (error: any) {
+        // File doesn't exist, which is fine - we'll create it
+        if (error.status !== 404) {
+          console.error('Error checking existing file:', error)
+          return null
+        }
+      }
+
+      // Convert buffer to base64 for GitHub API
+      const content = buffer.toString('base64')
+
+      // Upload to GitHub
+      const uploadResponse = await this.octokit.repos.createOrUpdateFileContents({
+        owner: this.owner,
+        repo: this.repo,
+        path: filePath,
+        message: `Add processed image: ${description}`,
+        content: content,
+      })
+
+      if (uploadResponse.data.content?.download_url) {
+        console.log(`Buffer uploaded to GitHub: ${uploadResponse.data.content.download_url}`)
+        return uploadResponse.data.content.download_url
+      } else {
+        console.error('Upload successful but no download URL returned')
+        return null
+      }
+
+    } catch (error) {
+      console.error(`Error uploading buffer to GitHub:`, error)
+      return null
+    }
+  }
 }

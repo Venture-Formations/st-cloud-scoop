@@ -70,8 +70,10 @@ export class MailerLiteService {
 
         // Step 2: Schedule the campaign using the campaign ID
         try {
-          const scheduleData = await this.getReviewScheduleData(campaign.date)
-          console.log('Scheduling campaign with data:', scheduleData)
+          // Schedule review for today (same day as creation), not campaign.date
+          const today = new Date().toISOString().split('T')[0] // Today's date in YYYY-MM-DD
+          const scheduleData = await this.getReviewScheduleData(today)
+          console.log('Scheduling review campaign for today with data:', scheduleData)
 
           const scheduleResponse = await mailerliteClient.post(`/campaigns/${campaignId}/schedule`, scheduleData)
 
@@ -523,6 +525,50 @@ ${sectionsHtml}
     }
   }
 
+  private async getFinalScheduleData(date: string): Promise<any> {
+    try {
+      // Get final send time from database settings
+      const { data: setting } = await supabaseAdmin
+        .from('app_settings')
+        .select('value')
+        .eq('key', 'email_finalSendTime')
+        .single()
+
+      const finalTime = setting?.value || '04:55' // Default to 4:55 AM if not found
+      console.log('Using final send time from settings:', finalTime)
+
+      // Parse the time (format: "HH:MM")
+      const [hours, minutes] = finalTime.split(':')
+
+      // MailerLite scheduling format for final campaign
+      const scheduleData = {
+        delivery: 'scheduled',
+        schedule: {
+          date: date, // Newsletter date (YYYY-MM-DD format)
+          hours: hours, // HH format
+          minutes: minutes, // MM format
+          timezone_id: 157 // Central Time zone ID
+        }
+      }
+
+      console.log('Final campaign schedule data:', JSON.stringify(scheduleData, null, 2))
+      return scheduleData
+
+    } catch (error) {
+      console.error('Error getting final schedule data, using default:', error)
+      // Fallback to 4:55 AM CT on the newsletter date
+      return {
+        delivery: 'scheduled',
+        schedule: {
+          date: date,
+          hours: '04',
+          minutes: '55',
+          timezone_id: 157
+        }
+      }
+    }
+  }
+
   async createFinalCampaign(campaign: CampaignWithEvents, mainGroupId: string) {
     try {
       console.log(`Creating final campaign for ${campaign.date}`)
@@ -542,10 +588,7 @@ ${sectionsHtml}
           from: 'scoop@stcscoop.com',
           content: emailContent,
         }],
-        groups: [mainGroupId],
-        delivery_schedule: {
-          type: 'instant'
-        }
+        groups: [mainGroupId]
       }
 
       console.log('Creating MailerLite campaign with data:', {
@@ -560,6 +603,29 @@ ${sectionsHtml}
         const campaignId = response.data.data.id
 
         console.log('Final campaign created successfully:', campaignId)
+
+        // Schedule the final campaign for the newsletter date
+        try {
+          const finalScheduleData = await this.getFinalScheduleData(campaign.date)
+          console.log('Scheduling final campaign for newsletter date with data:', finalScheduleData)
+
+          const scheduleResponse = await mailerliteClient.post(`/campaigns/${campaignId}/schedule`, finalScheduleData)
+
+          console.log('Final campaign schedule response:', {
+            status: scheduleResponse.status,
+            statusText: scheduleResponse.statusText,
+            data: scheduleResponse.data
+          })
+
+          if (scheduleResponse.status === 200 || scheduleResponse.status === 201) {
+            console.log('Final campaign scheduled successfully')
+          } else {
+            console.error('Failed to schedule final campaign:', scheduleResponse.status, scheduleResponse.data)
+          }
+        } catch (scheduleError) {
+          console.error('Error scheduling final campaign:', scheduleError)
+          // Don't fail the whole process if scheduling fails - campaign is still created
+        }
 
         await this.logInfo('Final campaign created successfully', {
           campaignId: campaign.id,

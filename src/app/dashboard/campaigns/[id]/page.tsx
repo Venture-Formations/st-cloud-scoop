@@ -283,81 +283,15 @@ function EventsManager({
 
               {/* Events List */}
               <div className="p-4 bg-white min-h-[400px]">
-                {dateEvents.length === 0 && selectedEvents.length === 0 ? (
+                {dateEvents.length === 0 ? (
                   <div className="text-gray-500 text-sm py-8 text-center">
-                    No events available for this date
+                    {selectedEvents.length > 0 ? 'Click "Local Events" to see available events for selection' : 'No events available for this date'}
                   </div>
                 ) : (
                   <div className="space-y-3">
-                    {/* First show selected events (even if availableEvents is empty) */}
-                    {selectedEvents.map(campaignEvent => {
-                      const event = campaignEvent.event
-                      if (!event) return null
-
+                    {dateEvents.map(event => {
+                      const isSelected = selectedEvents.some(ce => ce.event_id === event.id)
                       const isFeatured = featuredEventId === event.id
-
-                      return (
-                        <div
-                          key={event.id}
-                          className={`p-3 rounded-lg border-2 transition-all ${
-                            isFeatured
-                              ? 'border-blue-500 bg-blue-50 shadow-md'
-                              : 'border-green-300 bg-green-50'
-                          }`}
-                        >
-                          {/* Event Header with Checkbox */}
-                          <div className="flex items-start justify-between mb-2">
-                            <button
-                              onClick={() => handleEventToggle(date, event.id, false)}
-                              disabled={updating}
-                              className={`w-5 h-5 rounded border-2 flex items-center justify-center flex-shrink-0 bg-brand-primary border-brand-primary text-white ${updating ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
-                            >
-                              <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
-                                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                              </svg>
-                            </button>
-
-                            <button
-                              onClick={() => handleFeaturedToggle(date, event.id)}
-                              disabled={updating}
-                              className={`px-2 py-1 text-xs rounded border ${
-                                isFeatured
-                                  ? 'bg-blue-500 text-white border-blue-500'
-                                  : 'bg-gray-100 text-gray-700 border-gray-300 hover:bg-gray-200'
-                              } ${updating ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
-                            >
-                              {isFeatured ? '⭐ Featured' : 'Feature'}
-                            </button>
-                          </div>
-
-                          {/* Event Details */}
-                          <div className="cursor-pointer">
-                            <h4 className="font-semibold text-gray-900 mb-1">
-                              {event.title}
-                            </h4>
-                            <div className="text-sm text-gray-600 mb-1">
-                              📍 {event.venue}
-                            </div>
-                            <div className="text-sm text-gray-600">
-                              🕒 {formatEventTime(event.start_date)}
-                              {event.end_date && event.end_date !== event.start_date &&
-                                ` - ${formatEventTime(event.end_date)}`
-                              }
-                            </div>
-                            {event.event_summary && (
-                              <p className="text-sm text-gray-700 mt-2 line-clamp-2">
-                                {event.event_summary}
-                              </p>
-                            )}
-                          </div>
-                        </div>
-                      )
-                    })}
-
-                    {/* Then show available events that aren't selected */}
-                    {dateEvents.filter(event => !selectedEvents.some(ce => ce.event_id === event.id)).map(event => {
-                      const isSelected = false
-                      const isFeatured = false
 
                       return (
                         <div

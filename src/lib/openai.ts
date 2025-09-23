@@ -220,14 +220,34 @@ export async function callOpenAI(prompt: string, maxTokens = 1000, temperature =
     const timeoutId = setTimeout(() => controller.abort(), 30000) // 30 second timeout
 
     try {
-      const response = await openai.chat.completions.create({
-        model: 'gpt-5', // Use GPT-5 for improved performance and reliability
-        messages: [{ role: 'user', content: prompt }],
-        max_tokens: maxTokens,
-        temperature: temperature,
-      }, {
-        signal: controller.signal
-      })
+      // Try GPT-5 first, fall back to GPT-4o if it fails
+      let model = 'gpt-5'
+      let response
+
+      try {
+        console.log('Attempting to use GPT-5...')
+        response = await openai.chat.completions.create({
+          model: 'gpt-5',
+          messages: [{ role: 'user', content: prompt }],
+          max_tokens: maxTokens,
+          temperature: temperature,
+        }, {
+          signal: controller.signal
+        })
+        console.log('GPT-5 request successful')
+      } catch (gpt5Error) {
+        console.log('GPT-5 failed, falling back to GPT-4o:', gpt5Error instanceof Error ? gpt5Error.message : 'Unknown error')
+        model = 'gpt-4o'
+        response = await openai.chat.completions.create({
+          model: 'gpt-4o',
+          messages: [{ role: 'user', content: prompt }],
+          max_tokens: maxTokens,
+          temperature: temperature,
+        }, {
+          signal: controller.signal
+        })
+        console.log('GPT-4o fallback successful')
+      }
 
       clearTimeout(timeoutId)
 

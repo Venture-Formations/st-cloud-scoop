@@ -67,14 +67,21 @@ export async function fetchWeatherData(): Promise<WeatherDay[]> {
 
     for (const period of periods) {
       const periodDate = new Date(period.startTime)
-      const dateKey = periodDate.toDateString()
+      let dateKey = periodDate.toDateString()
 
       // Skip if this date is before our target start date
       if (periodDate < targetStartDate) continue
 
+      // Special handling for "Tonight" periods - group them with the following day
+      // since they represent the low temperature for the next day
+      if (period.name.toLowerCase().includes('tonight') && !period.isDaytime) {
+        const nextDay = new Date(periodDate.getTime() + (24 * 60 * 60 * 1000))
+        dateKey = nextDay.toDateString()
+      }
+
       if (!dayData[dateKey]) {
         dayData[dateKey] = {
-          date: periodDate,
+          date: new Date(dateKey),
           periods: [],
           high: null,
           low: null

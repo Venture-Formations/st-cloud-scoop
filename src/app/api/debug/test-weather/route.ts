@@ -14,25 +14,35 @@ export async function GET(request: NextRequest) {
     if (saveToDb) {
       console.log('🌤️ Testing with database save...')
 
-      // Use the full weather manager pipeline
-      const forecast = await generateDailyWeatherForecast()
-      console.log('✅ Weather forecast generated and saved:', forecast.id)
+      try {
+        // Use the full weather manager pipeline
+        const forecast = await generateDailyWeatherForecast()
+        console.log('✅ Weather forecast generated and saved:', forecast.id)
 
-      return NextResponse.json({
-        success: true,
-        message: 'Weather forecast generated and saved to database',
-        forecast: {
-          id: forecast.id,
-          forecast_date: forecast.forecast_date,
-          generated_at: forecast.generated_at,
-          has_image: !!forecast.image_url,
-          weather_days: forecast.weather_data.length,
-          image_url: forecast.image_url
-        },
-        weatherData: forecast.weather_data,
-        htmlLength: forecast.html_content?.length || 0,
-        saved: true
-      })
+        return NextResponse.json({
+          success: true,
+          message: 'Weather forecast generated and saved to database',
+          forecast: {
+            id: forecast.id,
+            forecast_date: forecast.forecast_date,
+            generated_at: forecast.generated_at,
+            has_image: !!forecast.image_url,
+            weather_days: forecast.weather_data.length,
+            image_url: forecast.image_url
+          },
+          weatherData: forecast.weather_data,
+          htmlLength: forecast.html_content?.length || 0,
+          saved: true
+        })
+      } catch (saveError) {
+        console.error('❌ Database save failed:', saveError)
+        return NextResponse.json({
+          success: false,
+          error: 'Database save failed',
+          message: saveError instanceof Error ? saveError.message : 'Unknown error',
+          saved: false
+        }, { status: 500 })
+      }
     }
 
     // Original test functionality (no database save)

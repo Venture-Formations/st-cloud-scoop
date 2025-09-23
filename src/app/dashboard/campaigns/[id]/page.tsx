@@ -1567,17 +1567,25 @@ export default function CampaignDetailPage() {
         const campaignDate = new Date(campaign.date + 'T00:00:00')
         const dayOfWeek = campaignDate.toLocaleDateString('en-US', { weekday: 'long' })
 
+        console.log('🍽️ Fetching dining deals for', dayOfWeek, 'campaign date:', campaign.date)
+
         const response = await fetch(`/api/dining-deals/available?day=${dayOfWeek}`)
         if (response.ok) {
           const data = await response.json()
+          console.log('📊 Available dining deals response:', data)
           setAvailableDiningDeals(data.deals || [])
+        } else {
+          console.error('❌ Failed to fetch available dining deals:', response.status, response.statusText)
         }
 
         // Fetch existing campaign dining selections
         const selectionsResponse = await fetch(`/api/campaigns/${campaign.id}/dining-deals`)
         if (selectionsResponse.ok) {
           const selectionsData = await selectionsResponse.json()
+          console.log('📋 Campaign dining selections:', selectionsData)
           setCampaignDiningDeals(selectionsData.selections || [])
+        } else {
+          console.error('❌ Failed to fetch campaign dining selections:', selectionsResponse.status, selectionsResponse.statusText)
         }
       } catch (error) {
         console.error('Error fetching dining deals data:', error)

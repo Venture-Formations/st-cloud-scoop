@@ -92,9 +92,28 @@ export async function getWeatherForCampaign(campaignId: string): Promise<string 
       return null
     }
 
-    // Generate newsletter-formatted HTML
-    const newsletterHTML = generateNewsletterWeatherHTML(data.weather_data)
-    return newsletterHTML
+    // Use GitHub-hosted image if available, otherwise fall back to HTML
+    if (data.image_url) {
+      const imageBasedWeatherHTML = `
+<table width="100%" cellpadding="0" cellspacing="0" style="border: 1px solid #f7f7f7; border-radius: 10px; margin-top: 10px; max-width: 990px; margin: 0 auto; background-color: #f7f7f7; font-family: Arial, sans-serif;">
+  <tr>
+    <td style="padding: 5px;">
+      <h2 style="font-size: 1.625em; line-height: 1.16em; font-family: Arial, sans-serif; color: #1877F2; margin: 0; padding: 0;">Local Weather</h2>
+    </td>
+  </tr>
+  <tr>
+    <td style="padding: 8px; text-align: center;">
+      <img src="${data.image_url}" alt="3-Day Weather Forecast for St. Cloud" style="max-width: 100%; height: auto; border-radius: 8px; display: block; margin: 0 auto;">
+    </td>
+  </tr>
+</table>
+<br>`
+      return imageBasedWeatherHTML
+    } else {
+      // Fallback to HTML text format
+      const newsletterHTML = generateNewsletterWeatherHTML(data.weather_data)
+      return newsletterHTML
+    }
 
   } catch (error) {
     console.error('Error fetching weather for campaign:', error)

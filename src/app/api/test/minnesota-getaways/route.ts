@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { supabaseAdmin } from '@/lib/supabase'
 import { VrboListing } from '@/types/database'
+import { getSelectedPropertiesForCampaign, selectPropertiesForCampaign } from '@/lib/vrbo-selector'
 
 async function generateMinnesotaGetawaysSection(): Promise<string> {
   try {
@@ -164,23 +165,37 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    console.log('🏠 Testing Minnesota Getaways section generation...')
+    const { searchParams } = new URL(request.url)
+    const campaignId = searchParams.get('campaign_id')
 
-    // Get active VRBO listings for display in the campaign page
-    const { data: listings, error } = await supabaseAdmin
-      .from('vrbo_listings')
-      .select('*')
-      .eq('is_active', true)
-      .order('created_at', { ascending: false })
-      .limit(3)
+    console.log('🏠 Testing Minnesota Getaways section generation...', 'campaign_id:', campaignId)
 
     let selectedProperties: VrboListing[] = []
 
-    if (error || !listings || listings.length === 0) {
-      console.log('No VRBO listings found, creating test data...')
+    // If campaign_id provided, use campaign-specific properties (same as email preview)
+    if (campaignId) {
+      selectedProperties = await getSelectedPropertiesForCampaign(campaignId)
 
-      // Create test data for demonstration
-      selectedProperties = [
+      if (selectedProperties.length === 0) {
+        console.log('No properties selected yet for campaign, selecting now...')
+        const selectionResult = await selectPropertiesForCampaign(campaignId)
+        selectedProperties = selectionResult.selected
+        console.log(selectionResult.message)
+      }
+    } else {
+      // Fallback to generic active listings if no campaign_id
+      const { data: listings, error } = await supabaseAdmin
+        .from('vrbo_listings')
+        .select('*')
+        .eq('is_active', true)
+        .order('created_at', { ascending: false })
+        .limit(3)
+
+      if (error || !listings || listings.length === 0) {
+        console.log('No VRBO listings found, creating test data...')
+
+        // Create test data for demonstration
+        selectedProperties = [
         {
           id: 'test-1',
           title: 'Cozy Lake Cabin',
@@ -230,9 +245,10 @@ export async function GET(request: NextRequest) {
           updated_at: new Date().toISOString()
         }
       ]
-    } else {
-      selectedProperties = listings.slice(0, 3)
-      console.log(`Found ${selectedProperties.length} VRBO listings for campaign page`)
+      } else {
+        selectedProperties = listings.slice(0, 3)
+        console.log(`Found ${selectedProperties.length} VRBO listings for campaign page`)
+      }
     }
 
     return NextResponse.json({

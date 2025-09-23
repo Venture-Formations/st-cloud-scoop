@@ -96,7 +96,7 @@ function MinnesotaGetawaysSection({ campaign }: { campaign: any }) {
   useEffect(() => {
     const fetchProperties = async () => {
       try {
-        const response = await fetch(`/api/test/minnesota-getaways`)
+        const response = await fetch(`/api/test/minnesota-getaways?campaign_id=${campaign.id}`)
         if (response.ok) {
           const data = await response.json()
           if (data.success && data.properties) {
@@ -110,8 +110,10 @@ function MinnesotaGetawaysSection({ campaign }: { campaign: any }) {
       }
     }
 
-    fetchProperties()
-  }, [])
+    if (campaign?.id) {
+      fetchProperties()
+    }
+  }, [campaign?.id])
 
   if (loading) {
     return (

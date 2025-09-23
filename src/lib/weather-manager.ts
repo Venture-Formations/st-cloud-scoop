@@ -111,19 +111,28 @@ export async function getWeatherForCampaign(campaignId: string): Promise<string 
     // Use GitHub-hosted image if available, otherwise fall back to HTML
     if (data.image_url) {
       const imageBasedWeatherHTML = `
-<table width="100%" cellpadding="0" cellspacing="0" style="border: 1px solid #f7f7f7; border-radius: 10px; margin-top: 10px; max-width: 990px; margin: 0 auto; background-color: #f7f7f7; font-family: Arial, sans-serif;">
+<!-- Section container -->
+<table width='100%' cellpadding='0' cellspacing='0' border='0' style='width:100%; max-width:990px; margin:10px auto; mso-table-lspace:0pt; mso-table-rspace:0pt; border-collapse:separate;'>
   <tr>
-    <td style="padding: 5px;">
-      <h2 style="font-size: 1.625em; line-height: 1.16em; font-family: Arial, sans-serif; color: #1877F2; margin: 0; padding: 0;">Local Weather</h2>
+    <td style='padding:5px; vertical-align:top;'>
+      <!-- White box -->
+      <table width='100%' cellpadding='0' cellspacing='0' border='0' style='width:100%; border:1px solid #ddd; border-radius:8px; background:#fff; font-family:Arial, sans-serif; font-size:16px; line-height:26px; box-shadow:0 4px 12px rgba(0,0,0,.15);'>
+        <tr>
+          <td style='padding:10px 5px; text-align:center;'>
+            <!-- Weather image card -->
+            <table width='100%' cellpadding='0' cellspacing='0' border='0' style='width:100%; max-width:650px; margin:0 auto; background:#fff; border-radius:10px;'>
+              <tr>
+                <td style='padding:0; text-align:center;'>
+                  <img src='${data.image_url}' alt='3 Day Weather Forecast for St. Cloud, MN' style='display:block; width:100%; max-width:950px; height:auto; border-radius:15px;'/>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+      </table>
     </td>
   </tr>
-  <tr>
-    <td style="padding: 8px; text-align: center;">
-      <img src="${data.image_url}" alt="3-Day Weather Forecast for St. Cloud" style="max-width: 100%; height: auto; border-radius: 8px; display: block; margin: 0 auto;">
-    </td>
-  </tr>
-</table>
-<br>`
+</table>`
       return imageBasedWeatherHTML
     } else {
       // Fallback to HTML text format

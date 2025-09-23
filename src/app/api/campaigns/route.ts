@@ -20,13 +20,13 @@ async function initializeRandomEventSelection(campaignId: string) {
       return
     }
 
-    // Calculate 3-day range starting from the day after the campaign date (Central Time)
-    // Use the campaign.date instead of creation timestamp for consistent timezone handling
+    // Calculate 3-day range starting from the campaign date (same day as newsletter)
+    // Use the campaign.date for consistent timezone handling
     const campaignDate = new Date(campaign.date + 'T00:00:00')
-    console.log(`Campaign date: ${campaign.date}, Starting events from day after campaign date`)
+    console.log(`Campaign date: ${campaign.date}, Starting events from campaign date`)
 
     const dates = []
-    for (let i = 1; i <= 3; i++) { // Start from i=1 to skip campaign date itself
+    for (let i = 0; i < 3; i++) { // Start from i=0 to include campaign date itself
       const date = new Date(campaignDate)
       date.setDate(campaignDate.getDate() + i)
       dates.push(date.toISOString().split('T')[0])

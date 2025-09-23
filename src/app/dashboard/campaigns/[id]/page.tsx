@@ -134,7 +134,7 @@ function MinnesotaGetawaysSection({ campaign }: { campaign: any }) {
 
   return (
     <div className="p-6">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {properties.map((property, index) => (
           <div key={index} className="border border-gray-200 rounded-lg bg-white shadow-sm overflow-hidden">
             {property.adjusted_image_url && (
@@ -145,11 +145,24 @@ function MinnesotaGetawaysSection({ campaign }: { campaign: any }) {
               />
             )}
             <div className="p-4">
-              <h3 className="font-semibold text-lg mb-2">{property.title}</h3>
-              <p className="text-gray-600 text-sm mb-2">{property.city}</p>
-              <div className="flex justify-between text-sm text-gray-500">
-                <span>{property.bedrooms} bedrooms</span>
-                <span>${property.price}/night</span>
+              <h3 className="font-semibold text-lg mb-2 text-blue-600">
+                <a href={property.link || '#'} className="hover:underline">
+                  {property.title}
+                </a>
+              </h3>
+              <p className="text-gray-600 text-sm mb-3">{property.city}</p>
+              <div className="border-t border-gray-200 pt-2">
+                <div className="grid grid-cols-3 gap-2 text-center text-xs text-gray-700">
+                  <div>
+                    <strong>{property.bedrooms}</strong> BR
+                  </div>
+                  <div className="border-l border-r border-gray-200">
+                    <strong>{property.bathrooms}</strong> BA
+                  </div>
+                  <div>
+                    Sleeps <strong>{property.sleeps}</strong>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -282,7 +295,12 @@ function NewsletterSectionComponent({
                   </div>
                 </div>
               ) : (
-                <div>
+                <div className="space-y-4">
+                  {weatherData.cached && (
+                    <div className="mb-4 text-center text-sm text-blue-600 bg-blue-50 p-2 rounded">
+                      📋 Showing cached weather forecast (generated at {new Date(weatherData.generatedAt).toLocaleString()})
+                    </div>
+                  )}
                   {weatherData.imageUrl ? (
                     <div className="mb-4">
                       <img
@@ -296,20 +314,25 @@ function NewsletterSectionComponent({
                       Weather image generation is not configured
                     </div>
                   )}
-                  <div className="grid grid-cols-3 gap-4">
-                    {weatherData.weatherData && weatherData.weatherData.map((day: any, index: number) => (
-                      <div key={index} className="text-center">
-                        <div className="font-semibold text-gray-900">{day.day}</div>
-                        <div className="text-sm text-gray-500 mb-2">{day.dateLabel}</div>
-                        <div className="text-2xl mb-2">{day.icon === 'sunny' ? '☀️' : day.icon === 'cloudy' ? '☁️' : day.icon === 'rainy' ? '🌧️' : '☀️'}</div>
-                        <div className="text-sm">
-                          <div className="font-semibold">{day.high}° / {day.low}°</div>
-                          <div className="text-gray-500">{day.precipitation}% rain</div>
-                          <div className="text-xs text-gray-500 mt-1">{day.condition}</div>
+
+                  <div className="bg-gray-50 p-4 rounded-lg">
+                    <h4 className="font-medium text-gray-900 mb-3">3-Day Forecast</h4>
+                    <div className="grid grid-cols-3 gap-4">
+                      {weatherData.weatherData && weatherData.weatherData.map((day: any, index: number) => (
+                        <div key={index} className="text-center">
+                          <div className="font-semibold text-gray-900">{day.day}</div>
+                          <div className="text-sm text-gray-500 mb-2">{day.dateLabel}</div>
+                          <div className="text-2xl mb-2">{day.icon === 'sunny' ? '☀️' : day.icon === 'cloudy' ? '☁️' : day.icon === 'rainy' ? '🌧️' : '☀️'}</div>
+                          <div className="text-sm">
+                            <div className="font-semibold">{day.high}° / {day.low}°</div>
+                            <div className="text-gray-500">{day.precipitation}% rain</div>
+                            <div className="text-xs text-gray-500 mt-1">{day.condition}</div>
+                          </div>
                         </div>
-                      </div>
-                    ))}
+                      ))}
+                    </div>
                   </div>
+
                 </div>
               )
             ) : (

@@ -6,9 +6,9 @@ export async function POST(request: NextRequest) {
     console.log('Manual Wordle database update...')
 
     const body = await request.json()
-    const { date = '2025-09-23' } = body
+    const { date = '2025-09-24' } = body
 
-    // Wordle data for recent dates
+    // Wordle data for recent dates - Wednesday Sep 24 newsletter shows Sep 23 Wordle
     const wordleData = [
       {
         date: '2025-09-22',

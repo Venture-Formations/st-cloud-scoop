@@ -28,6 +28,15 @@ export async function GET(request: NextRequest) {
       // Don't fail the request if VRBO table doesn't exist yet
     }
 
+    const { data: diningCount, error: diningError } = await supabaseAdmin
+      .from('dining_deals')
+      .select('id', { count: 'exact' })
+
+    if (diningError) {
+      console.error('Error fetching Dining Deals count:', diningError)
+      // Don't fail the request if table doesn't exist yet
+    }
+
     const databases = [
       {
         name: 'Local Events',
@@ -40,6 +49,12 @@ export async function GET(request: NextRequest) {
         description: 'Minnesota Getaways properties for newsletters',
         count: vrboCount?.length || 0,
         href: '/dashboard/databases/vrbo'
+      },
+      {
+        name: 'Dining Deals',
+        description: 'Restaurant specials organized by day of week',
+        count: diningCount?.length || 0,
+        href: '/dashboard/databases/dining'
       }
     ]
 

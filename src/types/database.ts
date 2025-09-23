@@ -309,3 +309,27 @@ export interface VrboSelectionState {
   shuffle_order: string[]  // Array of listing IDs in shuffled order
   last_updated: string
 }
+
+export interface DiningDeal {
+  id: string
+  business_name: string
+  business_address: string | null
+  google_profile: string | null  // Google Maps URL
+  day_of_week: 'Monday' | 'Tuesday' | 'Wednesday' | 'Thursday' | 'Friday' | 'Saturday' | 'Sunday'
+  special_description: string
+  special_time: string | null  // e.g., "11AM - 3PM", "All day", etc.
+  is_featured: boolean
+  is_active: boolean
+  created_at: string
+  updated_at: string
+}
+
+export interface CampaignDiningSelection {
+  id: string
+  campaign_id: string
+  deal_id: string
+  selection_order: number  // 1-8 for display order
+  is_featured_in_campaign: boolean  // Whether this deal is featured in this campaign
+  created_at: string
+  deal?: DiningDeal
+}

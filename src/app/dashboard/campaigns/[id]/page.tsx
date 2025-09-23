@@ -1570,10 +1570,13 @@ export default function CampaignDetailPage() {
         console.log('🍽️ Fetching dining deals for', dayOfWeek, 'campaign date:', campaign.date)
 
         const response = await fetch(`/api/dining-deals/available?day=${dayOfWeek}`)
+        let availableDealsData: any = null
+
         if (response.ok) {
           const data = await response.json()
           console.log('📊 Available dining deals response:', data)
           setAvailableDiningDeals(data.deals || [])
+          availableDealsData = data
         } else {
           console.error('❌ Failed to fetch available dining deals:', response.status, response.statusText)
         }
@@ -1586,13 +1589,13 @@ export default function CampaignDetailPage() {
           setCampaignDiningDeals(selectionsData.selections || [])
 
           // Auto-populate dining deals if none are selected yet
-          if ((!selectionsData.selections || selectionsData.selections.length === 0) && data?.deals?.length > 0) {
+          if ((!selectionsData.selections || selectionsData.selections.length === 0) && availableDealsData?.deals?.length > 0) {
             console.log('🎲 Auto-selecting 8 random dining deals for campaign')
 
             // Filter deals for the campaign's day of week
             const campaignDate = new Date(campaign.date + 'T00:00:00')
             const dayOfWeek = campaignDate.toLocaleDateString('en-US', { weekday: 'long' })
-            const dealsForDay = data.deals.filter((deal: any) => deal.day_of_week === dayOfWeek)
+            const dealsForDay = availableDealsData.deals.filter((deal: any) => deal.day_of_week === dayOfWeek)
 
             // Randomly select up to 8 deals
             const shuffled = [...dealsForDay].sort(() => 0.5 - Math.random())

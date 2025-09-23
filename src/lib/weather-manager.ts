@@ -76,21 +76,37 @@ export async function generateDailyWeatherForecast(): Promise<WeatherForecast> {
  */
 export async function getWeatherForCampaign(campaignId: string): Promise<string | null> {
   try {
-    // For now, get the latest active forecast
-    // In future, could be tied to campaign date
+    // First get the campaign to find its date
     const supabase = supabaseAdmin
+    const { data: campaign, error: campaignError } = await supabase
+      .from('newsletter_campaigns')
+      .select('date')
+      .eq('id', campaignId)
+      .single()
+
+    if (campaignError || !campaign) {
+      console.log('Campaign not found for weather lookup:', campaignId)
+      return null
+    }
+
+    console.log('Looking for weather forecast for newsletter date:', campaign.date)
+
+    // Get weather forecast that matches the newsletter date
     const { data, error } = await supabase
       .from('weather_forecasts')
       .select('*')
+      .eq('forecast_date', campaign.date)
       .eq('is_active', true)
       .order('generated_at', { ascending: false })
       .limit(1)
       .single()
 
     if (error || !data) {
-      console.log('No active weather forecast found')
+      console.log('No weather forecast found for newsletter date:', campaign.date)
       return null
     }
+
+    console.log('Found weather forecast for date:', data.forecast_date, 'with image:', !!data.image_url)
 
     // Use GitHub-hosted image if available, otherwise fall back to HTML
     if (data.image_url) {

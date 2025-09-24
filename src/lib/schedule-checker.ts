@@ -75,9 +75,11 @@ export class ScheduleChecker {
 
       console.log(`Time window matched for ${lastRunKey}: current ${currentTime}, scheduled ${scheduledTime}, diff ${timeDiff} minutes`)
 
-      // Check if we already ran today
+      // Check if we already ran today (use Central Time for consistency)
       try {
-        const today = new Date().toISOString().split('T')[0]
+        const nowCentral = new Date().toLocaleString("en-US", {timeZone: "America/Chicago"})
+        const centralDate = new Date(nowCentral)
+        const today = centralDate.toISOString().split('T')[0]
         const { data: setting } = await supabaseAdmin
           .from('app_settings')
           .select('value')
@@ -153,6 +155,56 @@ export class ScheduleChecker {
     }
   }
 
+  static async shouldRunReviewSend(): Promise<boolean> {
+    try {
+      const settings = await this.getScheduleSettings()
+
+      if (!settings.reviewScheduleEnabled) {
+        return false
+      }
+
+      const currentTime = this.getCurrentTimeInCT()
+      console.log(`Review Send check: Current CT time ${currentTime.timeString}, Scheduled: ${settings.scheduledSendTime}`)
+
+      return await this.isTimeToRun(
+        currentTime.timeString,
+        settings.scheduledSendTime,
+        'last_review_send_run'
+      )
+    } catch (error) {
+      console.error('Error checking review send schedule:', error)
+      return false
+    }
+  }
+
+  static async shouldRunEventPopulation(): Promise<boolean> {
+    try {
+      const settings = await this.getScheduleSettings()
+
+      if (!settings.reviewScheduleEnabled) {
+        return false
+      }
+
+      // Run 5 minutes before RSS processing
+      const rssTime = settings.rssProcessingTime
+      const [rssHour, rssMinute] = rssTime.split(':').map(Number)
+      const eventTime = `${rssHour.toString().padStart(2, '0')}:${(rssMinute - 5).toString().padStart(2, '0')}`
+
+      const currentTime = this.getCurrentTimeInCT()
+      console.log(`Event Population check: Current CT time ${currentTime.timeString}, Scheduled: ${eventTime}`)
+
+      return await this.isTimeToRun(
+        currentTime.timeString,
+        eventTime,
+        'last_event_population_run'
+      )
+    } catch (error) {
+      console.error('Error checking event population schedule:', error)
+      return false
+    }
+  }
+
+
   static async shouldRunFinalSend(): Promise<boolean> {
     try {
       const settings = await this.getScheduleSettings()
@@ -186,6 +238,7 @@ export class ScheduleChecker {
     rssProcessing: string
     subjectGeneration: string
     campaignCreation: string
+    reviewSend: string
     finalSend: string
     reviewEnabled: boolean
     dailyEnabled: boolean
@@ -200,6 +253,7 @@ export class ScheduleChecker {
         rssProcessing: settings.rssProcessingTime,
         subjectGeneration: subjectGeneration,
         campaignCreation: settings.campaignCreationTime,
+        reviewSend: settings.scheduledSendTime,
         finalSend: settings.dailyScheduledSendTime,
         reviewEnabled: settings.reviewScheduleEnabled,
         dailyEnabled: settings.dailyScheduleEnabled
@@ -210,6 +264,7 @@ export class ScheduleChecker {
         rssProcessing: '20:30',
         subjectGeneration: '20:30 (integrated)',
         campaignCreation: '20:50',
+        reviewSend: '21:00',
         finalSend: '04:55',
         reviewEnabled: false,
         dailyEnabled: false

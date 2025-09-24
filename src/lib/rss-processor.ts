@@ -77,10 +77,8 @@ export class RSSProcessor {
         console.log('Previous posts cleared successfully')
       }
 
-      // STEP 1: Populate events first (before RSS processing)
-      console.log('=== POPULATING EVENTS FIRST ===')
-      await this.populateEventsForCampaignSmart(campaignId)
-      console.log('=== EVENTS POPULATION COMPLETED ===')
+      // Note: Event population now happens via separate cron job (5 minutes before RSS processing)
+      // This ensures events are populated even if RSS processing times out
 
       // Get active RSS feeds
       const { data: feeds, error: feedsError } = await supabaseAdmin
@@ -143,7 +141,10 @@ export class RSSProcessor {
   }
 
   private async getOrCreateTodaysCampaign(): Promise<string> {
-    const today = new Date().toISOString().split('T')[0]
+    // Use Central Time for consistent date calculations
+    const nowCentral = new Date().toLocaleString("en-US", {timeZone: "America/Chicago"})
+    const centralDate = new Date(nowCentral)
+    const today = centralDate.toISOString().split('T')[0]
 
     // Check if campaign exists for today
     const { data: existing } = await supabaseAdmin

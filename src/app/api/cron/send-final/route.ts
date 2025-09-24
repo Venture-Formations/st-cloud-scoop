@@ -29,8 +29,10 @@ export async function POST(request: NextRequest) {
     console.log('=== FINAL SEND STARTED (Time Matched) ===')
     console.log('Central Time:', new Date().toLocaleString("en-US", {timeZone: "America/Chicago"}))
 
-    // Get today's campaign that's ready to send
-    const today = new Date().toISOString().split('T')[0]
+    // Get today's campaign that's ready to send (use Central Time for consistency)
+    const nowCentral = new Date().toLocaleString("en-US", {timeZone: "America/Chicago"})
+    const centralDate = new Date(nowCentral)
+    const today = centralDate.toISOString().split('T')[0]
 
     const { data: campaign, error } = await supabaseAdmin
       .from('newsletter_campaigns')

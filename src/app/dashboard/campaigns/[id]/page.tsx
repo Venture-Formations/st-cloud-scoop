@@ -1591,24 +1591,25 @@ export default function CampaignDetailPage() {
 
           // Auto-populate dining deals if none are selected yet
           if ((!selectionsData.selections || selectionsData.selections.length === 0) && availableDealsData?.deals?.length > 0) {
-            console.log('🎲 Auto-selecting 8 random dining deals for campaign')
+            console.log('🎲 Auto-selecting dining deals with business limits and randomization')
 
-            // Filter deals for the campaign's day of week
-            const campaignDate = new Date(campaign.date + 'T00:00:00')
-            const dayOfWeek = campaignDate.toLocaleDateString('en-US', { weekday: 'long' })
-            const dealsForDay = availableDealsData.deals.filter((deal: any) => deal.day_of_week === dayOfWeek)
+            try {
+              // Use proper dining selector with business limits and randomization
+              const { selectDiningDealsForCampaign } = await import('@/lib/dining-selector')
+              const campaignDate = new Date(campaign.date + 'T00:00:00')
+              const result = await selectDiningDealsForCampaign(campaign.id, campaignDate)
 
-            // Randomly select up to 8 deals
-            const shuffled = [...dealsForDay].sort(() => 0.5 - Math.random())
-            const selectedDeals = shuffled.slice(0, Math.min(8, dealsForDay.length))
-            const selectedDealIds = selectedDeals.map((deal: any) => deal.id)
-            const featuredDealId = selectedDeals.length > 0 ? selectedDeals[0].id : undefined
+              console.log('🎯 Auto-selection result:', result.message)
+              console.log('📋 Selected deals:', result.deals.map((deal: any) => `${deal.business_name}: ${deal.special_description}`))
 
-            console.log('🎯 Auto-selected deals:', selectedDealIds, 'featured:', featuredDealId)
-
-            // Save the auto-selected deals
-            if (selectedDealIds.length > 0) {
-              await updateDiningDealsSelections(selectedDealIds, featuredDealId)
+              // Refresh dining deals data to show the new selections
+              const updatedResponse = await fetch(`/api/campaigns/${campaign.id}/dining-deals`)
+              if (updatedResponse.ok) {
+                const updatedData = await updatedResponse.json()
+                setCampaignDiningDeals(updatedData.selections || [])
+              }
+            } catch (error) {
+              console.error('❌ Failed to auto-select dining deals:', error)
             }
           }
         } else {
@@ -2197,7 +2198,7 @@ export default function CampaignDetailPage() {
 
         {/* Dynamic Newsletter Sections */}
         {newsletterSections
-          .filter(section => section.is_active && !['The Local Scoop'].includes(section.name))
+          .filter(section => section.is_active && !['The Local Scoop', 'Local Events'].includes(section.name))
           .map(section => (
             <NewsletterSectionComponent
               key={section.id}

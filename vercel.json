@@ -1,11 +1,19 @@
 {
   "crons": [
     {
+      "path": "/api/cron/populate-events",
+      "schedule": "*/5 * * * *"
+    },
+    {
       "path": "/api/cron/rss-processing",
       "schedule": "*/5 * * * *"
     },
     {
       "path": "/api/cron/create-campaign",
+      "schedule": "*/5 * * * *"
+    },
+    {
+      "path": "/api/cron/send-review",
       "schedule": "*/5 * * * *"
     },
     {
@@ -34,14 +42,20 @@
     },
     {
       "path": "/api/cron/collect-wordle",
-      "schedule": "0 20 * * *"
+      "schedule": "0 12 * * *"
     }
   ],
   "functions": {
+    "app/api/cron/populate-events/route.ts": {
+      "maxDuration": 120
+    },
     "app/api/cron/rss-processing/route.ts": {
       "maxDuration": 720
     },
     "app/api/cron/create-campaign/route.ts": {
+      "maxDuration": 120
+    },
+    "app/api/cron/send-review/route.ts": {
       "maxDuration": 120
     },
     "app/api/cron/process-rss/route.ts": {

@@ -11,25 +11,25 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    console.log('=== AUTOMATED CAMPAIGN CREATION CHECK ===')
+    console.log('=== AUTOMATED REVIEW SEND CHECK ===')
     console.log('Time:', new Date().toISOString())
 
-    // Check if it's time to run campaign creation based on database settings
-    const shouldRun = await ScheduleChecker.shouldRunCampaignCreation()
+    // Check if it's time to run review sending based on database settings
+    const shouldRun = await ScheduleChecker.shouldRunReviewSend()
 
     if (!shouldRun) {
       return NextResponse.json({
         success: true,
-        message: 'Not time to run campaign creation or already ran today',
+        message: 'Not time to run review send or already ran today',
         skipped: true,
         timestamp: new Date().toISOString()
       })
     }
 
-    console.log('=== CAMPAIGN CREATION STARTED (Time Matched) ===')
+    console.log('=== REVIEW SEND STARTED (Time Matched) ===')
     console.log('Central Time:', new Date().toLocaleString("en-US", {timeZone: "America/Chicago"}))
 
-    // Get tomorrow's campaign (already processed with RSS and subject line)
+    // Get tomorrow's campaign that's in draft status and ready for review
     // Use Central Time for consistent date calculations
     const nowCentral = new Date().toLocaleString("en-US", {timeZone: "America/Chicago"})
     const centralDate = new Date(nowCentral)
@@ -37,7 +37,7 @@ export async function POST(request: NextRequest) {
     tomorrow.setDate(tomorrow.getDate() + 1)
     const campaignDate = tomorrow.toISOString().split('T')[0]
 
-    console.log('Creating review campaign for tomorrow\'s date:', campaignDate)
+    console.log('Sending review for tomorrow\'s campaign date:', campaignDate)
 
     // Find tomorrow's campaign with articles
     const { data: campaign, error: campaignError } = await supabaseAdmin
@@ -54,34 +54,25 @@ export async function POST(request: NextRequest) {
         manual_articles:manual_articles(*)
       `)
       .eq('date', campaignDate)
+      .eq('status', 'draft')
       .single()
 
     if (campaignError || !campaign) {
       return NextResponse.json({
         success: false,
-        error: 'No campaign found for tomorrow',
+        error: 'No draft campaign found for tomorrow',
         campaignDate: campaignDate
       }, { status: 404 })
     }
 
     console.log('Found campaign:', campaign.id, 'Status:', campaign.status)
 
-    // Only create if campaign is in draft status
-    if (campaign.status !== 'draft') {
-      return NextResponse.json({
-        success: true,
-        message: `Campaign status is ${campaign.status}, skipping campaign creation`,
-        campaignId: campaign.id,
-        skipped: true
-      })
-    }
-
     // Check if campaign has active articles
     const activeArticles = campaign.articles.filter((article: any) => article.is_active)
     if (activeArticles.length === 0) {
       return NextResponse.json({
         success: false,
-        error: 'No active articles found for campaign creation',
+        error: 'No active articles found for review sending',
         campaignId: campaign.id
       }, { status: 400 })
     }
@@ -98,27 +89,47 @@ export async function POST(request: NextRequest) {
     }
 
     console.log('Using subject line:', campaign.subject_line)
-    console.log('=== CAMPAIGN CREATION COMPLETED ===')
-    console.log('Campaign remains in draft status until sent to MailerLite for review')
+
+    // Create MailerLite review campaign
+    const mailerLiteService = new MailerLiteService()
+    const result = await mailerLiteService.createReviewCampaign(campaign)
+
+    console.log('MailerLite campaign created:', result.campaignId)
+
+    // Update campaign status to in_review
+    const { error: updateError } = await supabaseAdmin
+      .from('newsletter_campaigns')
+      .update({
+        status: 'in_review',
+        review_sent_at: new Date().toISOString()
+      })
+      .eq('id', campaign.id)
+
+    if (updateError) {
+      console.error('Failed to update campaign status:', updateError)
+      // Continue anyway since MailerLite campaign was created
+    }
+
+    console.log('=== REVIEW SEND COMPLETED ===')
 
     return NextResponse.json({
       success: true,
-      message: 'Campaign created successfully - ready for MailerLite review sending',
+      message: 'Review campaign sent to MailerLite successfully',
       campaignId: campaign.id,
       campaignDate: campaignDate,
+      mailerliteCampaignId: result.campaignId,
       subjectLine: campaign.subject_line,
       activeArticlesCount: activeArticles.length,
-      status: 'draft',
       timestamp: new Date().toISOString()
     })
 
   } catch (error) {
-    console.error('=== CAMPAIGN CREATION FAILED ===')
+    console.error('=== REVIEW SEND FAILED ===')
     console.error('Error:', error)
 
     return NextResponse.json({
       success: false,
-      error: 'Campaign creation failed',
+      error: 'Review send failed',
       message: error instanceof Error ? error.message : 'Unknown error',
       timestamp: new Date().toISOString()
     }, { status: 500 })
@@ -140,26 +151,26 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    console.log('=== AUTOMATED CAMPAIGN CREATION CHECK (GET) ===')
+    console.log('=== AUTOMATED REVIEW SEND CHECK (GET) ===')
     console.log('Time:', new Date().toISOString())
     console.log('Request type:', isVercelCron ? 'Vercel Cron' : 'Manual Test')
 
-    // Check if it's time to run campaign creation based on database settings
-    const shouldRun = await ScheduleChecker.shouldRunCampaignCreation()
+    // Check if it's time to run review sending based on database settings
+    const shouldRun = await ScheduleChecker.shouldRunReviewSend()
 
     if (!shouldRun) {
       return NextResponse.json({
         success: true,
-        message: 'Not time to run campaign creation or already ran today',
+        message: 'Not time to run review send or already ran today',
         skipped: true,
         timestamp: new Date().toISOString()
       })
     }
 
-    console.log('=== CAMPAIGN CREATION STARTED (Time Matched) ===')
+    console.log('=== REVIEW SEND STARTED (Time Matched) ===')
     console.log('Central Time:', new Date().toLocaleString("en-US", {timeZone: "America/Chicago"}))
 
-    // Get tomorrow's campaign (already processed with RSS and subject line)
+    // Get tomorrow's campaign that's in draft status and ready for review
     // Use Central Time for consistent date calculations
     const nowCentral = new Date().toLocaleString("en-US", {timeZone: "America/Chicago"})
     const centralDate = new Date(nowCentral)
@@ -167,7 +178,7 @@ export async function GET(request: NextRequest) {
     tomorrow.setDate(tomorrow.getDate() + 1)
     const campaignDate = tomorrow.toISOString().split('T')[0]
 
-    console.log('Creating review campaign for tomorrow\'s date:', campaignDate)
+    console.log('Sending review for tomorrow\'s campaign date:', campaignDate)
 
     // Find tomorrow's campaign with articles
     const { data: campaign, error: campaignError } = await supabaseAdmin
@@ -184,34 +195,25 @@ export async function GET(request: NextRequest) {
         manual_articles:manual_articles(*)
       `)
       .eq('date', campaignDate)
+      .eq('status', 'draft')
       .single()
 
     if (campaignError || !campaign) {
       return NextResponse.json({
         success: false,
-        error: 'No campaign found for tomorrow',
+        error: 'No draft campaign found for tomorrow',
         campaignDate: campaignDate
       }, { status: 404 })
     }
 
     console.log('Found campaign:', campaign.id, 'Status:', campaign.status)
 
-    // Only create if campaign is in draft status
-    if (campaign.status !== 'draft') {
-      return NextResponse.json({
-        success: true,
-        message: `Campaign status is ${campaign.status}, skipping campaign creation`,
-        campaignId: campaign.id,
-        skipped: true
-      })
-    }
-
     // Check if campaign has active articles
     const activeArticles = campaign.articles.filter((article: any) => article.is_active)
     if (activeArticles.length === 0) {
       return NextResponse.json({
         success: false,
-        error: 'No active articles found for campaign creation',
+        error: 'No active articles found for review sending',
         campaignId: campaign.id
       }, { status: 400 })
     }
@@ -228,27 +230,47 @@ export async function GET(request: NextRequest) {
     }
 
     console.log('Using subject line:', campaign.subject_line)
-    console.log('=== CAMPAIGN CREATION COMPLETED ===')
-    console.log('Campaign remains in draft status until sent to MailerLite for review')
+
+    // Create MailerLite review campaign
+    const mailerLiteService = new MailerLiteService()
+    const result = await mailerLiteService.createReviewCampaign(campaign)
+
+    console.log('MailerLite campaign created:', result.campaignId)
+
+    // Update campaign status to in_review
+    const { error: updateError } = await supabaseAdmin
+      .from('newsletter_campaigns')
+      .update({
+        status: 'in_review',
+        review_sent_at: new Date().toISOString()
+      })
+      .eq('id', campaign.id)
+
+    if (updateError) {
+      console.error('Failed to update campaign status:', updateError)
+      // Continue anyway since MailerLite campaign was created
+    }
+
+    console.log('=== REVIEW SEND COMPLETED ===')
 
     return NextResponse.json({
       success: true,
-      message: 'Campaign created successfully - ready for MailerLite review sending',
+      message: 'Review campaign sent to MailerLite successfully',
       campaignId: campaign.id,
       campaignDate: campaignDate,
+      mailerliteCampaignId: result.campaignId,
       subjectLine: campaign.subject_line,
       activeArticlesCount: activeArticles.length,
-      status: 'draft',
       timestamp: new Date().toISOString()
     })
 
   } catch (error) {
-    console.error('=== CAMPAIGN CREATION FAILED ===')
+    console.error('=== REVIEW SEND FAILED ===')
     console.error('Error:', error)
 
     return NextResponse.json({
       success: false,
-      error: 'Campaign creation failed',
+      error: 'Review send failed',
       message: error instanceof Error ? error.message : 'Unknown error',
       timestamp: new Date().toISOString()
     }, { status: 500 })

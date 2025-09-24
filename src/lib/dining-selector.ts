@@ -103,18 +103,34 @@ export async function selectDiningDealsForCampaign(campaignId: string, campaignD
       }
     }
 
-    // Select up to 8 deals with featured prioritization and business limits
-    const selectedDeals = selectDealsWithBusinessLimit(availableDeals, 8, 2)
+    // Randomize the available deals while preserving featured priority
+    const featuredDeals = availableDeals.filter(deal => deal.is_featured)
+    const nonFeaturedDeals = availableDeals.filter(deal => !deal.is_featured)
+
+    // Shuffle non-featured deals randomly
+    const shuffledNonFeatured = [...nonFeaturedDeals].sort(() => 0.5 - Math.random())
+
+    // Combine featured first, then shuffled non-featured
+    const randomizedDeals = [...featuredDeals, ...shuffledNonFeatured]
+
+    // Select up to 8 deals with business limits from randomized list
+    const selectedDeals = selectDealsWithBusinessLimit(randomizedDeals, 8, 2)
+
+    // Finally randomize the selected deals order (except keep featured first if any)
+    const selectedFeatured = selectedDeals.filter(deal => deal.is_featured)
+    const selectedNonFeatured = selectedDeals.filter(deal => !deal.is_featured)
+    const shuffledSelected = [...selectedNonFeatured].sort(() => 0.5 - Math.random())
+    const finalOrderedDeals = [...selectedFeatured, ...shuffledSelected]
 
     // If no deals are featured, mark the first one as featured
-    if (selectedDeals.length > 0 && !selectedDeals.some(deal => deal.is_featured)) {
+    if (finalOrderedDeals.length > 0 && !finalOrderedDeals.some(deal => deal.is_featured)) {
       // Update the first deal to be featured (temporarily for this campaign)
-      const firstDeal = selectedDeals[0]
+      const firstDeal = finalOrderedDeals[0]
       firstDeal.is_featured = true
     }
 
     // Insert campaign selections with proper ordering
-    const campaignSelections = selectedDeals.map((deal, index) => ({
+    const campaignSelections = finalOrderedDeals.map((deal, index) => ({
       campaign_id: campaignId,
       deal_id: deal.id,
       selection_order: index + 1,
@@ -132,7 +148,7 @@ export async function selectDiningDealsForCampaign(campaignId: string, campaignD
 
     // Count businesses to show in message
     const businessCounts: { [businessName: string]: number } = {}
-    selectedDeals.forEach(deal => {
+    finalOrderedDeals.forEach(deal => {
       const businessName = deal.business_name || 'Unknown'
       businessCounts[businessName] = (businessCounts[businessName] || 0) + 1
     })
@@ -142,8 +158,8 @@ export async function selectDiningDealsForCampaign(campaignId: string, campaignD
       .length
 
     return {
-      deals: selectedDeals,
-      message: `Selected ${selectedDeals.length} dining deals for ${dayOfWeek} (${selectedDeals.filter(d => d.is_featured).length} featured, max 2 per business${businessesWithMultiple > 0 ? `, ${businessesWithMultiple} businesses with multiple deals` : ''})`
+      deals: finalOrderedDeals,
+      message: `Selected ${finalOrderedDeals.length} dining deals for ${dayOfWeek} (${finalOrderedDeals.filter(d => d.is_featured).length} featured, max 2 per business, randomized order${businessesWithMultiple > 0 ? `, ${businessesWithMultiple} businesses with multiple deals` : ''})`
     }
 
   } catch (error) {

@@ -13,6 +13,27 @@ export async function generateDailyWeatherForecast(): Promise<WeatherForecast> {
   console.log('Starting daily weather forecast generation...')
 
   try {
+    // Calculate forecast date (tomorrow in Central Time)
+    const now = new Date()
+    const tomorrow = new Date(now.getTime() + (24 * 60 * 60 * 1000))
+    const forecastDate = tomorrow.toISOString().split('T')[0] // YYYY-MM-DD format
+
+    // Check if forecast already exists for this date
+    const supabase = supabaseAdmin
+    const { data: existing, error: existingError } = await supabase
+      .from('weather_forecasts')
+      .select('*')
+      .eq('forecast_date', forecastDate)
+      .eq('is_active', true)
+      .single()
+
+    if (existing && !existingError) {
+      console.log('Weather forecast already exists for date:', forecastDate, '- skipping generation')
+      return existing
+    }
+
+    console.log('No existing forecast found for date:', forecastDate, '- generating new forecast')
+
     // Fetch weather data from NWS
     const weatherData = await fetchWeatherData()
     console.log('Weather data fetched successfully')
@@ -32,11 +53,6 @@ export async function generateDailyWeatherForecast(): Promise<WeatherForecast> {
       console.log('Weather image generation failed, continuing without image:', error)
     }
 
-    // Calculate forecast date (tomorrow in Central Time)
-    const now = new Date()
-    const tomorrow = new Date(now.getTime() + (24 * 60 * 60 * 1000))
-    const forecastDate = tomorrow.toISOString().split('T')[0] // YYYY-MM-DD format
-
     // Prepare forecast data
     const forecastData: Omit<WeatherForecast, 'id' | 'created_at' | 'updated_at'> = {
       forecast_date: forecastDate,
@@ -48,7 +64,6 @@ export async function generateDailyWeatherForecast(): Promise<WeatherForecast> {
     }
 
     // Store in database (upsert to handle duplicates)
-    const supabase = supabaseAdmin
     const { data, error } = await supabase
       .from('weather_forecasts')
       .upsert(forecastData, {

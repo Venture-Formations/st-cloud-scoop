@@ -71,7 +71,10 @@ export class MailerLiteService {
         // Step 2: Schedule the campaign using the campaign ID
         try {
           // Schedule review for today (same day as creation), not campaign.date
-          const today = new Date().toISOString().split('T')[0] // Today's date in YYYY-MM-DD
+          // Use Central Time for consistent date calculations
+          const nowCentral = new Date().toLocaleString("en-US", {timeZone: "America/Chicago"})
+          const centralDate = new Date(nowCentral)
+          const today = centralDate.toISOString().split('T')[0] // Today's date in YYYY-MM-DD
           const scheduleData = await this.getReviewScheduleData(today)
           console.log('Scheduling review campaign for today with data:', scheduleData)
 

@@ -118,6 +118,20 @@ export const authOptions: NextAuthOptions = {
       if (session.user) {
         session.user.role = token.role as string
         session.user.isActive = token.isActive as boolean
+
+        // Debug logging for mobile access issues
+        console.log('Session callback:', {
+          email: session.user.email,
+          role: token.role,
+          isActive: token.isActive,
+          userAgent: session.user.name
+        })
+
+        // Block inactive users
+        if (token.isActive === false) {
+          console.log('Blocking inactive user:', session.user.email)
+          throw new Error('Access denied: User account is inactive')
+        }
       }
       return session
     },

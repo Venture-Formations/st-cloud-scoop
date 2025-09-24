@@ -4,80 +4,15 @@ import { callOpenAI } from '@/lib/openai'
 
 // Create Wordle prompt function
 function createWordlePrompt(date: string) {
-  return `{
-  "query": {
-    "description": "Find the Wordle answer for ${date}, based on trusted spoiler sources and high-confidence solver reports. If the answer is not confirmed, return the most likely guess reported by multiple sources.",
-    "criteria": {
-      "date": "${date}",
-      "required_fields": [
-        "word",
-        "definition",
-        "interesting_fact"
-      ],
-      "field_constraints": {
-        "definition": {
-          "type": "string",
-          "max_words": 30,
-          "source": [
-            "Merriam-Webster",
-            "Oxford",
-            "Collins"
-          ]
-        },
-        "interesting_fact": {
-          "type": "string",
-          "max_words": 50,
-          "style": "game show-worthy",
-          "content": [
-            "etymology",
-            "pop culture use",
-            "trivia",
-            "historical notes"
-          ],
-          "source_required": true,
-          "source_flexibility": "any reputable source"
-        }
-      },
-      "sources": {
-        "preferred": [
-          "Reddit r/wordle daily thread",
-          "wordlesolver.net",
-          "Tom's Cafe Wordle spoiler site",
-          "NYT WordleBot"
-        ],
-        "allow_additional_sources": true
-      },
-      "multiple_answers": {
-        "allow": true,
-        "format": "one object per answer",
-        "label_alt": "(alt answer)"
-      },
-      "fallback": {
-        "if_unconfirmed": [
-          {
-            "word": "Unknown",
-            "definition": "Unknown",
-            "interesting_fact": "Unknown"
-          }
-        ]
-      }
-    },
-    "output_rules": {
-      "format": "JSON_array_only",
-      "json_starts_with": "[",
-      "output_structure": [
-        {
-          "word": "string",
-          "definition": "string (≤ 30 words)",
-          "interesting_fact": "string (≤ 50 words, game show-worthy, do not show source)"
-        }
-      ],
-      "no_extras": true
-    }
-  }
-}
+  return `Find the Wordle answer for ${date}. Return ONLY a JSON array in this exact format:
 
-Do not wrap the output in triple backticks or markdown. Return on JSON. No comments or explainations`
+[{
+  "word": "WORD",
+  "definition": "Brief definition",
+  "interesting_fact": "One interesting fact about this word"
+}]
+
+Do not include any other text, markdown, or explanations. Just return the JSON array.`
 }
 
 async function collectWordleData(date: string) {
@@ -105,8 +40,26 @@ async function collectWordleData(date: string) {
   // Parse the response
   let wordleData
   try {
-    // The response should be a JSON array
-    const responseArray = Array.isArray(aiResponse) ? aiResponse : JSON.parse(aiResponse)
+    console.log('Raw AI Response:', aiResponse)
+    console.log('AI Response Type:', typeof aiResponse)
+
+    let responseArray
+
+    // Handle different response types
+    if (typeof aiResponse === 'object') {
+      if (Array.isArray(aiResponse)) {
+        responseArray = aiResponse
+      } else if (aiResponse && typeof aiResponse === 'object') {
+        // If it's an object but not an array, wrap it
+        responseArray = [aiResponse]
+      }
+    } else if (typeof aiResponse === 'string') {
+      // Clean the response of any markdown formatting
+      const cleanResponse = aiResponse.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim()
+      responseArray = JSON.parse(cleanResponse)
+    } else {
+      throw new Error('Unexpected response type: ' + typeof aiResponse)
+    }
 
     if (!Array.isArray(responseArray) || responseArray.length === 0) {
       throw new Error('Invalid response format - expected non-empty array')
@@ -115,14 +68,17 @@ async function collectWordleData(date: string) {
     // Take the first result
     wordleData = responseArray[0]
 
-    if (!wordleData.word || !wordleData.definition || !wordleData.interesting_fact) {
-      throw new Error('Missing required fields in Wordle data')
+    if (!wordleData || !wordleData.word || !wordleData.definition || !wordleData.interesting_fact) {
+      throw new Error('Missing required fields in Wordle data: ' + JSON.stringify(wordleData))
     }
+
+    console.log('Successfully parsed Wordle data:', wordleData)
 
   } catch (error) {
     console.error('Failed to parse AI response:', error)
     console.error('Raw response:', aiResponse)
-    throw new Error('Failed to parse Wordle data from AI response')
+    console.error('Response type:', typeof aiResponse)
+    throw new Error('Failed to parse Wordle data from AI response: ' + (error instanceof Error ? error.message : 'Unknown error'))
   }
 
   // Insert into database

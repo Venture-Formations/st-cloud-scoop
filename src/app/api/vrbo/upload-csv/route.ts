@@ -70,7 +70,9 @@ export async function POST(request: NextRequest) {
       skipped: 0,
       errors: [] as string[],
       imagesProcessed: 0,
-      imagesFailed: 0
+      imagesFailed: 0,
+      skippedReasons: [] as string[],
+      processedRows: [] as any[]
     }
 
     // Process each data row
@@ -108,7 +110,8 @@ export async function POST(request: NextRequest) {
 
         // Validate required fields
         if (!rowData.title || !rowData.link || !rowData.listing_type) {
-          results.errors.push(`Row ${i + 1}: Missing required fields`)
+          results.errors.push(`Row ${i + 1}: Missing required fields - title: ${!!rowData.title}, link: ${!!rowData.link}, listing_type: ${!!rowData.listing_type}`)
+          results.processedRows.push({ row: i + 1, title: rowData.title, status: 'missing_required_fields' })
           continue
         }
 
@@ -121,6 +124,8 @@ export async function POST(request: NextRequest) {
 
         if (existing) {
           results.skipped++
+          results.skippedReasons.push(`Row ${i + 1}: "${rowData.title}" already exists (ID: ${existing.id})`)
+          results.processedRows.push({ row: i + 1, title: rowData.title, status: 'already_exists' })
           continue
         }
 
@@ -157,12 +162,15 @@ export async function POST(request: NextRequest) {
 
         if (insertError) {
           results.errors.push(`Row ${i + 1}: ${insertError.message}`)
+          results.processedRows.push({ row: i + 1, title: rowData.title, status: 'insert_error', error: insertError.message })
         } else {
           results.created++
+          results.processedRows.push({ row: i + 1, title: rowData.title, status: 'created' })
         }
 
       } catch (error) {
         results.errors.push(`Row ${i + 1}: ${error instanceof Error ? error.message : 'Unknown error'}`)
+        results.processedRows.push({ row: i + 1, title: 'Unknown', status: 'processing_error', error: error instanceof Error ? error.message : 'Unknown error' })
       }
     }
 

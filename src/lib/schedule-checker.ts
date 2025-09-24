@@ -11,7 +11,7 @@ interface ScheduleSettings {
 }
 
 export class ScheduleChecker {
-  private static async getScheduleSettings(): Promise<ScheduleSettings> {
+  public static async getScheduleSettings(): Promise<ScheduleSettings> {
     const { data: settings } = await supabaseAdmin
       .from('app_settings')
       .select('key, value')
@@ -41,7 +41,7 @@ export class ScheduleChecker {
     }
   }
 
-  private static getCurrentTimeInCT(): { hours: number, minutes: number, timeString: string } {
+  public static getCurrentTimeInCT(): { hours: number, minutes: number, timeString: string } {
     // Get current time in Central Time
     const now = new Date()
     const centralTime = new Date(now.toLocaleString("en-US", {timeZone: "America/Chicago"}))
@@ -52,7 +52,7 @@ export class ScheduleChecker {
     return { hours, minutes, timeString }
   }
 
-  private static parseTime(timeStr: string): { hours: number, minutes: number } {
+  public static parseTime(timeStr: string): { hours: number, minutes: number } {
     const [hours, minutes] = timeStr.split(':').map(Number)
     return { hours, minutes }
   }

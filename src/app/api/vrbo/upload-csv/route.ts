@@ -20,14 +20,16 @@ export async function POST(request: NextRequest) {
 
     // Read the CSV content
     const csvContent = await file.text()
-    const lines = csvContent.split('\n').filter(line => line.trim())
 
-    if (lines.length < 2) {
+    // Parse CSV properly handling multi-line entries and quotes
+    const parsedCSV = parseCSVContent(csvContent)
+
+    if (parsedCSV.length < 2) {
       return NextResponse.json({ error: 'CSV must have at least a header and one data row' }, { status: 400 })
     }
 
     // Parse CSV header
-    const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, ''))
+    const headers = parsedCSV[0].map(h => h.trim().replace(/"/g, ''))
 
     // Expected columns mapping
     const columnMapping = {
@@ -72,9 +74,9 @@ export async function POST(request: NextRequest) {
     }
 
     // Process each data row
-    for (let i = 1; i < lines.length; i++) {
+    for (let i = 1; i < parsedCSV.length; i++) {
       try {
-        const values = parseCSVLine(lines[i])
+        const values = parsedCSV[i]
         if (values.length === 0) continue // Skip empty lines
 
         // Extract data from CSV row
@@ -175,25 +177,66 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// Helper function to parse CSV line with proper comma handling
-function parseCSVLine(line: string): string[] {
-  const result = []
-  let current = ''
+// Helper function to parse CSV content with proper multi-line and quote handling
+function parseCSVContent(content: string): string[][] {
+  const result: string[][] = []
+  const lines = content.split('\n')
+
+  let currentRow: string[] = []
+  let currentField = ''
   let inQuotes = false
+  let i = 0
 
-  for (let i = 0; i < line.length; i++) {
-    const char = line[i]
+  while (i < lines.length) {
+    const line = lines[i]
 
-    if (char === '"') {
-      inQuotes = !inQuotes
-    } else if (char === ',' && !inQuotes) {
-      result.push(current)
-      current = ''
+    for (let j = 0; j < line.length; j++) {
+      const char = line[j]
+
+      if (char === '"') {
+        // Handle quote escaping (double quotes)
+        if (inQuotes && j < line.length - 1 && line[j + 1] === '"') {
+          currentField += '"'
+          j++ // Skip next quote
+        } else {
+          inQuotes = !inQuotes
+        }
+      } else if (char === ',' && !inQuotes) {
+        // End of field
+        currentRow.push(currentField.trim())
+        currentField = ''
+      } else {
+        currentField += char
+      }
+    }
+
+    // End of line
+    if (inQuotes) {
+      // Multi-line field, add newline and continue
+      currentField += '\n'
     } else {
-      current += char
+      // End of row
+      currentRow.push(currentField.trim())
+
+      // Only add non-empty rows with actual data
+      if (currentRow.length > 0 && currentRow.some(field => field.trim().length > 0)) {
+        result.push(currentRow)
+      }
+
+      currentRow = []
+      currentField = ''
+    }
+
+    i++
+  }
+
+  // Handle any remaining row
+  if (currentRow.length > 0 || currentField.trim().length > 0) {
+    currentRow.push(currentField.trim())
+    if (currentRow.some(field => field.trim().length > 0)) {
+      result.push(currentRow)
     }
   }
 
-  result.push(current)
   return result
 }

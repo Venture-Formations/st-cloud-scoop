@@ -12,7 +12,14 @@ export const authOptions: NextAuthOptions = {
   ],
   callbacks: {
     async signIn({ user, account, profile }) {
+      console.log('SignIn callback triggered:', {
+        email: user.email,
+        provider: account?.provider,
+        userAgent: profile?.sub
+      })
+
       if (account?.provider === 'google') {
+        console.log('Processing Google OAuth sign-in for:', user.email)
         try {
           // First, create or get user in Supabase auth
           const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({

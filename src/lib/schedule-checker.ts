@@ -62,12 +62,12 @@ export class ScheduleChecker {
       const current = this.parseTime(currentTime)
       const scheduled = this.parseTime(scheduledTime)
 
-      // Check if current time matches scheduled time (within 15-minute window)
+      // Check if current time matches scheduled time (within 5-minute window)
       const currentMinutes = current.hours * 60 + current.minutes
       const scheduledMinutes = scheduled.hours * 60 + scheduled.minutes
       const timeDiff = Math.abs(currentMinutes - scheduledMinutes)
 
-      if (timeDiff > 15) {
+      if (timeDiff > 5) {
         console.log(`Time window not matched for ${lastRunKey}: current ${currentTime}, scheduled ${scheduledTime}, diff ${timeDiff} minutes`)
         resolve(false)
         return

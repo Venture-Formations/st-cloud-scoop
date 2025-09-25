@@ -30,6 +30,7 @@ export async function POST(request: NextRequest) {
         forecast_date: forecast.forecast_date,
         generated_at: forecast.generated_at,
         has_image: !!forecast.image_url,
+        image_url: forecast.image_url,
         weather_days: forecast.weather_data.length
       }
     })

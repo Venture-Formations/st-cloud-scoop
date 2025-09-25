@@ -18,21 +18,7 @@ export async function generateDailyWeatherForecast(): Promise<WeatherForecast> {
     const tomorrow = new Date(now.getTime() + (24 * 60 * 60 * 1000))
     const forecastDate = tomorrow.toISOString().split('T')[0] // YYYY-MM-DD format
 
-    // Check if forecast already exists for this date
-    const supabase = supabaseAdmin
-    const { data: existing, error: existingError } = await supabase
-      .from('weather_forecasts')
-      .select('*')
-      .eq('forecast_date', forecastDate)
-      .eq('is_active', true)
-      .single()
-
-    if (existing && !existingError) {
-      console.log('Weather forecast already exists for date:', forecastDate, '- skipping generation')
-      return existing
-    }
-
-    console.log('No existing forecast found for date:', forecastDate, '- generating new forecast')
+    console.log('Generating weather forecast for date:', forecastDate, '- will overwrite any existing forecast')
 
     // Fetch weather data from NWS
     const weatherData = await fetchWeatherData()
@@ -42,15 +28,19 @@ export async function generateDailyWeatherForecast(): Promise<WeatherForecast> {
     const weatherHTML = generateWeatherHTML(weatherData)
     console.log('Weather HTML generated')
 
-    // Generate image (optional)
+    // Generate image (always attempt, with detailed logging)
     let imageUrl: string | null = null
+    console.log('Starting weather image generation...')
     try {
       imageUrl = await generateWeatherImage(weatherData)
       if (imageUrl) {
-        console.log('Weather image generated successfully')
+        console.log('✅ Weather image generated successfully:', imageUrl)
+      } else {
+        console.log('⚠️ Weather image generation returned null (check API keys)')
       }
     } catch (error) {
-      console.log('Weather image generation failed, continuing without image:', error)
+      console.error('❌ Weather image generation failed:', error)
+      console.log('Continuing with forecast without image...')
     }
 
     // Prepare forecast data
@@ -63,11 +53,13 @@ export async function generateDailyWeatherForecast(): Promise<WeatherForecast> {
       is_active: true
     }
 
-    // Store in database (upsert to handle duplicates)
+    // Store in database (upsert to handle duplicates, always overwrite)
+    const supabase = supabaseAdmin
     const { data, error } = await supabase
       .from('weather_forecasts')
       .upsert(forecastData, {
-        onConflict: 'forecast_date'
+        onConflict: 'forecast_date',
+        ignoreDuplicates: false  // Always overwrite existing records
       })
       .select()
       .single()

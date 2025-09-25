@@ -79,6 +79,69 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       active_articles_count: campaign.articles?.filter((a: any) => a.is_active).length || 0
     })
 
+    // IMPORTANT: Log article positions FIRST, before MailerLite service call
+    // This ensures position logging happens even if MailerLite call fails or times out
+    console.log('=== LOGGING ARTICLE POSITIONS FOR REVIEW SEND ===')
+
+    // Get active articles sorted by rank (same logic as MailerLite service)
+    const activeArticles = campaign.articles
+      .filter((article: any) => article.is_active)
+      .sort((a: any, b: any) => (a.rank || 999) - (b.rank || 999))
+      .slice(0, 5) // Only log positions 1-5
+
+    const activeManualArticles = campaign.manual_articles
+      .filter((article: any) => article.is_active)
+      .sort((a: any, b: any) => (a.rank || 999) - (b.rank || 999))
+      .slice(0, 5) // Only log positions 1-5
+
+    console.log('Active articles for position logging:', activeArticles.map((a: any) => `ID: ${a.id}, Rank: ${a.rank}, Headline: ${a.headline}`))
+    console.log('Active manual articles for position logging:', activeManualArticles.map((a: any) => `ID: ${a.id}, Rank: ${a.rank}, Title: ${a.title}`))
+
+    let positionErrors = []
+
+    // Update review positions for regular articles
+    for (let i = 0; i < activeArticles.length; i++) {
+      const position = i + 1
+      const { error: updateError } = await supabaseAdmin
+        .from('articles')
+        .update({ review_position: position })
+        .eq('id', activeArticles[i].id)
+
+      if (updateError) {
+        console.error(`❌ Failed to update review position for article ${activeArticles[i].id}:`, updateError)
+        positionErrors.push(`Article ${activeArticles[i].id}: ${updateError.message}`)
+      } else {
+        console.log(`✅ Set review position ${position} for article: ${activeArticles[i].headline}`)
+      }
+    }
+
+    // Update review positions for manual articles
+    for (let i = 0; i < activeManualArticles.length; i++) {
+      const position = i + 1
+      const { error: updateError } = await supabaseAdmin
+        .from('manual_articles')
+        .update({ review_position: position })
+        .eq('id', activeManualArticles[i].id)
+
+      if (updateError) {
+        console.error(`❌ Failed to update review position for manual article ${activeManualArticles[i].id}:`, updateError)
+        positionErrors.push(`Manual Article ${activeManualArticles[i].id}: ${updateError.message}`)
+      } else {
+        console.log(`✅ Set review position ${position} for manual article: ${activeManualArticles[i].title}`)
+      }
+    }
+
+    console.log('=== ARTICLE POSITION LOGGING COMPLETE ===')
+
+    if (positionErrors.length > 0) {
+      console.error('Position logging errors encountered:', positionErrors)
+      return NextResponse.json({
+        error: 'Failed to log article positions',
+        details: positionErrors
+      }, { status: 500 })
+    }
+
+    // Now proceed with MailerLite service call
     console.log('Creating MailerLite service...')
     console.log('Environment check:', {
       hasApiKey: !!process.env.MAILERLITE_API_KEY,
@@ -97,55 +160,6 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
 
     const result = await mailerLiteService.createReviewCampaign(campaign, finalSubjectLine)
     console.log('MailerLite result:', result)
-
-    // Log article positions at review send
-    console.log('=== LOGGING ARTICLE POSITIONS FOR REVIEW SEND ===')
-
-    // Get active articles sorted by rank (same logic as MailerLite service)
-    const activeArticles = campaign.articles
-      .filter((article: any) => article.is_active)
-      .sort((a: any, b: any) => (a.rank || 999) - (b.rank || 999))
-      .slice(0, 5) // Only log positions 1-5
-
-    const activeManualArticles = campaign.manual_articles
-      .filter((article: any) => article.is_active)
-      .sort((a: any, b: any) => (a.rank || 999) - (b.rank || 999))
-      .slice(0, 5) // Only log positions 1-5
-
-    console.log('Active articles for position logging:', activeArticles.map((a: any) => `ID: ${a.id}, Rank: ${a.rank}, Headline: ${a.headline}`))
-    console.log('Active manual articles for position logging:', activeManualArticles.map((a: any) => `ID: ${a.id}, Rank: ${a.rank}, Title: ${a.title}`))
-
-    // Update review positions for regular articles
-    for (let i = 0; i < activeArticles.length; i++) {
-      const position = i + 1
-      const { error: updateError } = await supabaseAdmin
-        .from('articles')
-        .update({ review_position: position })
-        .eq('id', activeArticles[i].id)
-
-      if (updateError) {
-        console.error(`Failed to update review position for article ${activeArticles[i].id}:`, updateError)
-      } else {
-        console.log(`Set review position ${position} for article: ${activeArticles[i].headline}`)
-      }
-    }
-
-    // Update review positions for manual articles
-    for (let i = 0; i < activeManualArticles.length; i++) {
-      const position = i + 1
-      const { error: updateError } = await supabaseAdmin
-        .from('manual_articles')
-        .update({ review_position: position })
-        .eq('id', activeManualArticles[i].id)
-
-      if (updateError) {
-        console.error(`Failed to update review position for manual article ${activeManualArticles[i].id}:`, updateError)
-      } else {
-        console.log(`Set review position ${position} for manual article: ${activeManualArticles[i].title}`)
-      }
-    }
-
-    console.log('=== ARTICLE POSITION LOGGING COMPLETE ===')
 
     // Update campaign status to in_review and log review sent timestamp
     await supabaseAdmin

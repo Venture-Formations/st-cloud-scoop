@@ -15,24 +15,19 @@ export async function POST(
 
     const { id: articleId } = await params
 
-    // Get the article to verify it exists
+    // Get the article to verify it exists (don't select skipped column in case it doesn't exist)
     const { data: article, error: articleError } = await supabaseAdmin
       .from('articles')
-      .select('id, campaign_id, headline, skipped')
+      .select('id, campaign_id, headline')
       .eq('id', articleId)
       .single()
 
     if (articleError || !article) {
+      console.error('Article query error:', articleError)
       return NextResponse.json({
-        error: 'Article not found'
+        error: 'Article not found',
+        details: articleError?.message || 'Article does not exist'
       }, { status: 404 })
-    }
-
-    // Check if article is already skipped
-    if (article.skipped) {
-      return NextResponse.json({
-        error: 'Article is already skipped'
-      }, { status: 400 })
     }
 
     // Mark article as skipped
@@ -46,6 +41,16 @@ export async function POST(
 
     if (updateError) {
       console.error('Failed to skip article:', updateError)
+
+      // Provide helpful error message if column doesn't exist
+      if (updateError.message?.includes('column "skipped" of relation "articles" does not exist')) {
+        return NextResponse.json({
+          error: 'Database setup required',
+          details: 'The skipped column needs to be added to the database. Please run: /api/debug/add-skip-column',
+          sqlCommand: 'ALTER TABLE articles ADD COLUMN skipped BOOLEAN DEFAULT FALSE;'
+        }, { status: 500 })
+      }
+
       return NextResponse.json({
         error: 'Failed to skip article',
         details: updateError.message

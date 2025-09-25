@@ -8,37 +8,13 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const { date = '2025-09-24' } = body
 
-    // Actual Wordle words for recent dates - verified from spoiler sources
+    // Only confirmed Wordle words - DO NOT add future dates or unconfirmed words
     const wordleData = [
-      {
-        date: '2025-09-22',
-        word: 'ROUND',
-        definition: 'Having a curved shape that is circular or approximately circular.',
-        interesting_fact: 'The word "round" comes from Old French "roond," derived from Latin "rotundus," meaning circular like a wheel.'
-      },
-      {
-        date: '2025-09-23',
-        word: 'SHIRT',
-        definition: 'A garment for the upper body, typically having a collar and sleeves.',
-        interesting_fact: 'The word "shirt" comes from Old English "scyrte," related to "short," originally referring to a short tunic.'
-      },
-      {
-        date: '2025-09-24',
-        word: 'FLING',
-        definition: 'To throw or move forcefully or carelessly.',
-        interesting_fact: 'The word "fling" comes from Middle English, possibly of Scandinavian origin, related to Old Norse "flengja" meaning to whip.'
-      },
       {
         date: '2025-09-25',
         word: 'DRAPE',
         definition: 'To cover, dress, or hang with cloth or fabric in graceful folds.',
         interesting_fact: 'The word "drape" comes from French "draper," meaning "to weave" or "make cloth." Medieval drapers were important merchants who sold fine fabrics.'
-      },
-      {
-        date: '2025-09-26',
-        word: 'PLUMB',
-        definition: 'Exactly vertical or perpendicular; to measure the depth of water.',
-        interesting_fact: 'The word "plumb" comes from Latin "plumbum" meaning lead, referring to the lead weight used in plumb lines for measuring verticality.'
       }
     ]
 

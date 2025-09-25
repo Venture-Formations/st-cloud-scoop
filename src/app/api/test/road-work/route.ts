@@ -20,14 +20,27 @@ export async function GET(request: NextRequest) {
     let parseError = null
 
     try {
+      let jsonString = ''
+
       if (typeof aiResponse === 'string') {
-        roadWorkItems = JSON.parse(aiResponse)
+        jsonString = aiResponse
       } else if (Array.isArray(aiResponse)) {
         roadWorkItems = aiResponse
+        jsonString = '' // Skip parsing
       } else if (aiResponse && typeof aiResponse === 'object' && (aiResponse as any).raw) {
-        roadWorkItems = JSON.parse((aiResponse as any).raw)
+        jsonString = (aiResponse as any).raw
       } else {
         throw new Error('Unexpected AI response format')
+      }
+
+      if (jsonString) {
+        // Remove markdown code block wrappers if present
+        const cleanedJson = jsonString
+          .replace(/^```json\s*/i, '')
+          .replace(/\s*```$/i, '')
+          .trim()
+
+        roadWorkItems = JSON.parse(cleanedJson)
       }
     } catch (error) {
       parseError = error instanceof Error ? error.message : 'Parse error'

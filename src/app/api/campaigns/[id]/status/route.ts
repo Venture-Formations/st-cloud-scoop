@@ -74,8 +74,10 @@ export async function POST(
           day: 'numeric'
         })
 
-        await slack.sendSimpleMessage(
-          `Changes to ${formattedDate} made by ${userName}`
+        await slack.sendAlert(
+          `Campaign marked as "Changes Made" for ${formattedDate} by ${userName}`,
+          'warn',
+          'campaign_status_updates'
         )
       } catch (slackError) {
         console.error('Failed to send Slack notification:', slackError)

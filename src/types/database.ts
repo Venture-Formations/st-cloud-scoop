@@ -63,6 +63,7 @@ export interface Article {
   content: string
   rank: number | null
   is_active: boolean
+  skipped: boolean
   fact_check_score: number | null
   fact_check_details: string | null
   word_count: number | null
@@ -97,6 +98,7 @@ export interface ArchivedArticle {
   content: string
   rank: number | null
   is_active: boolean
+  skipped: boolean
   fact_check_score: number | null
   fact_check_details: string | null
   word_count: number | null

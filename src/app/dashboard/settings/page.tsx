@@ -1285,7 +1285,6 @@ function SlackSettings() {
     lowArticleCount: true,
     scheduledSendFailure: true,
     scheduledSendTiming: true,
-    deploymentNotifications: false,
     userActions: false,
     healthCheckAlerts: true,
     emailDeliveryUpdates: true
@@ -1342,11 +1341,11 @@ function SlackSettings() {
     {
       id: 'campaignStatusUpdates',
       name: 'Campaign Status Updates',
-      description: 'Notifications when campaigns are approved, sent, or have status changes',
+      description: 'Notifications when campaigns require attention (Changes Made or Failed status)',
       examples: [
-        'Campaign approved and ready to send',
-        'Campaign status changed to "sent" after delivery',
-        'Campaign marked for changes requested'
+        'Campaign marked as "Changes Made" - review required',
+        'Campaign status changed to "Failed" due to processing error',
+        'Campaign requires manual intervention before sending'
       ]
     },
     {
@@ -1427,16 +1426,6 @@ function SlackSettings() {
         'Database connection degraded',
         'MailerLite API responding slowly',
         'OpenAI service health check failed'
-      ]
-    },
-    {
-      id: 'deploymentNotifications',
-      name: 'Deployment Notifications',
-      description: 'Code deployment and update notifications',
-      examples: [
-        'New version deployed successfully',
-        'Deployment failed during build process',
-        'Database migration completed'
       ]
     },
     {

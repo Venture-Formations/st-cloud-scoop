@@ -777,11 +777,13 @@ function EventsManager({
 function RegularArticle({
   article,
   toggleArticle,
+  skipArticle,
   saving,
   getScoreColor
 }: {
   article: ArticleWithPost
   toggleArticle: (id: string, currentState: boolean) => void
+  skipArticle: (id: string) => void
   saving: boolean
   getScoreColor: (score: number) => string
 }) {
@@ -842,11 +844,21 @@ function RegularArticle({
             <span className="text-xs text-gray-500">
               from {article.rss_post?.rss_feed?.name || 'Unknown'}
             </span>
-            {article.word_count && (
-              <span className="text-xs text-gray-500">
-                {article.word_count} words
-              </span>
-            )}
+            <div className="flex items-center space-x-2">
+              {article.word_count && (
+                <span className="text-xs text-gray-500">
+                  {article.word_count} words
+                </span>
+              )}
+              <button
+                onClick={() => skipArticle(article.id)}
+                disabled={saving}
+                className="bg-red-100 hover:bg-red-200 text-red-700 px-2 py-1 rounded text-xs font-medium disabled:opacity-50"
+                title="Skip this article - removes it from the campaign"
+              >
+                Skip Article
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -858,11 +870,13 @@ function RegularArticle({
 function SortableArticle({
   article,
   toggleArticle,
+  skipArticle,
   saving,
   getScoreColor
 }: {
   article: ArticleWithPost
   toggleArticle: (id: string, currentState: boolean) => void
+  skipArticle: (id: string) => void
   saving: boolean
   getScoreColor: (score: number) => string
 }) {
@@ -971,16 +985,26 @@ function SortableArticle({
                 </span>
               )}
             </div>
-            {article.rss_post?.source_url && (
-              <a
-                href={article.rss_post.source_url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-brand-primary hover:text-blue-700"
+            <div className="flex items-center space-x-2">
+              {article.rss_post?.source_url && (
+                <a
+                  href={article.rss_post.source_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-brand-primary hover:text-blue-700"
+                >
+                  View Original
+                </a>
+              )}
+              <button
+                onClick={() => skipArticle(article.id)}
+                disabled={saving}
+                className="bg-red-100 hover:bg-red-200 text-red-700 px-2 py-1 rounded text-xs font-medium disabled:opacity-50"
+                title="Skip this article - removes it from the campaign"
               >
-                View Original
-              </a>
-            )}
+                Skip Article
+              </button>
+            </div>
           </div>
 
           {article.rss_post?.post_rating?.[0] && (
@@ -1125,7 +1149,7 @@ export default function CampaignDetailPage() {
 
     // Prevent selecting a 6th article - simply return without action
     if (!currentState) { // currentState is false means we're trying to activate
-      const activeCount = campaign.articles.filter(article => article.is_active).length
+      const activeCount = campaign.articles.filter(article => article.is_active && !article.skipped).length
       if (activeCount >= 5) {
         return // No action taken, no alert - just prevent the selection
       }
@@ -1165,6 +1189,46 @@ export default function CampaignDetailPage() {
 
     } catch (error) {
       alert('Failed to update article: ' + (error instanceof Error ? error.message : 'Unknown error'))
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const skipArticle = async (articleId: string) => {
+    if (!campaign) return
+
+    setSaving(true)
+    try {
+      const response = await fetch(`/api/articles/${articleId}/skip`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Failed to skip article')
+      }
+
+      // Update local state to remove the skipped article
+      setCampaign(prev => {
+        if (!prev) return prev
+        return {
+          ...prev,
+          articles: prev.articles.map(article =>
+            article.id === articleId
+              ? { ...article, skipped: true }
+              : article
+          )
+        }
+      })
+
+      // Show success message
+      alert('Article skipped successfully')
+
+    } catch (error) {
+      alert('Failed to skip article: ' + (error instanceof Error ? error.message : 'Unknown error'))
     } finally {
       setSaving(false)
     }
@@ -1921,8 +1985,8 @@ export default function CampaignDetailPage() {
                 Toggle articles on/off for the newsletter. Articles are ranked by AI evaluation.
               </p>
               <div className="text-sm">
-                <span className={`font-medium ${campaign.articles.filter(a => a.is_active).length === 5 ? 'text-green-600' : 'text-yellow-600'}`}>
-                  {campaign.articles.filter(a => a.is_active).length}/5 selected
+                <span className={`font-medium ${campaign.articles.filter(a => a.is_active && !a.skipped).length === 5 ? 'text-green-600' : 'text-yellow-600'}`}>
+                  {campaign.articles.filter(a => a.is_active && !a.skipped).length}/5 selected
                 </span>
                 <span className="text-gray-500 ml-1">for newsletter</span>
               </div>
@@ -1957,11 +2021,11 @@ export default function CampaignDetailPage() {
                 {/* Active articles section - sortable */}
                 {(() => {
                   const activeArticles = campaign.articles
-                    .filter(article => article.is_active)
+                    .filter(article => article.is_active && !article.skipped)
                     .sort((a, b) => (a.rank || 999) - (b.rank || 999))
 
                   const inactiveArticles = campaign.articles
-                    .filter(article => !article.is_active)
+                    .filter(article => !article.is_active && !article.skipped)
                     .sort((a, b) => (b.rss_post?.post_rating?.[0]?.total_score || 0) - (a.rss_post?.post_rating?.[0]?.total_score || 0))
 
                   return (
@@ -1982,6 +2046,7 @@ export default function CampaignDetailPage() {
                                 key={article.id}
                                 article={article}
                                 toggleArticle={toggleArticle}
+                                skipArticle={skipArticle}
                                 saving={saving}
                                 getScoreColor={getScoreColor}
                               />
@@ -2002,6 +2067,7 @@ export default function CampaignDetailPage() {
                               key={article.id}
                               article={article}
                               toggleArticle={toggleArticle}
+                              skipArticle={skipArticle}
                               saving={saving}
                               getScoreColor={getScoreColor}
                             />

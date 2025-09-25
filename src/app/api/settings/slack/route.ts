@@ -20,7 +20,10 @@ export async function GET() {
       campaignStatusUpdates: true,
       systemErrors: true,
       rssProcessingUpdates: true,
-      deploymentNotifications: false,
+      rssProcessingIncomplete: true,
+      lowArticleCount: true,
+      scheduledSendFailure: true,
+      scheduledSendTiming: true,
       userActions: false,
       healthCheckAlerts: true,
       emailDeliveryUpdates: true
@@ -61,7 +64,10 @@ export async function POST(request: NextRequest) {
       { key: 'slack_campaign_status_updates_enabled', value: body.campaignStatusUpdates ? 'true' : 'false' },
       { key: 'slack_system_errors_enabled', value: body.systemErrors ? 'true' : 'false' },
       { key: 'slack_rss_processing_updates_enabled', value: body.rssProcessingUpdates ? 'true' : 'false' },
-      { key: 'slack_deployment_notifications_enabled', value: body.deploymentNotifications ? 'true' : 'false' },
+      { key: 'slack_rss_processing_incomplete_enabled', value: body.rssProcessingIncomplete ? 'true' : 'false' },
+      { key: 'slack_low_article_count_enabled', value: body.lowArticleCount ? 'true' : 'false' },
+      { key: 'slack_scheduled_send_failure_enabled', value: body.scheduledSendFailure ? 'true' : 'false' },
+      { key: 'slack_scheduled_send_timing_enabled', value: body.scheduledSendTiming ? 'true' : 'false' },
       { key: 'slack_user_actions_enabled', value: body.userActions ? 'true' : 'false' },
       { key: 'slack_health_check_alerts_enabled', value: body.healthCheckAlerts ? 'true' : 'false' },
       { key: 'slack_email_delivery_updates_enabled', value: body.emailDeliveryUpdates ? 'true' : 'false' }

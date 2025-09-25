@@ -735,16 +735,30 @@ ${sectionsHtml}
       .select('*')
       .eq('campaign_id', campaign.id)
 
+    // Create more robust campaign events lookup - use just event_id for primary lookup
     const campaignEventsMap = new Map()
+    const campaignEventsByDate = new Map()
+
     campaignEvents?.forEach(ce => {
       const key = `${ce.event_id}_${ce.event_date}`
       campaignEventsMap.set(key, ce)
+
+      // Also create a date-based map for debugging
+      if (!campaignEventsByDate.has(ce.event_date)) {
+        campaignEventsByDate.set(ce.event_date, [])
+      }
+      campaignEventsByDate.get(ce.event_date).push(ce)
     })
+
+    console.log('MailerLite - Campaign events loaded:', campaignEvents?.length || 0)
+    console.log('MailerLite - Campaign events by date:', Array.from(campaignEventsByDate.entries()).map(([date, events]) => `${date}: ${events.length} events`))
 
     // Filter events by date and selection status
     const eventsByDate: { [key: string]: any[] } = {}
 
     dates.forEach(date => {
+      console.log(`MailerLite - Processing date: ${date}`)
+
       // Filter events that occur on this date
       const dateStart = new Date(date + 'T00:00:00-05:00')
       const dateEnd = new Date(date + 'T23:59:59-05:00')
@@ -755,11 +769,18 @@ ${sectionsHtml}
         return (eventStart <= dateEnd && eventEnd >= dateStart)
       })
 
+      console.log(`MailerLite - Found ${eventsForDate.length} available events for ${date}`)
+
       // Only include events that are selected for the campaign
       const selectedEvents = eventsForDate
         .map(event => {
-          const campaignEvent = campaignEventsMap.get(`${event.id}_${date}`)
+          const lookupKey = `${event.id}_${date}`
+          const campaignEvent = campaignEventsMap.get(lookupKey)
+
+          console.log(`MailerLite - Event ${event.title} (${event.id}): lookup key=${lookupKey}, found=${!!campaignEvent}, selected=${campaignEvent?.is_selected}`)
+
           if (campaignEvent && campaignEvent.is_selected) {
+            console.log(`MailerLite - Including event: ${event.title} (featured: ${campaignEvent.is_featured}, order: ${campaignEvent.display_order})`)
             return {
               ...event,
               is_featured: campaignEvent.is_featured,
@@ -770,6 +791,8 @@ ${sectionsHtml}
         })
         .filter(Boolean)
         .sort((a, b) => (a.display_order || 999) - (b.display_order || 999))
+
+      console.log(`MailerLite - Selected ${selectedEvents.length} events for ${date}`)
 
       if (selectedEvents.length > 0) {
         eventsByDate[date] = selectedEvents

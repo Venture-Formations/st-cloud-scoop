@@ -74,10 +74,28 @@ export async function GET(request: NextRequest) {
     console.log('=== MANUAL EVENTS SYNC STARTED ===')
     console.log('Time:', new Date().toISOString())
 
-    // Parse query parameters
+    // Parse query parameters - use dynamic dates like main sync
     const { searchParams } = new URL(request.url)
-    const startDate = searchParams.get('start_date') || '2025-06-01'
-    const endDate = searchParams.get('end_date') || '2025-06-30'
+    const overrideStartDate = searchParams.get('start_date')
+    const overrideEndDate = searchParams.get('end_date')
+
+    let startDate, endDate
+
+    if (overrideStartDate && overrideEndDate) {
+      startDate = overrideStartDate
+      endDate = overrideEndDate
+      console.log('Using override dates:', startDate, 'to', endDate)
+    } else {
+      // Default to today + next 7 days like main sync
+      const today = new Date()
+      startDate = today.toISOString().split('T')[0]
+
+      const nextWeek = new Date(today)
+      nextWeek.setDate(today.getDate() + 7)
+      endDate = nextWeek.toISOString().split('T')[0]
+
+      console.log('Using dynamic date range:', startDate, 'to', endDate)
+    }
 
     // Fetch events from Visit St. Cloud API
     const apiUrl = `https://www.visitstcloud.com/wp-json/tribe/events/v1/events?start_date=${startDate}&end_date=${endDate}&per_page=100&status=publish`

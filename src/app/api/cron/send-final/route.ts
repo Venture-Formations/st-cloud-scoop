@@ -48,7 +48,7 @@ export async function POST(request: NextRequest) {
         manual_articles:manual_articles(*)
       `)
       .eq('date', today)
-      .in('status', ['in_review', 'approved'])
+      .in('status', ['in_review', 'changes_made'])
       .single()
 
     if (error || !campaign) {

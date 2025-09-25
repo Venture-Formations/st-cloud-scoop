@@ -208,7 +208,50 @@ STYLE GUIDANCE: Write the headline as if the event just happened, not as a histo
 
 CREATIVITY REQUIREMENT: Each generation should produce a unique headline variation. Explore different angles, power verbs, and emotional hooks. Consider multiple ways to frame the same story - focus on different aspects, beneficiaries, or impacts. Never repeat previous generations.
 
-Respond with ONLY the headline text - no JSON, no quotes, no extra formatting. Just the headline itself.`
+Respond with ONLY the headline text - no JSON, no quotes, no extra formatting. Just the headline itself.`,
+
+  roadWorkGenerator: (campaignDate: string) => `
+Find exactly 9 active road, lane, or bridge closures, detours, or major traffic restrictions in effect on ${campaignDate} within 15 miles of ZIP code 56303 (St. Cloud, MN).
+
+INCLUSION CRITERIA:
+- Full closures, lane closures, bridge closures, detours, major traffic restrictions
+- Current closures active on ${campaignDate}
+- Recurring or periodic closures active on this date
+- All road types: state highways, county roads, city streets
+- Include segment-specific impacts and direction-specific lane closures
+- Include Hwy 55, Hwy 15, and closures near Kimball, Annandale, etc.
+
+EXCLUSION CRITERIA:
+- Completed closures
+- Planned or future closures
+- Shoulder-only work
+
+SOURCES TO CHECK:
+- MnDOT District 3: https://www.dot.state.mn.us/d3/
+- Stearns County Public Works: https://www.stearnscountymn.gov/185/Public-Works
+- Benton County Highway: https://www.co.benton.mn.us/180/Highway
+- Sherburne County Public Works: https://www.co.sherburne.mn.us/162/Public-Works
+- Local cities: Sartell, St. Cloud, St. Joseph, Waite Park, Sauk Rapids
+- St. Cloud APO: https://www.stcloudapo.org
+- Metro Bus detours: https://www.ridemetrobus.com
+- Local media traffic reports
+
+REQUIRED RESPONSE FORMAT:
+Respond with ONLY valid JSON array starting with [ and ending with ]. No other text before or after.
+
+[
+  {
+    "road_name": "Highway name or street name only",
+    "road_range": "from X to Y location description",
+    "city_or_township": "Primary city/township affected",
+    "reason": "Brief reason for closure/restriction",
+    "start_date": "MMM D format (e.g., Sep 25)",
+    "expected_reopen": "MMM D format or 'TBD'",
+    "source_url": "Official source URL"
+  }
+]
+
+Return exactly 9 items. If fewer than 9 exist, research more sources or include broader area.`
 }
 
 export async function callOpenAI(prompt: string, maxTokens = 1000, temperature = 0.3) {

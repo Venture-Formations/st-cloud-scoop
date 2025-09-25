@@ -275,6 +275,27 @@ export interface WeatherForecast {
   updated_at: string
 }
 
+export interface RoadWorkItem {
+  road_name: string
+  road_range: string
+  city_or_township: string
+  reason: string
+  start_date: string
+  expected_reopen: string
+  source_url: string
+}
+
+export interface RoadWorkData {
+  id: string
+  campaign_id: string
+  generated_at: string
+  road_work_data: RoadWorkItem[]
+  html_content: string
+  is_active: boolean
+  created_at: string
+  updated_at: string
+}
+
 export interface CampaignEvent {
   id: string
   campaign_id: string

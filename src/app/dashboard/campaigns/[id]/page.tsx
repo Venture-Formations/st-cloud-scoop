@@ -172,6 +172,104 @@ function MinnesotaGetawaysSection({ campaign }: { campaign: any }) {
   )
 }
 
+function RoadWorkSection({ campaign }: { campaign: any }) {
+  const [roadWorkData, setRoadWorkData] = useState<any>(null)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    const fetchRoadWorkData = async () => {
+      try {
+        const response = await fetch(`/api/test/road-work?campaign_date=${campaign.date}`)
+        if (response.ok) {
+          const data = await response.json()
+          if (data.success) {
+            setRoadWorkData(data)
+          } else {
+            console.error('Road work generation failed:', data.error)
+            setRoadWorkData({ success: false, error: data.error })
+          }
+        } else {
+          console.error('Road work API request failed:', response.status)
+          setRoadWorkData({ success: false, error: 'API request failed' })
+        }
+      } catch (error) {
+        console.error('Failed to fetch road work data:', error)
+        setRoadWorkData({ success: false, error: 'Network error' })
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchRoadWorkData()
+  }, [campaign.date])
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-8">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-primary"></div>
+        <span className="ml-3 text-gray-600">Loading road work data...</span>
+      </div>
+    )
+  }
+
+  if (!roadWorkData || roadWorkData.success === false) {
+    return (
+      <div className="text-center py-8">
+        <div className="text-gray-500 mb-2">
+          <span className="block text-lg">🚧</span>
+          Unable to load road work data
+        </div>
+        <div className="text-sm text-gray-400">
+          {roadWorkData?.error || 'Unknown error occurred'}
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="p-6">
+      <div className="mb-4">
+        <div className="text-sm text-gray-600 mb-2">
+          Found {roadWorkData.total_items || 0} road work items for {campaign.date}
+        </div>
+        <div className="text-xs text-gray-500">
+          Generated at: {roadWorkData.generated_at ? new Date(roadWorkData.generated_at).toLocaleString() : 'Unknown'}
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 max-h-96 overflow-y-auto">
+        {roadWorkData.roadWorkItems && roadWorkData.roadWorkItems.map((item: any, index: number) => (
+          <div key={index} className="border border-gray-200 rounded-lg p-4 bg-white shadow-sm">
+            <div className="font-medium text-gray-900 mb-2">{item.road_name}</div>
+            <div className="text-sm text-gray-600 mb-1">{item.road_range}</div>
+            <div className="text-xs text-gray-500 mb-2">{item.reason}</div>
+            <div className="flex justify-between items-center text-xs">
+              <span className="text-orange-600">📍 {item.city_or_township}</span>
+              <span className="text-gray-500">{item.start_date} → {item.expected_reopen}</span>
+            </div>
+            {item.source_url && (
+              <a
+                href={item.source_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-xs text-blue-600 hover:text-blue-800 underline mt-1 block"
+              >
+                View Source
+              </a>
+            )}
+          </div>
+        ))}
+      </div>
+
+      {(!roadWorkData.roadWorkItems || roadWorkData.roadWorkItems.length === 0) && (
+        <div className="text-center py-8 text-gray-500">
+          No road work items found for this date
+        </div>
+      )}
+    </div>
+  )
+}
+
 function DiningDealsSection({ campaign }: { campaign: any }) {
   const [deals, setDeals] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
@@ -370,6 +468,8 @@ function NewsletterSectionComponent({
             Article management is handled in the dedicated Articles section above
           </div>
         )
+      case 'Road Work':
+        return <RoadWorkSection campaign={campaign} />
       default:
         return (
           <div className="text-center py-8 text-gray-500">

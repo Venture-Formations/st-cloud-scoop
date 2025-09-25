@@ -5,6 +5,7 @@ import { supabaseAdmin } from '@/lib/supabase'
 import { getWeatherForCampaign } from '@/lib/weather-manager'
 import { selectPropertiesForCampaign, getSelectedPropertiesForCampaign } from '@/lib/vrbo-selector'
 import { selectDiningDealsForCampaign, getDiningDealsForCampaign } from '@/lib/dining-selector'
+import { generateDailyRoadWork } from '@/lib/road-work-manager'
 
 export async function GET(
   request: NextRequest,
@@ -650,6 +651,36 @@ async function generateDiningDealsSection(campaign: any): Promise<string> {
   }
 }
 
+async function generateRoadWorkSection(campaign: any): Promise<string> {
+  try {
+    console.log('Generating Road Work section for campaign:', campaign?.id)
+
+    // Generate road work data for the campaign date
+    const campaignDateStr = campaign.date // Format: YYYY-MM-DD
+    const campaignDate = new Date(campaignDateStr)
+
+    // Format date as "MMM D, YYYY" for AI prompt
+    const formattedDate = campaignDate.toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+      timeZone: 'UTC' // Use UTC to avoid timezone issues with date parsing
+    })
+
+    console.log('Generating road work for campaign date:', formattedDate)
+
+    // Generate road work data using AI
+    const roadWorkData = await generateDailyRoadWork(formattedDate)
+
+    console.log(`Generated road work section with ${roadWorkData.road_work_data.length} items`)
+    return roadWorkData.html_content
+
+  } catch (error) {
+    console.error('Error generating Road Work section:', error)
+    return ''
+  }
+}
+
 async function generateNewsletterHtml(campaign: any): Promise<string> {
   try {
     console.log('Generating HTML for campaign:', campaign?.id)
@@ -725,6 +756,11 @@ async function generateNewsletterHtml(campaign: any): Promise<string> {
           const diningHtml = await generateDiningDealsSection(campaign)
           if (diningHtml) {
             sectionsHtml += diningHtml
+          }
+        } else if (section.name === 'Road Work') {
+          const roadWorkHtml = await generateRoadWorkSection(campaign)
+          if (roadWorkHtml) {
+            sectionsHtml += roadWorkHtml
           }
         }
       }

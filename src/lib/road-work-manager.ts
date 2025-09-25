@@ -87,14 +87,27 @@ export async function generateDailyRoadWork(campaignDate?: string): Promise<Road
     // Parse AI response
     let roadWorkItems: RoadWorkItem[]
     try {
+      let jsonString = ''
+
       if (typeof aiResponse === 'string') {
-        roadWorkItems = JSON.parse(aiResponse)
+        jsonString = aiResponse
       } else if (Array.isArray(aiResponse)) {
         roadWorkItems = aiResponse
+        jsonString = '' // Skip parsing
       } else if (aiResponse && typeof aiResponse === 'object' && aiResponse.raw) {
-        roadWorkItems = JSON.parse(aiResponse.raw)
+        jsonString = aiResponse.raw
       } else {
         throw new Error('Unexpected AI response format')
+      }
+
+      if (jsonString) {
+        // Remove markdown code block wrappers if present
+        const cleanedJson = jsonString
+          .replace(/^```json\s*/i, '')
+          .replace(/\s*```$/i, '')
+          .trim()
+
+        roadWorkItems = JSON.parse(cleanedJson)
       }
     } catch (parseError) {
       console.error('Failed to parse AI response:', parseError)

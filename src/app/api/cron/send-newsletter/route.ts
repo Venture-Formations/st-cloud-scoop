@@ -112,11 +112,12 @@ export async function POST(request: NextRequest) {
 
     console.log('MailerLite final campaign created:', result.campaignId)
 
-    // Update campaign status to sent
+    // Update campaign status to sent and capture the previous status
     const { error: updateError } = await supabaseAdmin
       .from('newsletter_campaigns')
       .update({
         status: 'sent',
+        status_before_send: campaign.status, // Capture the status before sending
         final_sent_at: new Date().toISOString(),
         metrics: {
           ...campaign.metrics,

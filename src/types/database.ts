@@ -12,6 +12,7 @@ export interface NewsletterCampaign {
   last_action: 'changes_made' | 'approved' | null
   last_action_at: string | null
   last_action_by: string | null
+  status_before_send: CampaignStatus | null
   metrics: Record<string, any>
   created_at: string
   updated_at: string

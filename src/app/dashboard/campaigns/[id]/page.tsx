@@ -1016,7 +1016,6 @@ export default function CampaignDetailPage() {
   const [processingStatus, setProcessingStatus] = useState('')
   const [previewHtml, setPreviewHtml] = useState<string | null>(null)
   const [showPreview, setShowPreview] = useState(false)
-  const [sendingReview, setSendingReview] = useState(false)
   const [generatingSubject, setGeneratingSubject] = useState(false)
   const [updatingStatus, setUpdatingStatus] = useState(false)
   const [deleteModal, setDeleteModal] = useState(false)
@@ -1261,95 +1260,6 @@ export default function CampaignDetailPage() {
     }
   }
 
-  const sendForReview = async () => {
-    if (!campaign) return
-
-    // Check if there are any active articles
-    const activeArticles = campaign.articles.filter(article => article.is_active)
-    if (activeArticles.length === 0) {
-      alert('Please select at least one article before sending for review.')
-      return
-    }
-
-    setSendingReview(true)
-    try {
-      // First, generate subject line with AI if not already set
-      let subjectLine = campaign.subject_line
-      console.log('Current campaign subject line:', subjectLine)
-
-      if (!subjectLine || subjectLine.trim() === '') {
-        console.log('Generating AI subject line...')
-        const subjectResponse = await fetch(`/api/campaigns/${campaign.id}/generate-subject`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          }
-        })
-
-        if (subjectResponse.ok) {
-          const subjectData = await subjectResponse.json()
-          subjectLine = subjectData.subject_line
-
-          console.log('AI generated subject line:', subjectLine)
-
-          // Update campaign locally with new subject line
-          setCampaign(prev => {
-            if (!prev) return prev
-            return {
-              ...prev,
-              subject_line: subjectLine
-            }
-          })
-        } else {
-          const errorData = await subjectResponse.json().catch(() => null)
-          console.error('Failed to generate subject line:', subjectResponse.status, errorData)
-          alert(`Warning: Could not generate AI subject line. Error: ${errorData?.error || 'Unknown error'}. Proceeding with default subject.`)
-        }
-      } else {
-        console.log('Skipping AI generation - subject line already exists:', subjectLine)
-      }
-
-      // Now send for review - make sure we're using updated subject line
-      console.log('About to send for review with subject line:', subjectLine)
-      console.log('Campaign object subject_line before send:', campaign.subject_line)
-
-      // Add a small delay to ensure database is updated
-      await new Promise(resolve => setTimeout(resolve, 1000))
-
-      const response = await fetch(`/api/campaigns/${campaign.id}/send-review`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          force_subject_line: subjectLine // Send the generated subject line directly
-        })
-      })
-
-      if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.error || 'Failed to send review')
-      }
-
-      const data = await response.json()
-
-      // Update campaign status locally
-      setCampaign(prev => {
-        if (!prev) return prev
-        return {
-          ...prev,
-          status: 'in_review'
-        }
-      })
-
-      alert('Newsletter sent for review successfully!')
-
-    } catch (error) {
-      alert('Failed to send for review: ' + (error instanceof Error ? error.message : 'Unknown error'))
-    } finally {
-      setSendingReview(false)
-    }
-  }
 
   const generateSubjectLine = async () => {
     if (!campaign) return
@@ -1669,14 +1579,14 @@ export default function CampaignDetailPage() {
       case 'processing': return 'Processing'
       case 'draft': return 'Draft'
       case 'in_review': return 'In Review'
-      case 'ready_to_send': return 'Ready to Send'
+      case 'changes_made': return 'Changes Made'
       case 'sent': return 'Sent'
       case 'failed': return 'Failed'
       default: return status
     }
   }
 
-  const updateCampaignStatus = async (action: 'changes_made' | 'approved') => {
+  const updateCampaignStatus = async (action: 'changes_made') => {
     if (!campaign) return
 
     setUpdatingStatus(true)
@@ -1701,15 +1611,14 @@ export default function CampaignDetailPage() {
         if (!prev) return prev
         return {
           ...prev,
-          status: 'ready_to_send',
+          status: 'changes_made',
           last_action: action,
           last_action_at: data.campaign.last_action_at,
           last_action_by: data.campaign.last_action_by
         }
       })
 
-      const actionText = action === 'changes_made' ? 'Changes Made' : 'Approved'
-      alert(`Campaign marked as "${actionText}" and moved to Ready to Send status.${action === 'changes_made' ? ' Slack notification sent.' : ''}`)
+      alert(`Campaign marked as "Changes Made" and status updated. Slack notification sent.`)
 
     } catch (error) {
       alert('Failed to update campaign status: ' + (error instanceof Error ? error.message : 'Unknown error'))
@@ -1855,7 +1764,7 @@ export default function CampaignDetailPage() {
                   campaign.status === 'processing' ? 'bg-purple-100 text-purple-800' :
                   campaign.status === 'draft' ? 'bg-gray-100 text-gray-800' :
                   campaign.status === 'in_review' ? 'bg-yellow-100 text-yellow-800' :
-                  campaign.status === 'ready_to_send' ? 'bg-blue-100 text-blue-800' :
+                  campaign.status === 'changes_made' ? 'bg-orange-100 text-orange-800' :
                   campaign.status === 'sent' ? 'bg-green-100 text-green-800' :
                   'bg-red-100 text-red-800'
                 }`}>
@@ -1869,24 +1778,17 @@ export default function CampaignDetailPage() {
             <div className="flex space-x-2">
               <button
                 onClick={processRSSFeeds}
-                disabled={processing || saving || sendingReview || generatingSubject}
+                disabled={processing || saving || generatingSubject}
                 className="bg-green-600 hover:bg-green-700 disabled:opacity-50 text-white px-4 py-2 rounded text-sm font-medium"
               >
                 {processing ? 'Processing...' : 'Process RSS Feeds'}
               </button>
               <button
                 onClick={previewNewsletter}
-                disabled={saving || sendingReview || generatingSubject}
+                disabled={saving || generatingSubject}
                 className="bg-gray-200 hover:bg-gray-300 disabled:opacity-50 text-gray-800 px-4 py-2 rounded text-sm font-medium"
               >
                 Preview Newsletter
-              </button>
-              <button
-                onClick={sendForReview}
-                disabled={saving || sendingReview || generatingSubject || campaign.status === 'processing' || campaign.status === 'sent' || campaign.status === 'ready_to_send'}
-                className="bg-brand-primary hover:bg-blue-700 disabled:opacity-50 text-white px-4 py-2 rounded text-sm font-medium"
-              >
-                {sendingReview ? (generatingSubject ? 'Generating Subject...' : 'Sending...') : 'Send for Review'}
               </button>
             </div>
           </div>
@@ -1948,7 +1850,7 @@ export default function CampaignDetailPage() {
                   {campaign.subject_line && (
                     <button
                       onClick={startEditingSubject}
-                      disabled={generatingSubject || processing || sendingReview || savingSubject}
+                      disabled={generatingSubject || processing || savingSubject}
                       className="bg-gray-600 hover:bg-gray-700 disabled:opacity-50 text-white px-3 py-1 rounded text-sm font-medium"
                     >
                       Edit
@@ -1956,7 +1858,7 @@ export default function CampaignDetailPage() {
                   )}
                   <button
                     onClick={generateSubjectLine}
-                    disabled={generatingSubject || processing || sendingReview || savingSubject}
+                    disabled={generatingSubject || processing || savingSubject}
                     className="bg-purple-600 hover:bg-purple-700 disabled:opacity-50 text-white px-3 py-1 rounded text-sm font-medium"
                   >
                     {generatingSubject ? 'Generating...' : campaign.subject_line ? 'Regenerate' : 'Generate'}
@@ -1983,23 +1885,6 @@ export default function CampaignDetailPage() {
                 </>
               ) : (
                 'Changes Made'
-              )}
-            </button>
-            <button
-              onClick={() => updateCampaignStatus('approved')}
-              disabled={updatingStatus}
-              className="bg-green-600 hover:bg-green-700 disabled:opacity-50 text-white px-4 py-2 rounded-md font-medium text-sm flex items-center"
-            >
-              {updatingStatus ? (
-                <>
-                  <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                  </svg>
-                  Updating...
-                </>
-              ) : (
-                'Approved'
               )}
             </button>
             <button

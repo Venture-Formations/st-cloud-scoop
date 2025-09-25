@@ -42,7 +42,7 @@
     },
     {
       "path": "/api/cron/collect-wordle",
-      "schedule": "0 12 * * *"
+      "schedule": "0 18 * * *"
     }
   ],
   "functions": {

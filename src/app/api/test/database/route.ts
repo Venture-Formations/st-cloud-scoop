@@ -33,7 +33,7 @@ export async function GET(request: NextRequest) {
     const { data: constraintTest, error: constraintError } = await supabaseAdmin
       .from('newsletter_campaigns')
       .select('status')
-      .eq('status', 'ready_to_send')
+      .eq('status', 'changes_made')
       .limit(1)
 
     return NextResponse.json({

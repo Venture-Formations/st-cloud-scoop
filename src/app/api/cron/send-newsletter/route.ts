@@ -47,8 +47,8 @@ export async function POST(request: NextRequest) {
 
     console.log('Found campaign:', campaign.id, 'Status:', campaign.status)
 
-    // Only send if campaign is in_review or ready_to_send status
-    if (campaign.status !== 'in_review' && campaign.status !== 'ready_to_send') {
+    // Only send if campaign is in_review or changes_made status
+    if (campaign.status !== 'in_review' && campaign.status !== 'changes_made') {
       return NextResponse.json({
         success: true,
         message: `Campaign status is ${campaign.status}, skipping newsletter send`,

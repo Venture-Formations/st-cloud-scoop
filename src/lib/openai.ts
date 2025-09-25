@@ -191,7 +191,7 @@ Articles in this newsletter:
 ${articles.map((article, i) => `${i + 1}. ${article.headline}\n   ${article.content.substring(0, 100)}...`).join('\n\n')}
 
 HARD RULES:
-- ≤ 35 characters (count every space and punctuation) - this allows room for ice cream emoji prefix
+- ≤ 40 characters (count every space and punctuation) - this allows room for ice cream emoji prefix
 - Title Case; avoid ALL-CAPS words
 - Omit the year
 - No em dashes (—)

@@ -40,7 +40,7 @@ export default function CampaignsPage() {
     switch (status) {
       case 'draft': return 'bg-gray-100 text-gray-800'
       case 'in_review': return 'bg-yellow-100 text-yellow-800'
-      case 'ready_to_send': return 'bg-blue-100 text-blue-800'
+      case 'changes_made': return 'bg-orange-100 text-orange-800'
       case 'sent': return 'bg-green-100 text-green-800'
       case 'failed': return 'bg-red-100 text-red-800'
       default: return 'bg-gray-100 text-gray-800'
@@ -51,7 +51,7 @@ export default function CampaignsPage() {
     switch (status) {
       case 'draft': return 'Draft'
       case 'in_review': return 'In Review'
-      case 'ready_to_send': return 'Ready to Send'
+      case 'changes_made': return 'Changes Made'
       case 'sent': return 'Sent'
       case 'failed': return 'Failed'
       default: return status
@@ -101,7 +101,7 @@ export default function CampaignsPage() {
 
           {/* Filter buttons */}
           <div className="flex space-x-2">
-            {['all', 'draft', 'in_review', 'ready_to_send', 'sent', 'failed'].map((status) => (
+            {['all', 'draft', 'in_review', 'changes_made', 'sent', 'failed'].map((status) => (
               <button
                 key={status}
                 onClick={() => setFilter(status)}

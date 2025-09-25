@@ -16,9 +16,9 @@ export async function POST(
 
     const { action } = await request.json()
 
-    if (!action || !['changes_made', 'approved'].includes(action)) {
+    if (!action || action !== 'changes_made') {
       return NextResponse.json({
-        error: 'Invalid action. Must be "changes_made" or "approved"'
+        error: 'Invalid action. Must be "changes_made"'
       }, { status: 400 })
     }
 
@@ -37,11 +37,11 @@ export async function POST(
       }, { status: 404 })
     }
 
-    // Update campaign status to ready_to_send and record the action
+    // Update campaign status to changes_made and record the action
     const { error: updateError } = await supabaseAdmin
       .from('newsletter_campaigns')
       .update({
-        status: 'ready_to_send',
+        status: 'changes_made',
         last_action: action,
         last_action_at: new Date().toISOString(),
         last_action_by: session.user?.email || 'unknown'
@@ -57,8 +57,8 @@ export async function POST(
       }, { status: 500 })
     }
 
-    // If changes were made, send Slack notification
-    if (action === 'changes_made') {
+    // Send Slack notification for changes made
+    {
       try {
         const slack = new SlackNotificationService()
         const userName = session.user?.name || session.user?.email || 'Unknown User'
@@ -112,12 +112,10 @@ export async function POST(
 
     return NextResponse.json({
       success: true,
-      message: action === 'changes_made'
-        ? 'Campaign marked as having changes and moved to ready to send status'
-        : 'Campaign approved and moved to ready to send status',
+      message: 'Campaign marked as having changes made',
       campaign: {
         id: campaignId,
-        status: 'ready_to_send',
+        status: 'changes_made',
         last_action: action,
         last_action_at: new Date().toISOString(),
         last_action_by: session.user?.email

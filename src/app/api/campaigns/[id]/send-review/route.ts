@@ -63,7 +63,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ error: 'Campaign not found' }, { status: 404 })
     }
 
-    if (campaign.status !== 'draft' && campaign.status !== 'in_review' && campaign.status !== 'ready_to_send') {
+    if (campaign.status !== 'draft' && campaign.status !== 'in_review' && campaign.status !== 'changes_made') {
       return NextResponse.json({
         error: 'Campaign cannot be sent for review in current status'
       }, { status: 400 })

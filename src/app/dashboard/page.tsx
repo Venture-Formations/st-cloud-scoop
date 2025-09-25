@@ -33,7 +33,7 @@ export default function Dashboard() {
     switch (status) {
       case 'draft': return 'bg-gray-100 text-gray-800'
       case 'in_review': return 'bg-yellow-100 text-yellow-800'
-      case 'ready_to_send': return 'bg-blue-100 text-blue-800'
+      case 'changes_made': return 'bg-orange-100 text-orange-800'
       case 'sent': return 'bg-green-100 text-green-800'
       case 'failed': return 'bg-red-100 text-red-800'
       default: return 'bg-gray-100 text-gray-800'
@@ -44,7 +44,7 @@ export default function Dashboard() {
     switch (status) {
       case 'draft': return 'Draft'
       case 'in_review': return 'In Review'
-      case 'ready_to_send': return 'Ready to Send'
+      case 'changes_made': return 'Changes Made'
       case 'sent': return 'Sent'
       case 'failed': return 'Failed'
       default: return status
@@ -89,9 +89,9 @@ export default function Dashboard() {
             </div>
             <div className="bg-white p-6 rounded-lg shadow">
               <div className="text-2xl font-bold text-blue-600 mb-1">
-                {campaigns.filter(c => c.status === 'ready_to_send').length}
+                {campaigns.filter(c => c.status === 'changes_made').length}
               </div>
-              <div className="text-sm text-gray-600">Ready to Send</div>
+              <div className="text-sm text-gray-600">Changes Made</div>
             </div>
             <div className="bg-white p-6 rounded-lg shadow">
               <div className="text-2xl font-bold text-gray-600 mb-1">

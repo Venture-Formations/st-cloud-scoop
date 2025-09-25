@@ -3,6 +3,57 @@ import { supabaseAdmin } from '@/lib/supabase'
 import { MailerLiteService } from '@/lib/mailerlite'
 import { ScheduleChecker } from '@/lib/schedule-checker'
 
+// Helper function to log article positions at final send
+async function logFinalArticlePositions(campaign: any) {
+  console.log('=== LOGGING ARTICLE POSITIONS FOR FINAL SEND ===')
+
+  // Get active articles sorted by rank (same logic as MailerLite service)
+  const finalActiveArticles = campaign.articles
+    .filter((article: any) => article.is_active)
+    .sort((a: any, b: any) => (a.rank || 999) - (b.rank || 999))
+    .slice(0, 5) // Only log positions 1-5
+
+  const finalActiveManualArticles = campaign.manual_articles
+    .filter((article: any) => article.is_active)
+    .sort((a: any, b: any) => (a.rank || 999) - (b.rank || 999))
+    .slice(0, 5) // Only log positions 1-5
+
+  console.log('Final active articles for position logging:', finalActiveArticles.map((a: any) => `ID: ${a.id}, Rank: ${a.rank}, Headline: ${a.headline}`))
+  console.log('Final active manual articles for position logging:', finalActiveManualArticles.map((a: any) => `ID: ${a.id}, Rank: ${a.rank}, Title: ${a.title}`))
+
+  // Update final positions for regular articles
+  for (let i = 0; i < finalActiveArticles.length; i++) {
+    const position = i + 1
+    const { error: updateError } = await supabaseAdmin
+      .from('articles')
+      .update({ final_position: position })
+      .eq('id', finalActiveArticles[i].id)
+
+    if (updateError) {
+      console.error(`Failed to update final position for article ${finalActiveArticles[i].id}:`, updateError)
+    } else {
+      console.log(`Set final position ${position} for article: ${finalActiveArticles[i].headline}`)
+    }
+  }
+
+  // Update final positions for manual articles
+  for (let i = 0; i < finalActiveManualArticles.length; i++) {
+    const position = i + 1
+    const { error: updateError } = await supabaseAdmin
+      .from('manual_articles')
+      .update({ final_position: position })
+      .eq('id', finalActiveManualArticles[i].id)
+
+    if (updateError) {
+      console.error(`Failed to update final position for manual article ${finalActiveManualArticles[i].id}:`, updateError)
+    } else {
+      console.log(`Set final position ${position} for manual article: ${finalActiveManualArticles[i].title}`)
+    }
+  }
+
+  console.log('=== FINAL ARTICLE POSITION LOGGING COMPLETE ===')
+}
+
 export async function POST(request: NextRequest) {
   // Verify cron secret for security
   const authHeader = request.headers.get('Authorization')
@@ -86,6 +137,9 @@ export async function POST(request: NextRequest) {
     }
 
     console.log('Using main group ID from settings:', mainGroupId)
+
+    // Log article positions at final send
+    await logFinalArticlePositions(campaign)
 
     const result = await mailerLiteService.createFinalCampaign(campaign, mainGroupId)
 
@@ -221,6 +275,9 @@ export async function GET(request: NextRequest) {
     }
 
     console.log('Using main group ID from settings:', mainGroupId)
+
+    // Log article positions at final send
+    await logFinalArticlePositions(campaign)
 
     const result = await mailerLiteService.createFinalCampaign(campaign, mainGroupId)
 

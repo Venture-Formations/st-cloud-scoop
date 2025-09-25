@@ -98,6 +98,64 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     const result = await mailerLiteService.createReviewCampaign(campaign, finalSubjectLine)
     console.log('MailerLite result:', result)
 
+    // Log article positions at review send
+    console.log('=== LOGGING ARTICLE POSITIONS FOR REVIEW SEND ===')
+
+    // Get active articles sorted by rank (same logic as MailerLite service)
+    const activeArticles = campaign.articles
+      .filter((article: any) => article.is_active)
+      .sort((a: any, b: any) => (a.rank || 999) - (b.rank || 999))
+      .slice(0, 5) // Only log positions 1-5
+
+    const activeManualArticles = campaign.manual_articles
+      .filter((article: any) => article.is_active)
+      .sort((a: any, b: any) => (a.rank || 999) - (b.rank || 999))
+      .slice(0, 5) // Only log positions 1-5
+
+    console.log('Active articles for position logging:', activeArticles.map((a: any) => `ID: ${a.id}, Rank: ${a.rank}, Headline: ${a.headline}`))
+    console.log('Active manual articles for position logging:', activeManualArticles.map((a: any) => `ID: ${a.id}, Rank: ${a.rank}, Title: ${a.title}`))
+
+    // Update review positions for regular articles
+    for (let i = 0; i < activeArticles.length; i++) {
+      const position = i + 1
+      const { error: updateError } = await supabaseAdmin
+        .from('articles')
+        .update({ review_position: position })
+        .eq('id', activeArticles[i].id)
+
+      if (updateError) {
+        console.error(`Failed to update review position for article ${activeArticles[i].id}:`, updateError)
+      } else {
+        console.log(`Set review position ${position} for article: ${activeArticles[i].headline}`)
+      }
+    }
+
+    // Update review positions for manual articles
+    for (let i = 0; i < activeManualArticles.length; i++) {
+      const position = i + 1
+      const { error: updateError } = await supabaseAdmin
+        .from('manual_articles')
+        .update({ review_position: position })
+        .eq('id', activeManualArticles[i].id)
+
+      if (updateError) {
+        console.error(`Failed to update review position for manual article ${activeManualArticles[i].id}:`, updateError)
+      } else {
+        console.log(`Set review position ${position} for manual article: ${activeManualArticles[i].title}`)
+      }
+    }
+
+    console.log('=== ARTICLE POSITION LOGGING COMPLETE ===')
+
+    // Update campaign status to in_review and log review sent timestamp
+    await supabaseAdmin
+      .from('newsletter_campaigns')
+      .update({
+        status: 'in_review',
+        review_sent_at: new Date().toISOString()
+      })
+      .eq('id', id)
+
     // Log user activity
     if (session.user?.email) {
       const { data: user } = await supabaseAdmin

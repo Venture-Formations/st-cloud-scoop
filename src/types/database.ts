@@ -66,6 +66,8 @@ export interface Article {
   fact_check_score: number | null
   fact_check_details: string | null
   word_count: number | null
+  review_position: number | null
+  final_position: number | null
   created_at: string
   updated_at: string
 }
@@ -79,6 +81,8 @@ export interface ManualArticle {
   source_url: string | null
   rank: number | null
   is_active: boolean
+  review_position: number | null
+  final_position: number | null
   created_by: string | null
   created_at: string
   updated_at: string

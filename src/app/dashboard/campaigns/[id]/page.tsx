@@ -861,6 +861,16 @@ function RegularArticle({
                   {article.word_count} words
                 </span>
               )}
+              {article.rss_post?.source_url && (
+                <a
+                  href={article.rss_post.source_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-brand-primary hover:text-blue-700 text-xs"
+                >
+                  View Original
+                </a>
+              )}
               <button
                 onClick={() => skipArticle(article.id)}
                 disabled={saving}

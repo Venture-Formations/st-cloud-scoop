@@ -8,7 +8,7 @@ export async function GET(request: NextRequest) {
     const today = new Date()
     const todayStr = today.toISOString().split('T')[0]
 
-    const apiUrl = `https://www.visitstcloud.com/wp-json/wp/v2/events?per_page=5&after=${todayStr}T00:00:00&_fields=id,title,date,status`
+    const apiUrl = `https://www.visitstcloud.com/wp-json/tribe/events/v1/events?start_date=${todayStr}&end_date=${todayStr}&per_page=5&status=publish`
 
     console.log('Testing API URL:', apiUrl)
 

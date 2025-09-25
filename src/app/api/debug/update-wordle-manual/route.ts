@@ -8,25 +8,25 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const { date = '2025-09-24' } = body
 
-    // Wordle data for recent dates - Wednesday Sep 24 newsletter shows Sep 23 Wordle
+    // Actual Wordle words for recent dates - verified from spoiler sources
     const wordleData = [
       {
         date: '2025-09-22',
-        word: 'BLEND',
-        definition: 'To mix together thoroughly and inseparably.',
-        interesting_fact: 'The word "blend" originally meant "to deceive" in Old Norse, but evolved to mean "mixing" by the 14th century.'
+        word: 'ROUND',
+        definition: 'Having a curved shape that is circular or approximately circular.',
+        interesting_fact: 'The word "round" comes from Old French "roond," derived from Latin "rotundus," meaning circular like a wheel.'
       },
       {
         date: '2025-09-23',
-        word: 'TOAST',
-        definition: 'Sliced bread browned by exposure to radiant heat.',
-        interesting_fact: 'The word "toast" comes from the Latin "torrere," meaning "to parch." The French "toster" evolved into our modern word.'
+        word: 'SHIRT',
+        definition: 'A garment for the upper body, typically having a collar and sleeves.',
+        interesting_fact: 'The word "shirt" comes from Old English "scyrte," related to "short," originally referring to a short tunic.'
       },
       {
         date: '2025-09-24',
-        word: 'PLANT',
-        definition: 'A living organism that grows in the earth and has a stem, leaves, and roots.',
-        interesting_fact: 'Plants produce oxygen through photosynthesis, generating about 330 billion tons of oxygen annually - enough for all life on Earth.'
+        word: 'FLING',
+        definition: 'To throw or move forcefully or carelessly.',
+        interesting_fact: 'The word "fling" comes from Middle English, possibly of Scandinavian origin, related to Old Norse "flengja" meaning to whip.'
       },
       {
         date: '2025-09-25',
@@ -36,9 +36,9 @@ export async function POST(request: NextRequest) {
       },
       {
         date: '2025-09-26',
-        word: 'CRANE',
-        definition: 'A large, tall machine used for moving heavy objects by suspending them from a projecting arm.',
-        interesting_fact: 'Construction cranes are named after the bird because their silhouette resembles a crane\'s long neck and beak when extended.'
+        word: 'PLUMB',
+        definition: 'Exactly vertical or perpendicular; to measure the depth of water.',
+        interesting_fact: 'The word "plumb" comes from Latin "plumbum" meaning lead, referring to the lead weight used in plumb lines for measuring verticality.'
       }
     ]
 

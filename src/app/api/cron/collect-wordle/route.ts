@@ -29,7 +29,7 @@ If unconfirmed, return: [{"word": "Unknown", "definition": "Unknown", "interesti
 Return only JSON array, no markdown formatting or explanations.`
 }
 
-async function collectWordleData(date: string) {
+async function collectWordleData(date: string, forceRefresh = false) {
   console.log(`🧩 Collecting Wordle data for ${date}...`)
 
   // Check if we already have data for this date
@@ -39,9 +39,13 @@ async function collectWordleData(date: string) {
     .eq('date', date)
     .single()
 
-  if (existing) {
+  if (existing && !forceRefresh) {
     console.log(`✅ Wordle data already exists for ${date}`)
     return existing
+  }
+
+  if (forceRefresh && existing) {
+    console.log(`🔄 Force refresh enabled - will update existing data for ${date}`)
   }
 
   // Generate the prompt for today's date
@@ -199,10 +203,14 @@ export async function GET(request: NextRequest) {
     // Allow Vercel cron (no secret) or manual testing (with correct secret)
     console.log('✅ Request authorized')
 
-    // Get today's date in YYYY-MM-DD format
-    const today = new Date().toISOString().split('T')[0]
+    // Get parameters
+    const dateParam = searchParams.get('date')
+    const forceRefresh = searchParams.get('force') === 'true'
 
-    const wordleData = await collectWordleData(today)
+    // Use specified date or today's date in YYYY-MM-DD format
+    const targetDate = dateParam || new Date().toISOString().split('T')[0]
+
+    const wordleData = await collectWordleData(targetDate, forceRefresh)
 
     return NextResponse.json({
       success: true,

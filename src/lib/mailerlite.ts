@@ -534,11 +534,11 @@ ${sectionsHtml}
       const { data: setting } = await supabaseAdmin
         .from('app_settings')
         .select('value')
-        .eq('key', 'email_finalSendTime')
+        .eq('key', 'email_dailyScheduledSendTime')
         .single()
 
       const finalTime = setting?.value || '04:55' // Default to 4:55 AM if not found
-      console.log('Using final send time from settings:', finalTime)
+      console.log('Using daily scheduled send time from settings:', finalTime)
 
       // Parse the time (format: "HH:MM")
       const [hours, minutes] = finalTime.split(':')
@@ -576,19 +576,34 @@ ${sectionsHtml}
     try {
       console.log(`Creating final campaign for ${campaign.date}`)
 
+      // Get sender settings
+      const { data: settings } = await supabaseAdmin
+        .from('app_settings')
+        .select('key, value')
+        .in('key', ['email_senderName', 'email_fromEmail'])
+
+      const settingsMap = (settings || []).reduce((acc, setting) => {
+        acc[setting.key] = setting.value
+        return acc
+      }, {} as Record<string, string>)
+
+      const senderName = settingsMap['email_senderName'] || 'St. Cloud Scoop'
+      const fromEmail = settingsMap['email_fromEmail'] || 'scoop@stcscoop.com'
+
       const emailContent = await this.generateEmailHTML(campaign, false) // Not a review
 
       const subjectLine = campaign.subject_line || `Newsletter - ${new Date(campaign.date).toLocaleDateString()}`
 
       console.log('Creating final campaign with subject line:', subjectLine)
+      console.log('Using sender settings:', { senderName, fromEmail })
 
       const campaignData = {
         name: `Newsletter: ${campaign.date}`,
         type: 'regular',
         emails: [{
           subject: `🍦 ${subjectLine}`,
-          from_name: 'St. Cloud Scoop',
-          from: 'scoop@stcscoop.com',
+          from_name: senderName,
+          from: fromEmail,
           content: emailContent,
         }],
         groups: [mainGroupId]

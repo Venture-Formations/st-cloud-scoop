@@ -72,12 +72,20 @@ export async function POST(request: NextRequest) {
     // Send the final campaign
     const mailerLiteService = new MailerLiteService()
 
-    // Get main group ID from environment
-    const mainGroupId = process.env.MAILERLITE_MAIN_GROUP_ID
+    // Get main group ID from settings
+    const { data: mainGroupSetting } = await supabaseAdmin
+      .from('app_settings')
+      .select('value')
+      .eq('key', 'email_mainGroupId')
+      .single()
+
+    const mainGroupId = mainGroupSetting?.value
 
     if (!mainGroupId) {
-      throw new Error('Main group ID not configured')
+      throw new Error('Main group ID not configured in settings')
     }
+
+    console.log('Using main group ID from settings:', mainGroupId)
 
     const result = await mailerLiteService.createFinalCampaign(campaign, mainGroupId)
 

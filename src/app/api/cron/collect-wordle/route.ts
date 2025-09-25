@@ -53,7 +53,7 @@ async function collectWordleData(date: string, forceRefresh = false) {
 
   // Call OpenAI with the prompt
   console.log('🤖 Calling OpenAI for Wordle data...')
-  const aiResponse = await callOpenAI(prompt, 500, 0.7)
+  const aiResponse = await callOpenAI(prompt, 1000, 0.7)
 
   // Parse the response
   let wordleData

@@ -52,11 +52,11 @@ export class RSSProcessor {
   async processAllFeedsForCampaign(campaignId: string) {
     console.log(`Starting RSS processing for campaign: ${campaignId}`)
 
+    let archiveResult: any = null
+
     try {
       // STEP 0: Archive existing articles and posts before clearing (PRESERVES POSITION DATA!)
       console.log('Archiving existing articles and posts before clearing...')
-
-      let archiveResult: any = null
 
       try {
         archiveResult = await this.archiveService.archiveCampaignArticles(campaignId, 'rss_processing_clear')

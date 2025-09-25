@@ -62,6 +62,8 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
+  let campaign: any = null
+
   try {
     console.log('=== AUTOMATED FINAL SEND CHECK ===')
     console.log('Time:', new Date().toISOString())
@@ -105,7 +107,7 @@ export async function POST(request: NextRequest) {
     const centralDate = new Date(nowCentral)
     const today = centralDate.toISOString().split('T')[0]
 
-    const { data: campaign, error } = await supabaseAdmin
+    const { data, error } = await supabaseAdmin
       .from('newsletter_campaigns')
       .select(`
         *,
@@ -121,6 +123,8 @@ export async function POST(request: NextRequest) {
       .eq('date', today)
       .in('status', ['in_review', 'changes_made'])
       .single()
+
+    campaign = data
 
     if (error || !campaign) {
       console.log('No campaign ready to send for today')
@@ -225,6 +229,8 @@ export async function POST(request: NextRequest) {
 
 // Handle GET requests from Vercel cron (no auth header, uses URL secret)
 export async function GET(request: NextRequest) {
+  let campaign: any = null
+
   try {
     // For Vercel cron: check secret in URL params, for manual: require secret param
     const searchParams = new URL(request.url).searchParams
@@ -281,7 +287,7 @@ export async function GET(request: NextRequest) {
     const centralDate = new Date(nowCentral)
     const today = centralDate.toISOString().split('T')[0]
 
-    const { data: campaign, error } = await supabaseAdmin
+    const { data, error } = await supabaseAdmin
       .from('newsletter_campaigns')
       .select(`
         *,
@@ -297,6 +303,8 @@ export async function GET(request: NextRequest) {
       .eq('date', today)
       .in('status', ['in_review', 'changes_made'])
       .single()
+
+    campaign = data
 
     if (error || !campaign) {
       console.log('No campaign ready to send for today')

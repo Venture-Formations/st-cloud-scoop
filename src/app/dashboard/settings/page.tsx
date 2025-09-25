@@ -1281,6 +1281,10 @@ function SlackSettings() {
     campaignStatusUpdates: true,
     systemErrors: true,
     rssProcessingUpdates: true,
+    rssProcessingIncomplete: true,
+    lowArticleCount: true,
+    scheduledSendFailure: true,
+    scheduledSendTiming: true,
     deploymentNotifications: false,
     userActions: false,
     healthCheckAlerts: true,
@@ -1338,37 +1342,112 @@ function SlackSettings() {
     {
       id: 'campaignStatusUpdates',
       name: 'Campaign Status Updates',
-      description: 'Notifications when campaigns are approved, sent, or have status changes'
+      description: 'Notifications when campaigns are approved, sent, or have status changes',
+      examples: [
+        'Campaign approved and ready to send',
+        'Campaign status changed to "sent" after delivery',
+        'Campaign marked for changes requested'
+      ]
     },
     {
       id: 'systemErrors',
       name: 'System Errors',
-      description: 'Critical system errors and failures'
+      description: 'Critical system errors and failures',
+      examples: [
+        'Database connection failures',
+        'API authentication errors',
+        'Critical application crashes'
+      ]
     },
     {
       id: 'rssProcessingUpdates',
       name: 'RSS Processing Updates',
-      description: 'Completion and failure notifications for RSS feed processing'
+      description: 'Completion and success notifications for RSS feed processing',
+      examples: [
+        'RSS processing completed with 8 articles generated',
+        'Subject line generated successfully',
+        'Archive preserved 12 articles before processing'
+      ]
+    },
+    {
+      id: 'rssProcessingIncomplete',
+      name: 'RSS Processing Incomplete',
+      description: 'Alerts when RSS processing fails partway through',
+      examples: [
+        'RSS processing stopped at AI article generation due to OpenAI timeout',
+        'Feed processing completed but article creation failed',
+        'Archive succeeded but RSS feed parsing crashed'
+      ]
+    },
+    {
+      id: 'lowArticleCount',
+      name: 'Low Article Count (≤6 articles)',
+      description: 'Warnings when newsletter may not have enough content',
+      examples: [
+        'Only 3 articles generated for tomorrow\'s newsletter',
+        'RSS feeds produced 6 articles - consider manual review',
+        'Insufficient content detected for quality delivery'
+      ]
+    },
+    {
+      id: 'scheduledSendFailure',
+      name: 'Scheduled Send Failures',
+      description: 'Alerts when scheduled sends trigger but fail to deliver',
+      examples: [
+        'Final send scheduled but MailerLite API authentication failed',
+        'Campaign ready but delivery blocked by MailerLite configuration error',
+        'Send triggered at 9 PM but no email actually delivered'
+      ]
+    },
+    {
+      id: 'scheduledSendTiming',
+      name: 'Scheduled Send Timing Issues',
+      description: 'Warnings about scheduling configuration problems',
+      examples: [
+        'Campaign marked "ready_to_send" but cron says it\'s not time to send',
+        'Multiple campaigns waiting but send window appears misconfigured',
+        'Scheduling logic conflict detected'
+      ]
     },
     {
       id: 'emailDeliveryUpdates',
       name: 'Email Delivery Updates',
-      description: 'MailerLite campaign delivery confirmations and stats'
+      description: 'MailerLite campaign delivery confirmations and stats',
+      examples: [
+        'Review campaign sent to review group successfully',
+        'Final newsletter delivered to 1,247 subscribers',
+        'MailerLite campaign creation completed'
+      ]
     },
     {
       id: 'healthCheckAlerts',
       name: 'Health Check Alerts',
-      description: 'System health monitoring alerts and warnings'
+      description: 'System health monitoring alerts and warnings',
+      examples: [
+        'Database connection degraded',
+        'MailerLite API responding slowly',
+        'OpenAI service health check failed'
+      ]
     },
     {
       id: 'deploymentNotifications',
       name: 'Deployment Notifications',
-      description: 'Code deployment and update notifications'
+      description: 'Code deployment and update notifications',
+      examples: [
+        'New version deployed successfully',
+        'Deployment failed during build process',
+        'Database migration completed'
+      ]
     },
     {
       id: 'userActions',
       name: 'User Actions',
-      description: 'User login, campaign modifications, and administrative actions'
+      description: 'User login, campaign modifications, and administrative actions',
+      examples: [
+        'Admin user logged in from new device',
+        'Campaign manually edited and saved',
+        'User changed email scheduling settings'
+      ]
     }
   ]
 
@@ -1381,31 +1460,47 @@ function SlackSettings() {
           Control which types of notifications are sent to your Slack channel.
         </p>
 
-        <div className="space-y-4">
+        <div className="space-y-6">
           {notificationTypes.map((type) => (
-            <div key={type.id} className="flex items-center justify-between py-3 border-b border-gray-100 last:border-b-0">
-              <div className="flex-1">
-                <div className="font-medium text-gray-900">{type.name}</div>
-                <div className="text-sm text-gray-600">{type.description}</div>
-              </div>
-              <div className="flex items-center ml-4">
-                <button
-                  onClick={() => handleToggle(type.id, !settings[type.id as keyof typeof settings])}
-                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                    settings[type.id as keyof typeof settings] ? 'bg-brand-primary' : 'bg-gray-300'
-                  }`}
-                >
-                  <span
-                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                      settings[type.id as keyof typeof settings] ? 'translate-x-6' : 'translate-x-1'
+            <div key={type.id} className="border border-gray-200 rounded-lg p-4 bg-gray-50">
+              <div className="flex items-start justify-between">
+                <div className="flex-1">
+                  <div className="font-medium text-gray-900 mb-1">{type.name}</div>
+                  <div className="text-sm text-gray-600 mb-3">{type.description}</div>
+
+                  {/* Examples Section */}
+                  <div className="bg-white rounded-md p-3 border border-gray-100">
+                    <div className="text-xs font-medium text-gray-500 mb-2">Example notifications:</div>
+                    <ul className="text-xs text-gray-600 space-y-1">
+                      {type.examples.map((example, index) => (
+                        <li key={index} className="flex items-start">
+                          <span className="text-gray-400 mr-2">•</span>
+                          <span className="font-mono bg-gray-100 px-1 py-0.5 rounded text-xs">{example}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+
+                <div className="flex flex-col items-end ml-4">
+                  <button
+                    onClick={() => handleToggle(type.id, !settings[type.id as keyof typeof settings])}
+                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                      settings[type.id as keyof typeof settings] ? 'bg-brand-primary' : 'bg-gray-300'
                     }`}
-                  />
-                </button>
-                <span className={`ml-3 text-sm font-medium ${
-                  settings[type.id as keyof typeof settings] ? 'text-green-600' : 'text-gray-500'
-                }`}>
-                  {settings[type.id as keyof typeof settings] ? 'Enabled' : 'Disabled'}
-                </span>
+                  >
+                    <span
+                      className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                        settings[type.id as keyof typeof settings] ? 'translate-x-6' : 'translate-x-1'
+                      }`}
+                    />
+                  </button>
+                  <span className={`mt-2 text-sm font-medium ${
+                    settings[type.id as keyof typeof settings] ? 'text-green-600' : 'text-gray-500'
+                  }`}>
+                    {settings[type.id as keyof typeof settings] ? 'Enabled' : 'Disabled'}
+                  </span>
+                </div>
               </div>
             </div>
           ))}

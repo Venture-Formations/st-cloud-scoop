@@ -85,11 +85,13 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    console.log('Starting events sync from Visit St. Cloud API...')
+    console.log('🔄 Starting events sync from Visit St. Cloud API...')
+    console.log('⏰ Function start time:', new Date().toISOString())
 
     // For testing/manual sync, allow date override from query params
     const overrideStartDate = searchParams.get('start_date')
     const overrideEndDate = searchParams.get('end_date')
+    console.log('📅 Date overrides:', { overrideStartDate, overrideEndDate })
 
     let startDateString, endDateString
 
@@ -153,14 +155,15 @@ export async function POST(request: NextRequest) {
       }
     } else {
       // For daily sync, fetch each of the next 7 days individually
-      console.log('Using daily fetch strategy for better results')
+      console.log('🗓️ Using daily fetch strategy for better results')
+      console.log('⏰ Daily fetch start time:', new Date().toISOString())
 
       for (let dayOffset = 0; dayOffset < 7; dayOffset++) {
         const currentDate = new Date()
         currentDate.setDate(currentDate.getDate() + dayOffset)
         const dayString = currentDate.toISOString().split('T')[0]
 
-        console.log(`Fetching events for day ${dayOffset + 1}/7: ${dayString}`)
+        console.log(`📍 Fetching events for day ${dayOffset + 1}/7: ${dayString} at ${new Date().toISOString()}`)
 
         try {
           const apiUrl = `https://www.visitstcloud.com/wp-json/tribe/events/v1/events?start_date=${dayString}&end_date=${dayString}&per_page=100&status=publish`
@@ -194,14 +197,24 @@ export async function POST(request: NextRequest) {
     }
 
     const events = allEvents
-    console.log(`Fetched total ${events.length} events from API using daily strategy`)
+    console.log(`✅ Fetched total ${events.length} events from API using daily strategy`)
+    console.log('⏰ API fetch complete time:', new Date().toISOString())
 
     let newEvents = 0
     let updatedEvents = 0
     let errors = 0
 
+    console.log('🔄 Starting event processing loop...')
+    console.log('⏰ Event processing start time:', new Date().toISOString())
+
     // Process each event
-    for (const apiEvent of events) {
+    for (let i = 0; i < events.length; i++) {
+      const apiEvent = events[i]
+
+      if (i % 10 === 0) {
+        console.log(`📊 Processing event ${i + 1}/${events.length} at ${new Date().toISOString()}`)
+      }
+
       try {
         const eventData = {
           external_id: `visitstcloud_${apiEvent.id}`,
@@ -220,6 +233,10 @@ export async function POST(request: NextRequest) {
         }
 
         // Check if event already exists and get its event_summary status
+        if (i % 10 === 0) {
+          console.log(`📊 Checking existing event ${i + 1}/${events.length} at ${new Date().toISOString()}`)
+        }
+
         const { data: existingEvent } = await supabaseAdmin
           .from('events')
           .select('id, updated_at, event_summary')
@@ -277,10 +294,15 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    console.log('🔄 Processing complete, handling inactive events...')
+    console.log('⏰ Deactivation start time:', new Date().toISOString())
+
     // Mark events as inactive if they're no longer in the API response
     const apiExternalIds = events.map(e => `visitstcloud_${e.id}`)
 
     if (apiExternalIds.length > 0) {
+      console.log(`📋 Deactivating events not in ${apiExternalIds.length} current API results...`)
+
       const { error: deactivateError } = await supabaseAdmin
         .from('events')
         .update({ active: false, updated_at: new Date().toISOString() })
@@ -293,7 +315,8 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    console.log(`Events sync complete. New: ${newEvents}, Updated: ${updatedEvents}, Errors: ${errors}`)
+    console.log(`✅ Events sync complete. New: ${newEvents}, Updated: ${updatedEvents}, Errors: ${errors}`)
+    console.log('⏰ Function complete time:', new Date().toISOString())
 
     return NextResponse.json({
       success: true,

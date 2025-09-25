@@ -20,7 +20,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     const { id } = await params
 
     // Fetch campaign with active articles
-    const { data: campaign, error } = await supabaseAdmin
+    let { data: campaign, error } = await supabaseAdmin
       .from('newsletter_campaigns')
       .select(`
         *,
@@ -28,6 +28,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
           headline,
           content,
           is_active,
+          skipped,
           rank,
           rss_post:rss_posts(
             post_rating:post_ratings(total_score)
@@ -37,13 +38,56 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       .eq('id', id)
       .single()
 
-    if (error || !campaign) {
+    if (error) {
+      console.error('Campaign fetch error:', error)
+
+      // If the error is about the skipped column not existing, try without it
+      if (error.message?.includes('column "skipped" of relation "articles" does not exist')) {
+        console.log('Skipped column does not exist, trying without it...')
+        const { data: campaignFallback, error: fallbackError } = await supabaseAdmin
+          .from('newsletter_campaigns')
+          .select(`
+            *,
+            articles:articles(
+              headline,
+              content,
+              is_active,
+              rank,
+              rss_post:rss_posts(
+                post_rating:post_ratings(total_score)
+              )
+            )
+          `)
+          .eq('id', id)
+          .single()
+
+        if (fallbackError || !campaignFallback) {
+          return NextResponse.json({ error: 'Campaign not found' }, { status: 404 })
+        }
+
+        // Use fallback data and filter without skipped check
+        campaign = campaignFallback
+      } else {
+        return NextResponse.json({ error: 'Campaign not found' }, { status: 404 })
+      }
+    }
+
+    if (!campaign) {
       return NextResponse.json({ error: 'Campaign not found' }, { status: 404 })
     }
 
     // Get active articles sorted by rank (custom order, rank 1 = #1 position)
+    // Exclude skipped articles to ensure we use the current #1 article (if skipped field exists)
     const activeArticles = campaign.articles
-      .filter((article: any) => article.is_active)
+      .filter((article: any) => {
+        // Always check is_active
+        if (!article.is_active) return false
+
+        // Check skipped only if the field exists (avoid errors if column missing)
+        if (article.hasOwnProperty('skipped') && article.skipped) return false
+
+        return true
+      })
       .sort((a: any, b: any) => (a.rank || 999) - (b.rank || 999))
 
     if (activeArticles.length === 0) {
@@ -54,11 +98,14 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
 
     // Use the #1 ranked article (rank 1) for subject line generation
     const topArticle = activeArticles[0]
-    console.log(`Generating subject line based on #1 ranked article: "${topArticle.headline}" (rank: ${topArticle.rank || 'unranked'}, score: ${topArticle.rss_post?.post_rating?.[0]?.total_score || 0})`)
+    console.log(`Generating subject line based on current #1 ranked article (excluding skipped): "${topArticle.headline}" (rank: ${topArticle.rank || 'unranked'}, score: ${topArticle.rss_post?.post_rating?.[0]?.total_score || 0})`)
+    console.log(`Total active non-skipped articles: ${activeArticles.length}`)
     console.log('Top article full content:', {
       headline: topArticle.headline,
       content: topArticle.content,
-      content_length: topArticle.content?.length || 0
+      content_length: topArticle.content?.length || 0,
+      is_active: topArticle.is_active,
+      skipped: topArticle.skipped
     })
 
     // Generate subject line using AI with just the top article

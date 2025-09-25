@@ -1576,7 +1576,6 @@ export default function CampaignDetailPage() {
 
   const formatStatus = (status: string) => {
     switch (status) {
-      case 'processing': return 'Processing'
       case 'draft': return 'Draft'
       case 'in_review': return 'In Review'
       case 'changes_made': return 'Changes Made'
@@ -1761,7 +1760,6 @@ export default function CampaignDetailPage() {
               </h1>
               <div className="flex items-center space-x-4">
                 <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                  campaign.status === 'processing' ? 'bg-purple-100 text-purple-800' :
                   campaign.status === 'draft' ? 'bg-gray-100 text-gray-800' :
                   campaign.status === 'in_review' ? 'bg-yellow-100 text-yellow-800' :
                   campaign.status === 'changes_made' ? 'bg-orange-100 text-orange-800' :

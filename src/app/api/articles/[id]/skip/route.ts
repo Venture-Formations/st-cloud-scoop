@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { supabaseAdmin } from '@/lib/supabase'
 import { authOptions } from '@/lib/auth'
+import { getCurrentTopArticle, generateSubjectLine } from '@/lib/subject-line-generator'
 
 export async function POST(
   request: NextRequest,
@@ -15,10 +16,10 @@ export async function POST(
 
     const { id: articleId } = await params
 
-    // Get the article to verify it exists (don't select skipped column in case it doesn't exist)
+    // Get the article to verify it exists and check its rank
     const { data: article, error: articleError } = await supabaseAdmin
       .from('articles')
-      .select('id, campaign_id, headline')
+      .select('id, campaign_id, headline, rank, is_active')
       .eq('id', articleId)
       .single()
 
@@ -28,6 +29,15 @@ export async function POST(
         error: 'Article not found',
         details: articleError?.message || 'Article does not exist'
       }, { status: 404 })
+    }
+
+    // Check if this article is currently the #1 article (for subject line regeneration)
+    const { article: currentTopArticle } = await getCurrentTopArticle(article.campaign_id)
+    const isCurrentTopArticle = currentTopArticle?.id === articleId
+
+    console.log(`Skipping article: "${article.headline}" (rank: ${article.rank})`)
+    if (isCurrentTopArticle) {
+      console.log('This is the current #1 article - will regenerate subject line after skipping')
     }
 
     // Mark article as skipped
@@ -85,13 +95,28 @@ export async function POST(
       // Don't fail the request if logging fails
     }
 
+    // Auto-regenerate subject line if we skipped the #1 article
+    let subjectLineResult = null
+    if (isCurrentTopArticle) {
+      console.log('Auto-regenerating subject line since #1 article was skipped...')
+      subjectLineResult = await generateSubjectLine(article.campaign_id, session.user?.email || undefined)
+
+      if (subjectLineResult.success) {
+        console.log(`Subject line auto-regenerated: "${subjectLineResult.subject_line}"`)
+      } else {
+        console.error('Failed to auto-regenerate subject line:', subjectLineResult.error)
+      }
+    }
+
     return NextResponse.json({
       success: true,
       message: 'Article skipped successfully',
       article: {
         id: articleId,
         skipped: true
-      }
+      },
+      subject_line_regenerated: isCurrentTopArticle,
+      new_subject_line: subjectLineResult?.success ? subjectLineResult.subject_line : null
     })
 
   } catch (error) {

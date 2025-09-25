@@ -89,6 +89,28 @@ export async function POST(request: NextRequest) {
 
     const result = await mailerLiteService.createFinalCampaign(campaign, mainGroupId)
 
+    // Update campaign status to sent and capture the previous status
+    const { error: updateError } = await supabaseAdmin
+      .from('newsletter_campaigns')
+      .update({
+        status: 'sent',
+        status_before_send: campaign.status, // Capture the status before sending
+        final_sent_at: new Date().toISOString(),
+        metrics: {
+          ...campaign.metrics,
+          mailerlite_campaign_id: result.campaignId,
+          sent_timestamp: new Date().toISOString()
+        }
+      })
+      .eq('id', campaign.id)
+
+    if (updateError) {
+      console.error('Failed to update campaign status to sent:', updateError)
+      // Don't fail the entire operation - the email was sent successfully
+    } else {
+      console.log('Campaign status updated to sent')
+    }
+
     return NextResponse.json({
       success: true,
       message: 'Final newsletter sent successfully',
@@ -201,6 +223,28 @@ export async function GET(request: NextRequest) {
     console.log('Using main group ID from settings:', mainGroupId)
 
     const result = await mailerLiteService.createFinalCampaign(campaign, mainGroupId)
+
+    // Update campaign status to sent and capture the previous status
+    const { error: updateError } = await supabaseAdmin
+      .from('newsletter_campaigns')
+      .update({
+        status: 'sent',
+        status_before_send: campaign.status, // Capture the status before sending
+        final_sent_at: new Date().toISOString(),
+        metrics: {
+          ...campaign.metrics,
+          mailerlite_campaign_id: result.campaignId,
+          sent_timestamp: new Date().toISOString()
+        }
+      })
+      .eq('id', campaign.id)
+
+    if (updateError) {
+      console.error('Failed to update campaign status to sent:', updateError)
+      // Don't fail the entire operation - the email was sent successfully
+    } else {
+      console.log('Campaign status updated to sent')
+    }
 
     return NextResponse.json({
       success: true,

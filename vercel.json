@@ -71,7 +71,7 @@
       "maxDuration": 30
     },
     "app/api/cron/sync-events/route.ts": {
-      "maxDuration": 120
+      "maxDuration": 300
     },
     "app/api/cron/generate-weather/route.ts": {
       "maxDuration": 180

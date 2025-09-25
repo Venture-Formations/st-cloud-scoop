@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
 import { MailerLiteService } from '@/lib/mailerlite'
 import { ScheduleChecker } from '@/lib/schedule-checker'
+import { SlackNotificationService } from '@/lib/slack'
 
 // Helper function to log article positions at final send
 async function logFinalArticlePositions(campaign: any) {
@@ -69,6 +70,25 @@ export async function POST(request: NextRequest) {
     const shouldRun = await ScheduleChecker.shouldRunFinalSend()
 
     if (!shouldRun) {
+      // Check if there's a campaign that's ready to send but missed its window
+      const { data: readyCampaigns } = await supabaseAdmin
+        .from('newsletter_campaigns')
+        .select('id, date, status, created_at')
+        .eq('status', 'ready_to_send')
+        .order('created_at', { ascending: false })
+        .limit(5)
+
+      if (readyCampaigns && readyCampaigns.length > 0) {
+        // There are campaigns ready but we're not sending - this could indicate a timing issue
+        const slack = new SlackNotificationService()
+
+        await slack.sendAlert(
+          `⏰ Scheduled Send Check: Found ${readyCampaigns.length} campaigns with 'ready_to_send' status but shouldRun returned false. This may indicate a timing configuration issue.`,
+          'warn',
+          'scheduled_send_timing'
+        )
+      }
+
       return NextResponse.json({
         success: true,
         message: 'Not time to run final send or already ran today',
@@ -175,6 +195,25 @@ export async function POST(request: NextRequest) {
 
   } catch (error) {
     console.error('Scheduled final newsletter send failed:', error)
+
+    // Send Slack notification for scheduled send failure
+    try {
+      const slack = new SlackNotificationService()
+      const currentCentralTime = new Date().toLocaleString("en-US", {timeZone: "America/Chicago"})
+
+      await slack.sendScheduledSendFailureAlert(
+        campaign?.id || 'Unknown',
+        currentCentralTime,
+        error instanceof Error ? error.message : 'Unknown error',
+        {
+          operation: 'final_send_post',
+          timestamp: new Date().toISOString(),
+          attempted_campaign_status: campaign?.status || 'Unknown'
+        }
+      )
+    } catch (slackError) {
+      console.error('Failed to send Slack notification for send failure:', slackError)
+    }
 
     return NextResponse.json({
       error: 'Final newsletter send failed',
@@ -207,6 +246,25 @@ export async function GET(request: NextRequest) {
     const shouldRun = await ScheduleChecker.shouldRunFinalSend()
 
     if (!shouldRun) {
+      // Check if there's a campaign that's ready to send but missed its window
+      const { data: readyCampaigns } = await supabaseAdmin
+        .from('newsletter_campaigns')
+        .select('id, date, status, created_at')
+        .eq('status', 'ready_to_send')
+        .order('created_at', { ascending: false })
+        .limit(5)
+
+      if (readyCampaigns && readyCampaigns.length > 0) {
+        // There are campaigns ready but we're not sending - this could indicate a timing issue
+        const slack = new SlackNotificationService()
+
+        await slack.sendAlert(
+          `⏰ Scheduled Send Check: Found ${readyCampaigns.length} campaigns with 'ready_to_send' status but shouldRun returned false. This may indicate a timing configuration issue.`,
+          'warn',
+          'scheduled_send_timing'
+        )
+      }
+
       return NextResponse.json({
         success: true,
         message: 'Not time to run final send or already ran today',
@@ -313,6 +371,25 @@ export async function GET(request: NextRequest) {
 
   } catch (error) {
     console.error('Scheduled final newsletter send failed:', error)
+
+    // Send Slack notification for scheduled send failure
+    try {
+      const slack = new SlackNotificationService()
+      const currentCentralTime = new Date().toLocaleString("en-US", {timeZone: "America/Chicago"})
+
+      await slack.sendScheduledSendFailureAlert(
+        campaign?.id || 'Unknown',
+        currentCentralTime,
+        error instanceof Error ? error.message : 'Unknown error',
+        {
+          operation: 'final_send_get',
+          timestamp: new Date().toISOString(),
+          attempted_campaign_status: campaign?.status || 'Unknown'
+        }
+      )
+    } catch (slackError) {
+      console.error('Failed to send Slack notification for send failure:', slackError)
+    }
 
     return NextResponse.json({
       error: 'Final newsletter send failed',

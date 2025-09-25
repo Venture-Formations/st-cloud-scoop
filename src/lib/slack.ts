@@ -178,6 +178,87 @@ export class SlackNotificationService {
 
     await this.sendAlert(message, level, 'health_check_alerts')
   }
+
+  /**
+   * Alert when RSS processing doesn't complete fully
+   */
+  async sendRSSIncompleteAlert(campaignId: string, completedSteps: string[], failedStep: string, error?: string) {
+    const message = [
+      `🚨 RSS Processing Incomplete for Campaign ${campaignId}`,
+      ``,
+      `✅ Completed: ${completedSteps.join(', ')}`,
+      `❌ Failed at: ${failedStep}`,
+      error ? `Error: ${error}` : '',
+      ``,
+      `⚠️ Campaign may be missing content or in invalid state`
+    ].filter(Boolean).join('\n')
+
+    await this.sendAlert(message, 'error', 'rss_processing_incomplete')
+  }
+
+  /**
+   * Alert when campaign has 6 or fewer articles available
+   */
+  async sendLowArticleCountAlert(campaignId: string, articleCount: number, campaignDate: string) {
+    const message = [
+      `📰 Low Article Count Alert`,
+      ``,
+      `Campaign: ${campaignId}`,
+      `Date: ${campaignDate}`,
+      `Article Count: ${articleCount} articles`,
+      ``,
+      `⚠️ Newsletter may not have enough content for quality delivery`,
+      `Consider manual review before sending`
+    ].join('\n')
+
+    await this.sendAlert(message, 'warn', 'low_article_count')
+  }
+
+  /**
+   * Alert when scheduled send fires but nothing was sent to MailerLite
+   */
+  async sendScheduledSendFailureAlert(campaignId: string, scheduledTime: string, reason?: string, details?: any) {
+    const message = [
+      `📅 Scheduled Send Failed`,
+      ``,
+      `Campaign: ${campaignId}`,
+      `Scheduled Time: ${scheduledTime}`,
+      `Status: Send triggered but no email delivered to MailerLite`,
+      reason ? `Reason: ${reason}` : '',
+      ``,
+      `🔍 Check campaign status, MailerLite configuration, and logs`,
+      details ? `Details: ${JSON.stringify(details, null, 2)}` : ''
+    ].filter(Boolean).join('\n')
+
+    await this.sendAlert(message, 'error', 'scheduled_send_failure')
+  }
+
+  /**
+   * Enhanced RSS processing alert with article count monitoring
+   */
+  async sendRSSProcessingCompleteAlert(campaignId: string, articleCount: number, campaignDate: string, includeArchiveInfo?: { archivedArticles: number; archivedPosts: number; archivedRatings: number }) {
+    const lowCountWarning = articleCount <= 6
+
+    const message = [
+      `${lowCountWarning ? '⚠️' : '✅'} RSS Processing Complete`,
+      ``,
+      `Campaign: ${campaignId}`,
+      `Date: ${campaignDate}`,
+      `Articles Generated: ${articleCount}`,
+      lowCountWarning ? `⚠️ Warning: Low article count (≤6)` : '',
+      ``,
+      includeArchiveInfo ? `📁 Archive: ${includeArchiveInfo.archivedArticles} articles, ${includeArchiveInfo.archivedPosts} posts preserved` : '',
+      `📧 Ready for review and scheduling`
+    ].filter(Boolean).join('\n')
+
+    // Send as warning if article count is low, otherwise info
+    await this.sendAlert(message, lowCountWarning ? 'warn' : 'info', 'rss_processing_updates')
+
+    // Send separate low article count alert if needed
+    if (lowCountWarning) {
+      await this.sendLowArticleCountAlert(campaignId, articleCount, campaignDate)
+    }
+  }
 }
 
 // Error handler utility

@@ -56,8 +56,10 @@ export class RSSProcessor {
       // STEP 0: Archive existing articles and posts before clearing (PRESERVES POSITION DATA!)
       console.log('Archiving existing articles and posts before clearing...')
 
+      let archiveResult: any = null
+
       try {
-        const archiveResult = await this.archiveService.archiveCampaignArticles(campaignId, 'rss_processing_clear')
+        archiveResult = await this.archiveService.archiveCampaignArticles(campaignId, 'rss_processing_clear')
         console.log(`✅ Archive successful: ${archiveResult.archivedArticlesCount} articles, ${archiveResult.archivedPostsCount} posts, ${archiveResult.archivedRatingsCount} ratings preserved`)
 
         // Log specifically about position data preservation
@@ -158,15 +160,99 @@ export class RSSProcessor {
         .update({ status: 'draft' })
         .eq('id', campaignId)
 
-      await this.errorHandler.logInfo('RSS processing completed successfully', { campaignId }, 'rss_processor')
-      await this.slack.sendRSSProcessingAlert(true, campaignId)
+      // Get final article count to report to Slack
+      const { data: finalArticles, error: countError } = await supabaseAdmin
+        .from('articles')
+        .select('id')
+        .eq('campaign_id', campaignId)
+        .eq('is_active', true)
+
+      const articleCount = finalArticles?.length || 0
+
+      // Get campaign date for notifications
+      const { data: campaignInfo } = await supabaseAdmin
+        .from('newsletter_campaigns')
+        .select('date')
+        .eq('id', campaignId)
+        .single()
+
+      const campaignDate = campaignInfo?.date || 'Unknown'
+
+      await this.errorHandler.logInfo('RSS processing completed successfully', {
+        campaignId,
+        articleCount,
+        campaignDate
+      }, 'rss_processor')
+
+      // Enhanced Slack notification with article count monitoring
+      await this.slack.sendRSSProcessingCompleteAlert(
+        campaignId,
+        articleCount,
+        campaignDate,
+        archiveResult ? {
+          archivedArticles: archiveResult.archivedArticlesCount,
+          archivedPosts: archiveResult.archivedPostsCount,
+          archivedRatings: archiveResult.archivedRatingsCount
+        } : undefined
+      )
 
     } catch (error) {
+      // Determine which steps were completed before failure
+      const completedSteps = []
+      const failedStep = 'Unknown step'
+
+      // Check what got completed by examining campaign state
+      const { data: campaignCheck } = await supabaseAdmin
+        .from('newsletter_campaigns')
+        .select('status')
+        .eq('id', campaignId)
+        .single()
+
+      // Check if articles exist
+      const { data: articlesCheck } = await supabaseAdmin
+        .from('articles')
+        .select('id')
+        .eq('campaign_id', campaignId)
+        .limit(1)
+
+      // Check if posts exist
+      const { data: postsCheck } = await supabaseAdmin
+        .from('rss_posts')
+        .select('id')
+        .eq('campaign_id', campaignId)
+        .limit(1)
+
+      // Determine what was completed
+      if (archiveResult) completedSteps.push('Archive')
+      if (postsCheck?.length) completedSteps.push('RSS Feed Processing')
+      if (articlesCheck?.length) completedSteps.push('Article Generation')
+      if (campaignCheck?.status === 'draft') completedSteps.push('Status Update')
+
+      // Determine likely failure point
+      let failedStepGuess = 'RSS Processing Start'
+      if (postsCheck?.length && !articlesCheck?.length) failedStepGuess = 'AI Article Processing'
+      else if (articlesCheck?.length && campaignCheck?.status !== 'draft') failedStepGuess = 'Campaign Status Update'
+      else if (completedSteps.length === 0) failedStepGuess = 'Archive or Initial Setup'
+
       await this.errorHandler.handleError(error, {
         source: 'rss_processor',
-        operation: 'processAllFeedsForCampaign'
+        operation: 'processAllFeedsForCampaign',
+        campaignId,
+        completedSteps,
+        failedStep: failedStepGuess
       })
-      await this.slack.sendRSSProcessingAlert(false, undefined, error instanceof Error ? error.message : 'Unknown error')
+
+      // Enhanced failure notification
+      await this.slack.sendRSSIncompleteAlert(
+        campaignId,
+        completedSteps,
+        failedStepGuess,
+        error instanceof Error ? error.message : 'Unknown error'
+      )
+
+      // Also send the traditional alert
+      await this.slack.sendRSSProcessingAlert(false, campaignId, error instanceof Error ? error.message : 'Unknown error')
+
       throw error
     }
   }

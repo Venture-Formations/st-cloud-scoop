@@ -38,16 +38,16 @@ async function initializeRandomEventSelection(campaignId: string) {
 
     // For each date, fetch available events and randomly select up to 8
     for (const eventDate of dates) {
-      const dateStart = new Date(eventDate + 'T00:00:00')
-      const dateEnd = new Date(eventDate + 'T23:59:59')
+      const dateStart = new Date(eventDate + 'T00:00:00-05:00')
+      const dateEnd = new Date(eventDate + 'T23:59:59-05:00')
 
-      // Fetch events for this date
+      // Fetch events for this date using broader range matching
       const { data: availableEvents, error: eventsError } = await supabaseAdmin
         .from('events')
         .select('*')
         .eq('active', true)
-        .gte('start_date', dateStart.toISOString())
-        .lte('start_date', dateEnd.toISOString())
+        .gte('start_date', eventDate)
+        .lte('start_date', eventDate + 'T23:59:59')
         .order('start_date', { ascending: true })
 
       if (eventsError) {
@@ -62,29 +62,11 @@ async function initializeRandomEventSelection(campaignId: string) {
 
       console.log(`Found ${availableEvents.length} events for ${eventDate}`)
 
-      // Separate featured and non-featured events
-      const featuredEvents = availableEvents.filter(event => event.featured)
-      const nonFeaturedEvents = availableEvents.filter(event => !event.featured)
+      // Randomly shuffle all available events
+      const shuffledEvents = [...availableEvents].sort(() => Math.random() - 0.5)
 
-      // Randomly shuffle non-featured events
-      const shuffledEvents = nonFeaturedEvents.sort(() => Math.random() - 0.5)
-
-      // Select events: all featured events + random non-featured up to 8 total
-      const selectedEvents: any[] = []
-
-      // Add featured events first (they should always be selected if they exist)
-      featuredEvents.forEach(event => {
-        if (selectedEvents.length < 8) {
-          selectedEvents.push(event)
-        }
-      })
-
-      // Add random non-featured events to fill up to 8
-      shuffledEvents.forEach(event => {
-        if (selectedEvents.length < 8) {
-          selectedEvents.push(event)
-        }
-      })
+      // Select up to 8 events randomly
+      const selectedEvents = shuffledEvents.slice(0, Math.min(8, availableEvents.length))
 
       console.log(`Selected ${selectedEvents.length} events for ${eventDate}`)
 
@@ -94,7 +76,7 @@ async function initializeRandomEventSelection(campaignId: string) {
         event_id: event.id,
         event_date: eventDate,
         is_selected: true,
-        is_featured: event.featured, // Use the event's featured status from database
+        is_featured: index === 0, // First event of each day is featured
         display_order: index + 1
       }))
 

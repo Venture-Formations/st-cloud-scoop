@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { supabaseAdmin } from '@/lib/supabase'
 import { authOptions } from '@/lib/auth'
+import { selectPropertiesForCampaign } from '@/lib/vrbo-selector'
+import { selectDiningDealsForCampaign } from '@/lib/dining-selector'
 
 // Helper function to initialize random event selection for a new campaign
 async function initializeRandomEventSelection(campaignId: string) {
@@ -116,6 +118,31 @@ async function initializeRandomEventSelection(campaignId: string) {
   }
 }
 
+// Helper function to initialize VRBO property selection for a new campaign
+async function initializeVrboSelection(campaignId: string) {
+  try {
+    console.log(`Initializing VRBO property selection for campaign ${campaignId}`)
+    const result = await selectPropertiesForCampaign(campaignId)
+    console.log('VRBO selection result:', result.message)
+  } catch (error) {
+    console.error('Error initializing VRBO selection:', error)
+    // Don't throw error to prevent campaign creation from failing
+  }
+}
+
+// Helper function to initialize dining deals selection for a new campaign
+async function initializeDiningDealsSelection(campaignId: string, campaignDate: string) {
+  try {
+    console.log(`Initializing dining deals selection for campaign ${campaignId}`)
+    const date = new Date(campaignDate + 'T00:00:00')
+    const result = await selectDiningDealsForCampaign(campaignId, date)
+    console.log('Dining deals selection result:', result.message)
+  } catch (error) {
+    console.error('Error initializing dining deals selection:', error)
+    // Don't throw error to prevent campaign creation from failing
+  }
+}
+
 export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
@@ -195,8 +222,17 @@ export async function POST(request: NextRequest) {
       throw error
     }
 
-    // Initialize random event selection for the new campaign
-    await initializeRandomEventSelection(campaign.id)
+    // Initialize all content selections for the new campaign
+    console.log('Initializing campaign content selections...')
+
+    // Run all initializations in parallel for better performance
+    await Promise.all([
+      initializeRandomEventSelection(campaign.id),
+      initializeVrboSelection(campaign.id),
+      initializeDiningDealsSelection(campaign.id, campaign.date)
+    ])
+
+    console.log('Campaign content initialization completed')
 
     return NextResponse.json({ campaign }, { status: 201 })
 

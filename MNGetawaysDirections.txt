@@ -646,3 +646,53 @@ An example of the final HTML:
 <br>
 
 The Minnesota Getaways section in the Newsletter Camping page should show what the HTML code is showing.
+
+Adjusted URL Naming Script:
+const REPO_USER = 'VFDavid';
+const REPO_NAME = 'STCScoop';
+const BRANCH    = 'Vrbo'; // case-sensitive GitHub branch
+
+function onOpen() {
+  SpreadsheetApp.getUi()
+    .createMenu('Images')
+    .addItem('Fill VRBO Adjusted URLs', 'fillAdjustedUrlsVRBO')
+    .addItem('Fill ETSY Adjusted URLs', 'fillAdjustedUrlsETSY')
+    .addToUi();
+}
+
+// --- Hash helper (same as Node script) ---
+function sha1Hex16_(s) {
+  const raw = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_1, String(s));
+  return raw.map(b => ('0' + (b & 0xFF).toString(16)).slice(-2)).join('').slice(0,16);
+}
+
+// --- Generic filler for any sheet ---
+function fillAdjustedUrlsForSheet_(sheetName, srcHeader, dstHeader, subfolder) {
+  const sh = SpreadsheetApp.getActive().getSheetByName(sheetName);
+  if (!sh) throw new Error(`Sheet not found: ${sheetName}`);
+
+  const last = sh.getLastRow();
+  if (last < 2) return;
+
+  const headers = sh.getRange(1, 1, 1, sh.getLastColumn()).getValues()[0];
+  const colSrc  = headers.indexOf(srcHeader) + 1;
+  const colDst  = headers.indexOf(dstHeader) + 1;
+  if (colSrc < 1 || colDst < 1)
+    throw new Error(`[${sheetName}] Missing required columns "${srcHeader}" or "${dstHeader}".`);
+
+  const srcVals = sh.getRange(2, colSrc, last - 1, 1).getValues();
+  const dstVals = sh.getRange(2, colDst, last - 1, 1).getValues();
+
+  const out = [];
+  for (let i = 0; i < srcVals.length; i++) {
+    const src = String(srcVals[i][0] || '').trim();
+    const already = dstVals[i][0];
+    if (!src || already) { out.push([already]); continue; }
+
+    const hash16 = sha1Hex16_(src);
+    const url = `https://cdn.jsdelivr.net/gh/${REPO_USER}/${REPO_NAME}@${BRANCH}/images/${subfolder}/${hash16}.jpg`;
+    out.push([url]);
+  }
+
+  sh.getRange(2, colDst, out.length, 1).setValues(out);
+}

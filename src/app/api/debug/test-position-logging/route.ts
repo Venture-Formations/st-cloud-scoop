@@ -59,9 +59,9 @@ export async function GET(request: NextRequest) {
       total_manual_articles: campaign.manual_articles?.length || 0,
       active_articles: activeArticles.length,
       active_manual_articles: activeManualArticles.length,
-      article_updates: [],
-      manual_article_updates: [],
-      errors: []
+      article_updates: [] as any[],
+      manual_article_updates: [] as any[],
+      errors: [] as any[]
     }
 
     // Test updating review positions for regular articles

@@ -59,7 +59,7 @@ export async function GET(request: NextRequest) {
         articles_with_positions: archivedArticles.filter(a =>
           a.review_position !== null || a.final_position !== null
         ).length,
-        campaigns_archived: [...new Set(archivedArticles.map(a => a.campaign_id))].length,
+        campaigns_archived: Array.from(new Set(archivedArticles.map(a => a.campaign_id))).length,
         archived_articles: archivedArticles.map(article => ({
           id: article.id,
           original_article_id: article.original_article_id,

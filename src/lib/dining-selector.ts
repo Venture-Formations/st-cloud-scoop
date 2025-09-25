@@ -83,23 +83,31 @@ export async function selectDiningDealsForCampaign(campaignId: string, campaignD
     }
 
     if (existingSelections && existingSelections.length > 0) {
-      // Get the deal details for existing selections
-      const dealIds = existingSelections.map(s => s.deal_id)
+      // Get the deal details for existing selections in their original selection order
       const { data: selectedDeals, error: selectedError } = await supabaseAdmin
-        .from('dining_deals')
-        .select('*')
-        .in('id', dealIds)
-        .order('is_featured', { ascending: false })
-        .order('business_name', { ascending: true })
+        .from('campaign_dining_selections')
+        .select(`
+          *,
+          dining_deal:dining_deals(*)
+        `)
+        .eq('campaign_id', campaignId)
+        .order('selection_order', { ascending: true })
 
       if (selectedError) {
         console.error('Error fetching selected deals:', selectedError)
         throw new Error('Failed to fetch selected deals')
       }
 
+      // Extract the dining deals from the joined data, preserving selection order
+      const deals = selectedDeals?.map(s => ({
+        ...s.dining_deal,
+        is_featured_in_campaign: s.is_featured_in_campaign,
+        selection_order: s.selection_order
+      })) || []
+
       return {
-        deals: selectedDeals || [],
-        message: `Using existing ${selectedDeals?.length || 0} dining deals for ${dayOfWeek}`
+        deals: deals,
+        message: `Using existing ${deals.length} dining deals for ${dayOfWeek} (in original random order)`
       }
     }
 

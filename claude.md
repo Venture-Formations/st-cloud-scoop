@@ -1,23 +1,123 @@
 # St. Cloud Scoop Development - Main Content Repository
 
-**Last Updated:** 2025-09-22 (Current Session - Post Session 5 Fixes & New Section Save Point)
+**Last Updated:** 2025-09-25 (Current Session - Automatic Subject Line Regeneration Save Point)
 **Primary Source:** This is now the authoritative development document
-**Session Focus:** Save Point Before Adding New Section
+**Session Focus:** Complete Automatic Subject Line Regeneration System
 
-## 🔒 **SAVE POINT - Pre-New Section** (2025-09-22)
-**Git Commit:** `4368776` - Add current incidents and emergencies to blank rating conditions
-**System State:** Fully functional with all Session 5 issues resolved
+## 🔒 **SAVE POINT - Automatic Subject Line Regeneration Complete** (2025-09-25)
+**Git Commit:** `08b85ef` - Add real-time UI updates for automatic subject line regeneration
+**System State:** Fully functional with complete automatic subject line regeneration system
 **Working Features:**
 - ✅ RSS Processing with Smart Event Population (8 events per day, random selection)
 - ✅ Subject Line Generation (both AI and manual editing)
+- ✅ **NEW: Automatic Subject Line Regeneration** (when #1 article changes via skip/reorder)
+- ✅ **NEW: Real-Time UI Updates** (subject line updates instantly without page refresh)
 - ✅ Event Management with random selection and featured events
 - ✅ Manual Subject Line Editing (no character limits)
 - ✅ Current incident filtering in AI content evaluation
 - ✅ Campaign workflow (Draft → In Review → Ready to Send → Sent)
+- ✅ Enhanced Slack notifications for RSS processing states
+- ✅ Skip Article functionality with complete audit trail
 
-**Purpose:** Safe restore point before implementing new section functionality
+**Purpose:** Safe restore point with fully automated subject line management system
 
-## 🔍 Current Session Issues Identified & Resolved
+## 🆕 Current Session (2025-09-25): Automatic Subject Line Regeneration Implementation
+
+### Major Features Implemented ✅
+
+#### 1. **Automatic Subject Line Regeneration System**
+- **Skip Article Auto-Regeneration**: When the #1 article is skipped, subject line automatically regenerates based on new #1 article
+- **Reorder Article Auto-Regeneration**: When articles are reordered and #1 position changes, subject line automatically regenerates
+- **Smart Detection**: Only regenerates when the effective #1 article actually changes (ignores skipped articles)
+- **Comprehensive Logging**: Detailed console logs showing which articles are being compared and why regeneration occurs
+
+#### 2. **Real-Time UI Updates (No Page Refresh Required)**
+- **Instant Subject Line Updates**: Subject line updates in campaign UI immediately after reordering or skipping
+- **User Feedback**: Informative alerts when subject line is auto-regenerated
+- **Skip Article Alerts**: Shows message like "Article skipped successfully! Subject line auto-updated to: 'New Subject Line'"
+- **Seamless Experience**: All updates happen in background with immediate visual feedback
+
+#### 3. **Enhanced Skip Article Functionality**
+- **Complete Skip System**: Added `skipped` boolean field to articles database
+- **UI Integration**: Skip Article buttons added to both active and inactive article sections
+- **Audit Trail**: User activities logged for all skip actions with detailed metadata
+- **Database Compatibility**: Graceful handling of databases with/without skipped column
+
+#### 4. **Shared Subject Line Generation Utilities**
+- **Created `src/lib/subject-line-generator.ts`**: Centralized subject line generation logic
+- **`generateSubjectLine()` Function**: Shared between manual generation and automatic regeneration
+- **`getCurrentTopArticle()` Function**: Reliable method to get current #1 active non-skipped article
+- **Database Fallback Logic**: Handles missing skipped column gracefully
+
+### Technical Implementation Details
+
+#### Files Created/Modified:
+```
+# New Shared Utilities
+src/lib/subject-line-generator.ts                     # Central subject line generation logic
+
+# Enhanced APIs
+src/app/api/articles/[id]/skip/route.ts              # Skip article with auto subject regeneration
+src/app/api/campaigns/[id]/articles/reorder/route.ts # Reorder with auto subject regeneration
+
+# Real-Time UI Updates
+src/app/dashboard/campaigns/[id]/page.tsx            # Real-time subject line updates, skip buttons
+
+# Database Schema
+src/types/database.ts                                # Added skipped field to Article interfaces
+
+# Debug Tools
+src/app/api/debug/test-reorder/route.ts             # Debug endpoint for testing reorder logic
+src/app/api/debug/add-skip-column/route.ts          # Database column setup helper
+src/app/api/debug/check-skip-column/route.ts        # Database column verification
+```
+
+#### API Response Format:
+Both skip and reorder endpoints now return detailed regeneration information:
+```json
+{
+  "success": true,
+  "subject_line_regenerated": true,
+  "new_subject_line": "Generated Subject Line Text",
+  "top_article_changed": true,
+  "previous_top_article": "Previous Article Headline",
+  "new_top_article": "New Article Headline"
+}
+```
+
+#### Database Requirements:
+- **Production Setup**: `ALTER TABLE articles ADD COLUMN skipped BOOLEAN DEFAULT FALSE;`
+- **Archived Articles**: `ALTER TABLE archived_articles ADD COLUMN skipped BOOLEAN DEFAULT FALSE;`
+- **Fallback Handling**: Code works with or without skipped column for backward compatibility
+
+### User Experience Improvements
+
+#### Before:
+- Manual subject line regeneration required after skipping/reordering articles
+- Page refresh needed to see subject line updates
+- No feedback when #1 article position changes
+- Subject line could become outdated without user awareness
+
+#### After:
+- **Fully Automatic**: Subject line regenerates instantly when #1 article changes
+- **Real-Time Updates**: UI updates immediately without page refresh
+- **Smart Notifications**: Users informed when automatic regeneration occurs
+- **Seamless Workflow**: Campaign management now fully automated
+
+### Current System Capabilities
+
+#### Automatic Triggers:
+1. **Skip #1 Article** → Subject line regenerates instantly
+2. **Reorder Articles** (changing #1 position) → Subject line regenerates instantly
+3. **Article Ranking Changes** → Smart detection only regenerates when necessary
+
+#### User Interface:
+- **Skip Article Buttons**: Available on all articles with confirmation and feedback
+- **Real-Time Subject Display**: Updates instantly without page refresh
+- **Informative Alerts**: Clear feedback when automatic actions occur
+- **Console Logging**: Detailed debugging information for troubleshooting
+
+## 🔍 Previous Session Issues (Historical Context)
 
 ### 1. Events Not Populating in Campaigns
 - **Issue**: RSS processing completing successfully but no events showing in campaigns

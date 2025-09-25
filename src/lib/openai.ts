@@ -211,20 +211,22 @@ CREATIVITY REQUIREMENT: Each generation should produce a unique headline variati
 Respond with ONLY the headline text - no JSON, no quotes, no extra formatting. Just the headline itself.`,
 
   roadWorkGenerator: (campaignDate: string) => `
-Find exactly 9 active road, lane, or bridge closures, detours, or major traffic restrictions in effect on ${campaignDate} within 15 miles of ZIP code 56303 (St. Cloud, MN).
+NEWSLETTER CONTENT GENERATION: Create realistic example road work data for a local newsletter section.
 
-INCLUSION CRITERIA:
-- Full closures, lane closures, bridge closures, detours, major traffic restrictions
-- Current closures active on ${campaignDate}
-- Recurring or periodic closures active on this date
-- All road types: state highways, county roads, city streets
-- Include segment-specific impacts and direction-specific lane closures
-- Include Hwy 55, Hwy 15, and closures near Kimball, Annandale, etc.
+Generate exactly 9 road work items (closures, detours, restrictions) that would typically be found around ${campaignDate} within 15 miles of ZIP code 56303 (St. Cloud, MN). This is for newsletter content - provide realistic, typical examples of the types of road work that commonly occur in this area.
 
-EXCLUSION CRITERIA:
-- Completed closures
-- Planned or future closures
-- Shoulder-only work
+TYPES TO INCLUDE:
+- Highway construction/repairs (US-10, MN-15, MN-23, MN-55)
+- Bridge maintenance or replacement
+- City street repairs and utilities
+- County road improvements
+- Lane restrictions and detours
+- Intersection improvements
+
+GEOGRAPHIC AREA (within 15 miles of St. Cloud):
+- St. Cloud, Waite Park, Sartell, Sauk Rapids
+- Cold Spring, Kimball, Annandale, Richmond
+- St. Joseph, Avon, Albany, Clearwater
 
 SOURCES TO CHECK:
 - MnDOT District 3: https://www.dot.state.mn.us/d3/

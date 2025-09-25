@@ -842,7 +842,18 @@ function RegularArticle({
           <p className="text-sm text-gray-600 mt-1 line-clamp-2">{article.content}</p>
           <div className="flex items-center justify-between mt-2">
             <span className="text-xs text-gray-500">
-              from {article.rss_post?.rss_feed?.name || 'Unknown'}
+              Source: {(() => {
+                const author = article.rss_post?.author
+                const feedName = article.rss_post?.rss_feed?.name
+
+                // Use author if available and not "St. Cloud Local News"
+                if (author && author !== 'St. Cloud Local News') {
+                  return author
+                }
+
+                // Fall back to feed name if author is not useful
+                return feedName || 'Unknown'
+              })()}
             </span>
             <div className="flex items-center space-x-2">
               {article.word_count && (
@@ -977,7 +988,18 @@ function SortableArticle({
 
           <div className="flex items-center justify-between text-sm text-gray-500">
             <div className="flex items-center space-x-4">
-              <span>Source: {article.rss_post?.rss_feed?.name}</span>
+              <span>Source: {(() => {
+                const author = article.rss_post?.author
+                const feedName = article.rss_post?.rss_feed?.name
+
+                // Use author if available and not "St. Cloud Local News"
+                if (author && author !== 'St. Cloud Local News') {
+                  return author
+                }
+
+                // Fall back to feed name if author is not useful
+                return feedName || 'Unknown'
+              })()}</span>
               <span>{article.word_count} words</span>
               {article.fact_check_score && (
                 <span className={getScoreColor(article.fact_check_score)}>

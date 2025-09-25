@@ -236,39 +236,36 @@ async function generateLocalEventsSection(campaign: any): Promise<string> {
     campaignEventsMap.set(key, ce)
   })
 
-  // Filter events by date and selection status
+  // Use campaign events directly - they're already filtered and selected
   const eventsByDate: { [key: string]: any[] } = {}
 
-  dates.forEach(date => {
-    // Filter events that occur on this date
-    const dateStart = new Date(date + 'T00:00:00-05:00')
-    const dateEnd = new Date(date + 'T23:59:59-05:00')
+  // Create a lookup map for available events by ID for quick access
+  const availableEventsMap = new Map()
+  availableEvents?.forEach(event => {
+    availableEventsMap.set(event.id, event)
+  })
 
-    const eventsForDate = availableEvents.filter(event => {
-      const eventStart = new Date(event.start_date)
-      const eventEnd = event.end_date ? new Date(event.end_date) : eventStart
-      return (eventStart <= dateEnd && eventEnd >= dateStart)
-    })
-
-    // Only include events that are selected for the campaign
-    const selectedEvents = eventsForDate
-      .map(event => {
-        const campaignEvent = campaignEventsMap.get(`${event.id}_${date}`)
-        if (campaignEvent && campaignEvent.is_selected) {
-          return {
-            ...event,
-            is_featured: campaignEvent.is_featured,
-            display_order: campaignEvent.display_order
-          }
+  // Group campaign events by date
+  campaignEvents?.forEach(ce => {
+    if (ce.is_selected) {
+      const event = availableEventsMap.get(ce.event_id)
+      if (event) {
+        if (!eventsByDate[ce.event_date]) {
+          eventsByDate[ce.event_date] = []
         }
-        return null
-      })
-      .filter(Boolean)
-      .sort((a, b) => (a.display_order || 999) - (b.display_order || 999))
 
-    if (selectedEvents.length > 0) {
-      eventsByDate[date] = selectedEvents
+        eventsByDate[ce.event_date].push({
+          ...event,
+          is_featured: ce.is_featured,
+          display_order: ce.display_order
+        })
+      }
     }
+  })
+
+  // Sort events within each date by display order
+  Object.keys(eventsByDate).forEach(date => {
+    eventsByDate[date].sort((a, b) => (a.display_order || 999) - (b.display_order || 999))
   })
 
   console.log('HTML generation - events by date:', Object.keys(eventsByDate).map(date => `${date}: ${eventsByDate[date].length} events`))

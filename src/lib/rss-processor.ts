@@ -3,6 +3,7 @@ import { supabaseAdmin } from './supabase'
 import { AI_PROMPTS, callOpenAI } from './openai'
 import { ErrorHandler, SlackNotificationService } from './slack'
 import { GitHubImageStorage } from './github-storage'
+import { ArticleArchiveService } from './article-archive'
 import type {
   RssFeed,
   RssPost,
@@ -22,11 +23,13 @@ export class RSSProcessor {
   private errorHandler: ErrorHandler
   private slack: SlackNotificationService
   private githubStorage: GitHubImageStorage
+  private archiveService: ArticleArchiveService
 
   constructor() {
     this.errorHandler = new ErrorHandler()
     this.slack = new SlackNotificationService()
     this.githubStorage = new GitHubImageStorage()
+    this.archiveService = new ArticleArchiveService()
   }
 
   async processAllFeeds() {
@@ -50,6 +53,34 @@ export class RSSProcessor {
     console.log(`Starting RSS processing for campaign: ${campaignId}`)
 
     try {
+      // STEP 0: Archive existing articles and posts before clearing (PRESERVES POSITION DATA!)
+      console.log('Archiving existing articles and posts before clearing...')
+
+      try {
+        const archiveResult = await this.archiveService.archiveCampaignArticles(campaignId, 'rss_processing_clear')
+        console.log(`✅ Archive successful: ${archiveResult.archivedArticlesCount} articles, ${archiveResult.archivedPostsCount} posts, ${archiveResult.archivedRatingsCount} ratings preserved`)
+
+        // Log specifically about position data preservation
+        if (archiveResult.archivedArticlesCount > 0) {
+          const { data: articlesWithPositions } = await supabaseAdmin
+            .from('articles')
+            .select('id, review_position, final_position')
+            .eq('campaign_id', campaignId)
+            .or('review_position.not.is.null,final_position.not.is.null')
+
+          if (articlesWithPositions && articlesWithPositions.length > 0) {
+            console.log(`📊 Preserved position data for ${articlesWithPositions.length} articles with tracking information`)
+          }
+        }
+      } catch (archiveError) {
+        // Archive failure shouldn't block RSS processing, but we should log it
+        console.warn('⚠️ Archive failed, but continuing with RSS processing:', archiveError)
+        await this.errorHandler.logInfo('Archive failed but RSS processing continuing', {
+          campaignId,
+          archiveError: archiveError instanceof Error ? archiveError.message : 'Unknown error'
+        }, 'rss_processor')
+      }
+
       // Clear previous articles and posts for this campaign to allow fresh processing
       console.log('Clearing previous articles and posts...')
 

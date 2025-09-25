@@ -88,6 +88,63 @@ export interface ManualArticle {
   updated_at: string
 }
 
+export interface ArchivedArticle {
+  id: string
+  original_article_id: string
+  post_id: string | null
+  campaign_id: string
+  headline: string
+  content: string
+  rank: number | null
+  is_active: boolean
+  fact_check_score: number | null
+  fact_check_details: string | null
+  word_count: number | null
+  review_position: number | null
+  final_position: number | null
+  archived_at: string
+  archive_reason: string
+  campaign_date: string | null
+  campaign_status: string | null
+  original_created_at: string
+  original_updated_at: string
+  created_at: string
+}
+
+export interface ArchivedRssPost {
+  id: string
+  original_post_id: string
+  feed_id: string
+  campaign_id: string
+  external_id: string
+  title: string
+  description: string | null
+  content: string | null
+  author: string | null
+  publication_date: string | null
+  source_url: string | null
+  image_url: string | null
+  processed_at: string
+  archived_at: string
+  archive_reason: string
+  campaign_date: string | null
+  created_at: string
+}
+
+export interface ArchivedPostRating {
+  id: string
+  original_rating_id: string
+  archived_post_id: string
+  interest_level: number
+  local_relevance: number
+  community_impact: number
+  total_score: number
+  ai_reasoning: string | null
+  archived_at: string
+  original_created_at: string
+  created_at: string
+}
+
 export interface User {
   id: string
   email: string

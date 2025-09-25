@@ -777,7 +777,6 @@ function CsvUploadForm({ onClose, onSuccess }: { onClose: () => void; onSuccess:
 
     setUploading(true)
     setError('')
-    setResult(null)
 
     try {
       const formData = new FormData()
@@ -833,9 +832,9 @@ function CsvUploadForm({ onClose, onSuccess }: { onClose: () => void; onSuccess:
             onClick={onClose}
             className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
           >
-            {result ? 'Close' : 'Cancel'}
+            Cancel
           </button>
-          {!result && (
+          {
             <button
               type="submit"
               disabled={!file || uploading}
@@ -843,7 +842,7 @@ function CsvUploadForm({ onClose, onSuccess }: { onClose: () => void; onSuccess:
             >
               {uploading ? 'Uploading...' : 'Upload CSV'}
             </button>
-          )}
+          }
         </div>
       </form>
     </div>

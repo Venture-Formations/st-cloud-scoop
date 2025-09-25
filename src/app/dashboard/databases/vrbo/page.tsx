@@ -762,7 +762,6 @@ function CsvUploadForm({ onClose, onSuccess }: { onClose: () => void; onSuccess:
 
     setUploading(true)
     setError('')
-    setResult(null)
 
     try {
       const formData = new FormData()

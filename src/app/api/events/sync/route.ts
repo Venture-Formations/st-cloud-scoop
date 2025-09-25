@@ -86,6 +86,7 @@ export async function POST(request: NextRequest) {
     }
 
     console.log('🔄 Starting events sync from Visit St. Cloud API...')
+    const functionStartTime = Date.now()
     console.log('⏰ Function start time:', new Date().toISOString())
 
     // For testing/manual sync, allow date override from query params
@@ -207,15 +208,37 @@ export async function POST(request: NextRequest) {
     console.log('🔄 Starting event processing loop...')
     console.log('⏰ Event processing start time:', new Date().toISOString())
 
-    // Process each event
-    for (let i = 0; i < events.length; i++) {
-      const apiEvent = events[i]
+    // Process events in smaller batches to prevent timeout
+    const BATCH_SIZE = 5
+    const batches = []
 
-      if (i % 10 === 0) {
-        console.log(`📊 Processing event ${i + 1}/${events.length} at ${new Date().toISOString()}`)
+    for (let i = 0; i < events.length; i += BATCH_SIZE) {
+      batches.push(events.slice(i, i + BATCH_SIZE))
+    }
+
+    console.log(`📦 Processing ${events.length} events in ${batches.length} batches of ${BATCH_SIZE}`)
+
+    // Process each batch
+    for (let batchIndex = 0; batchIndex < batches.length; batchIndex++) {
+      const batch = batches[batchIndex]
+
+      console.log(`📊 Processing batch ${batchIndex + 1}/${batches.length} (${batch.length} events) at ${new Date().toISOString()}`)
+
+      // Check if we're approaching timeout (leave 60 seconds for cleanup)
+      const elapsed = Date.now() - functionStartTime
+      if (elapsed > 240000) { // 4 minutes
+        console.log(`⏰ Approaching timeout after ${Math.round(elapsed/1000)}s, stopping processing at batch ${batchIndex + 1}`)
+        break
       }
 
-      try {
+      // Process events in current batch
+      for (let i = 0; i < batch.length; i++) {
+        const apiEvent = batch[i]
+        const globalIndex = batchIndex * BATCH_SIZE + i
+
+        console.log(`🔍 Processing event ${globalIndex + 1}/${events.length}: ${apiEvent.title}`)
+
+        try {
         const eventData = {
           external_id: `visitstcloud_${apiEvent.id}`,
           title: decodeHtmlEntities(apiEvent.title) || 'Untitled Event',
@@ -233,9 +256,7 @@ export async function POST(request: NextRequest) {
         }
 
         // Check if event already exists and get its event_summary status
-        if (i % 10 === 0) {
-          console.log(`📊 Checking existing event ${i + 1}/${events.length} at ${new Date().toISOString()}`)
-        }
+        console.log(`🔍 Checking existing event ${globalIndex + 1}/${events.length} at ${new Date().toISOString()}`)
 
         const { data: existingEvent } = await supabaseAdmin
           .from('events')
@@ -289,10 +310,17 @@ export async function POST(request: NextRequest) {
           }
         }
       } catch (error) {
-        console.error('Error processing event:', error)
+        console.error(`❌ Error processing event ${globalIndex + 1}/${events.length}:`, error)
         errors++
       }
     }
+
+    // Small delay between batches to prevent overwhelming the database
+    if (batchIndex < batches.length - 1) {
+      console.log(`⏸️ Batch ${batchIndex + 1} complete, pausing 1 second before next batch...`)
+      await new Promise(resolve => setTimeout(resolve, 1000))
+    }
+  }
 
     console.log('🔄 Processing complete, handling inactive events...')
     console.log('⏰ Deactivation start time:', new Date().toISOString())

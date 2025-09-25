@@ -123,21 +123,23 @@ async function collectWordleData(date: string, forceRefresh = false) {
     throw new Error('Failed to parse Wordle data from AI response: ' + (error instanceof Error ? error.message : 'Unknown error'))
   }
 
-  // Insert into database
+  // Insert or update database (upsert for force refresh)
   const { data: newWordle, error } = await supabaseAdmin
     .from('wordle')
-    .insert([{
+    .upsert([{
       date,
       word: wordleData.word.toUpperCase(),
       definition: wordleData.definition,
       interesting_fact: wordleData.interesting_fact
-    }])
+    }], {
+      onConflict: 'date'
+    })
     .select()
     .single()
 
   if (error) {
-    console.error('Failed to insert Wordle data:', error)
-    throw new Error(`Database insertion failed: ${error.message}`)
+    console.error('Failed to upsert Wordle data:', error)
+    throw new Error(`Database upsert failed: ${error.message}`)
   }
 
   console.log(`✅ Wordle data collected and stored for ${date}:`, newWordle.word)

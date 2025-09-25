@@ -1243,10 +1243,13 @@ export default function CampaignDetailPage() {
         throw new Error(errorData.error || 'Failed to skip article')
       }
 
+      const responseData = await response.json()
+
       // Update local state to remove the skipped article
       setCampaign(prev => {
         if (!prev) return prev
-        return {
+
+        const updatedCampaign = {
           ...prev,
           articles: prev.articles.map(article =>
             article.id === articleId
@@ -1254,10 +1257,22 @@ export default function CampaignDetailPage() {
               : article
           )
         }
+
+        // Update subject line if it was auto-regenerated
+        if (responseData.subject_line_regenerated && responseData.new_subject_line) {
+          console.log(`Subject line auto-updated after skip to: "${responseData.new_subject_line}"`)
+          updatedCampaign.subject_line = responseData.new_subject_line
+        }
+
+        return updatedCampaign
       })
 
-      // Show success message
-      alert('Article skipped successfully')
+      // Show success message with subject line info if applicable
+      const message = responseData.subject_line_regenerated
+        ? `Article skipped successfully! Subject line auto-updated to: "${responseData.new_subject_line}"`
+        : 'Article skipped successfully'
+
+      alert(message)
 
     } catch (error) {
       alert('Failed to skip article: ' + (error instanceof Error ? error.message : 'Unknown error'))
@@ -1796,7 +1811,19 @@ export default function CampaignDetailPage() {
           throw new Error(`Failed to update order: ${response.status}`)
         }
 
+        const responseData = await response.json()
         console.log('Successfully updated article ranks')
+
+        // Check if subject line was auto-regenerated
+        if (responseData.subject_line_regenerated && responseData.new_subject_line) {
+          console.log(`Subject line auto-updated to: "${responseData.new_subject_line}"`)
+
+          // Update the campaign state with the new subject line
+          setCampaign(prev => prev ? {
+            ...prev,
+            subject_line: responseData.new_subject_line
+          } : null)
+        }
       } catch (error) {
         console.error('Failed to update article order:', error)
         // Refresh campaign to revert changes

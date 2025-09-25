@@ -78,6 +78,12 @@
     },
     "app/api/cron/collect-wordle/route.ts": {
       "maxDuration": 120
+    },
+    "app/api/events/sync/route.ts": {
+      "maxDuration": 300
+    },
+    "app/api/events/manual-sync/route.ts": {
+      "maxDuration": 300
     }
   }
 }

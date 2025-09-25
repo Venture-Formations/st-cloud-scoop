@@ -4,6 +4,7 @@ import { useEffect, useState, useMemo } from 'react'
 import Layout from '@/components/Layout'
 import Link from 'next/link'
 import { Event } from '@/types/database'
+import CsvUploadSummary from '@/components/CsvUploadSummary'
 
 type SortField = 'title' | 'start_date' | 'venue' | 'featured' | 'created_at'
 type SortDirection = 'asc' | 'desc'
@@ -32,6 +33,8 @@ export default function EventsDatabasePage() {
     dateRange: 'all'
   })
   const [showAddForm, setShowAddForm] = useState(false)
+  const [showCsvUpload, setShowCsvUpload] = useState(false)
+  const [csvUploadResult, setCsvUploadResult] = useState<any>(null)
   const [submitting, setSubmitting] = useState(false)
   const [editingEvent, setEditingEvent] = useState<string | null>(null)
   const [editData, setEditData] = useState<Partial<Event>>({})
@@ -266,12 +269,20 @@ export default function EventsDatabasePage() {
               {events.length} total events • {filteredAndSortedEvents.length} shown
             </p>
           </div>
-          <button
-            onClick={() => setShowAddForm(true)}
-            className="bg-brand-primary text-white px-4 py-2 rounded-lg hover:bg-brand-primary/90 font-medium"
-          >
-            Add Event
-          </button>
+          <div className="flex space-x-3">
+            <button
+              onClick={() => setShowCsvUpload(true)}
+              className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors"
+            >
+              Upload CSV
+            </button>
+            <button
+              onClick={() => setShowAddForm(true)}
+              className="bg-brand-primary text-white px-4 py-2 rounded-lg hover:bg-brand-primary/90 font-medium"
+            >
+              Add Event
+            </button>
+          </div>
         </div>
 
         {/* Filters */}
@@ -495,6 +506,36 @@ export default function EventsDatabasePage() {
             submitting={submitting}
           />
         )}
+
+        {/* CSV Upload Modal */}
+        {showCsvUpload && !csvUploadResult && (
+          <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+            <div className="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
+              <div className="mt-3">
+                <h3 className="text-lg font-medium text-gray-900 mb-4">Upload Events CSV</h3>
+                <EventsCsvUploadForm
+                  onClose={() => setShowCsvUpload(false)}
+                  onSuccess={(result) => {
+                    setCsvUploadResult(result)
+                    fetchEvents()
+                  }}
+                />
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* CSV Upload Summary */}
+        {csvUploadResult && (
+          <CsvUploadSummary
+            result={csvUploadResult}
+            uploadType="Events"
+            onClose={() => {
+              setCsvUploadResult(null)
+              setShowCsvUpload(false)
+            }}
+          />
+        )}
       </div>
     </Layout>
   )
@@ -682,6 +723,88 @@ function AddEventModal({
           </div>
         </form>
       </div>
+    </div>
+  )
+}
+
+// Events CSV Upload Form Component
+function EventsCsvUploadForm({ onClose, onSuccess }: { onClose: () => void; onSuccess: (result: any) => void }) {
+  const [file, setFile] = useState<File | null>(null)
+  const [uploading, setUploading] = useState(false)
+  const [error, setError] = useState('')
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!file) return
+
+    setUploading(true)
+    setError('')
+
+    try {
+      const formData = new FormData()
+      formData.append('file', file)
+
+      const response = await fetch('/api/events/upload-csv', {
+        method: 'POST',
+        body: formData
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Upload failed')
+      }
+
+      const result = await response.json()
+      onSuccess(result.results)
+    } catch (error) {
+      setError(error instanceof Error ? error.message : 'An error occurred')
+    } finally {
+      setUploading(false)
+    }
+  }
+
+  return (
+    <div className="space-y-4">
+      {error && (
+        <div className="bg-red-50 border border-red-200 text-red-700 px-3 py-2 rounded text-sm">
+          {error}
+        </div>
+      )}
+
+      <form onSubmit={handleSubmit}>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Select CSV File
+          </label>
+          <input
+            type="file"
+            accept=".csv"
+            onChange={(e) => setFile(e.target.files?.[0] || null)}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+            required
+          />
+          <p className="text-xs text-gray-500 mt-1">
+            CSV should have columns: Title, Description, Start Date, End Date, Venue, Address, URL, Image URL
+          </p>
+        </div>
+
+        <div className="flex justify-end space-x-3 pt-4">
+          <button
+            type="button"
+            onClick={onClose}
+            className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
+          >
+            Cancel
+          </button>
+          <button
+            type="submit"
+            disabled={!file || uploading}
+            className="px-4 py-2 text-sm font-medium text-white bg-green-600 border border-transparent rounded-md hover:bg-green-700 disabled:opacity-50"
+          >
+            {uploading ? 'Uploading...' : 'Upload CSV'}
+          </button>
+        </div>
+      </form>
     </div>
   )
 }

@@ -4,6 +4,7 @@ import { useEffect, useState, useMemo } from 'react'
 import Layout from '@/components/Layout'
 import Link from 'next/link'
 import { VrboListing } from '@/types/database'
+import CsvUploadSummary from '@/components/CsvUploadSummary'
 
 type SortField = 'title' | 'city' | 'listing_type' | 'bedrooms' | 'bathrooms' | 'sleeps' | 'created_at'
 type SortDirection = 'asc' | 'desc'
@@ -33,6 +34,7 @@ export default function VrboDatabasePage() {
   })
   const [showAddForm, setShowAddForm] = useState(false)
   const [showCsvUpload, setShowCsvUpload] = useState(false)
+  const [csvUploadResult, setCsvUploadResult] = useState<any>(null)
   const [submitting, setSubmitting] = useState(false)
   const [editingListing, setEditingListing] = useState<string | null>(null)
   const [editData, setEditData] = useState<Partial<VrboListing>>({})
@@ -421,15 +423,33 @@ export default function VrboDatabasePage() {
         )}
 
         {/* CSV Upload Modal */}
-        {showCsvUpload && (
+        {showCsvUpload && !csvUploadResult && (
           <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
             <div className="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
               <div className="mt-3">
                 <h3 className="text-lg font-medium text-gray-900 mb-4">Upload VRBO CSV</h3>
-                <CsvUploadForm onClose={() => setShowCsvUpload(false)} onSuccess={fetchListings} />
+                <CsvUploadForm
+                  onClose={() => setShowCsvUpload(false)}
+                  onSuccess={(result) => {
+                    setCsvUploadResult(result)
+                    fetchListings()
+                  }}
+                />
               </div>
             </div>
           </div>
+        )}
+
+        {/* CSV Upload Summary */}
+        {csvUploadResult && (
+          <CsvUploadSummary
+            result={csvUploadResult}
+            uploadType="VRBO Listings"
+            onClose={() => {
+              setCsvUploadResult(null)
+              setShowCsvUpload(false)
+            }}
+          />
         )}
       </div>
     </Layout>
@@ -731,11 +751,10 @@ function AddListingForm({ onClose, onSuccess }: { onClose: () => void; onSuccess
 }
 
 // CSV Upload Form Component
-function CsvUploadForm({ onClose, onSuccess }: { onClose: () => void; onSuccess: () => void }) {
+function CsvUploadForm({ onClose, onSuccess }: { onClose: () => void; onSuccess: (result: any) => void }) {
   const [file, setFile] = useState<File | null>(null)
   const [uploading, setUploading] = useState(false)
   const [error, setError] = useState('')
-  const [result, setResult] = useState<any>(null)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -760,8 +779,7 @@ function CsvUploadForm({ onClose, onSuccess }: { onClose: () => void; onSuccess:
       }
 
       const result = await response.json()
-      setResult(result.results)
-      onSuccess()
+      onSuccess(result.results)
     } catch (error) {
       setError(error instanceof Error ? error.message : 'An error occurred')
     } finally {
@@ -774,25 +792,6 @@ function CsvUploadForm({ onClose, onSuccess }: { onClose: () => void; onSuccess:
       {error && (
         <div className="bg-red-50 border border-red-200 text-red-700 px-3 py-2 rounded text-sm">
           {error}
-        </div>
-      )}
-
-      {result && (
-        <div className="bg-green-50 border border-green-200 text-green-700 px-3 py-2 rounded text-sm">
-          <div className="font-medium">Upload completed!</div>
-          <div className="text-xs mt-1">
-            Created: {result.created}, Skipped: {result.skipped}, Errors: {result.errors?.length || 0}
-          </div>
-          {result.errors && result.errors.length > 0 && (
-            <div className="mt-2">
-              <div className="font-medium">Errors:</div>
-              <ul className="list-disc list-inside text-xs">
-                {result.errors.map((error: string, index: number) => (
-                  <li key={index}>{error}</li>
-                ))}
-              </ul>
-            </div>
-          )}
         </div>
       )}
 
@@ -819,17 +818,15 @@ function CsvUploadForm({ onClose, onSuccess }: { onClose: () => void; onSuccess:
             onClick={onClose}
             className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
           >
-            {result ? 'Close' : 'Cancel'}
+            Cancel
           </button>
-          {!result && (
-            <button
-              type="submit"
-              disabled={!file || uploading}
-              className="px-4 py-2 text-sm font-medium text-white bg-green-600 border border-transparent rounded-md hover:bg-green-700 disabled:opacity-50"
-            >
-              {uploading ? 'Uploading...' : 'Upload CSV'}
-            </button>
-          )}
+          <button
+            type="submit"
+            disabled={!file || uploading}
+            className="px-4 py-2 text-sm font-medium text-white bg-green-600 border border-transparent rounded-md hover:bg-green-700 disabled:opacity-50"
+          >
+            {uploading ? 'Uploading...' : 'Upload CSV'}
+          </button>
         </div>
       </form>
     </div>

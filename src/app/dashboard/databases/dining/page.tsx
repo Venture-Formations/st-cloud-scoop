@@ -4,6 +4,7 @@ import { useEffect, useState, useMemo } from 'react'
 import Layout from '@/components/Layout'
 import Link from 'next/link'
 import { DiningDeal } from '@/types/database'
+import CsvUploadSummary from '@/components/CsvUploadSummary'
 
 type SortField = 'business_name' | 'day_of_week' | 'special_description' | 'is_featured' | 'created_at'
 type SortDirection = 'asc' | 'desc'
@@ -37,6 +38,7 @@ export default function DiningDatabasePage() {
   })
   const [showAddForm, setShowAddForm] = useState(false)
   const [showCsvUpload, setShowCsvUpload] = useState(false)
+  const [csvUploadResult, setCsvUploadResult] = useState<any>(null)
   const [submitting, setSubmitting] = useState(false)
   const [editingDeal, setEditingDeal] = useState<string | null>(null)
   const [editData, setEditData] = useState<Partial<DiningDeal>>({})
@@ -467,15 +469,33 @@ export default function DiningDatabasePage() {
         )}
 
         {/* CSV Upload Modal */}
-        {showCsvUpload && (
+        {showCsvUpload && !csvUploadResult && (
           <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
             <div className="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
               <div className="mt-3">
                 <h3 className="text-lg font-medium text-gray-900 mb-4">Upload Dining Deals CSV</h3>
-                <CsvUploadForm onClose={() => setShowCsvUpload(false)} onSuccess={fetchDeals} />
+                <CsvUploadForm
+                  onClose={() => setShowCsvUpload(false)}
+                  onSuccess={(result) => {
+                    setCsvUploadResult(result)
+                    fetchDeals()
+                  }}
+                />
               </div>
             </div>
           </div>
+        )}
+
+        {/* CSV Upload Summary */}
+        {csvUploadResult && (
+          <CsvUploadSummary
+            result={csvUploadResult}
+            uploadType="Dining Deals"
+            onClose={() => {
+              setCsvUploadResult(null)
+              setShowCsvUpload(false)
+            }}
+          />
         )}
       </div>
     </Layout>
@@ -746,11 +766,10 @@ function AddDealForm({ onClose, onSuccess }: { onClose: () => void; onSuccess: (
 }
 
 // CSV Upload Form Component
-function CsvUploadForm({ onClose, onSuccess }: { onClose: () => void; onSuccess: () => void }) {
+function CsvUploadForm({ onClose, onSuccess }: { onClose: () => void; onSuccess: (result: any) => void }) {
   const [file, setFile] = useState<File | null>(null)
   const [uploading, setUploading] = useState(false)
   const [error, setError] = useState('')
-  const [result, setResult] = useState<any>(null)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -775,8 +794,7 @@ function CsvUploadForm({ onClose, onSuccess }: { onClose: () => void; onSuccess:
       }
 
       const result = await response.json()
-      setResult(result.results)
-      onSuccess()
+      onSuccess(result.results)
     } catch (error) {
       setError(error instanceof Error ? error.message : 'An error occurred')
     } finally {
@@ -789,25 +807,6 @@ function CsvUploadForm({ onClose, onSuccess }: { onClose: () => void; onSuccess:
       {error && (
         <div className="bg-red-50 border border-red-200 text-red-700 px-3 py-2 rounded text-sm">
           {error}
-        </div>
-      )}
-
-      {result && (
-        <div className="bg-green-50 border border-green-200 text-green-700 px-3 py-2 rounded text-sm">
-          <div className="font-medium">Upload completed!</div>
-          <div className="text-xs mt-1">
-            Created: {result.created}, Skipped: {result.skipped}, Errors: {result.errors?.length || 0}
-          </div>
-          {result.errors && result.errors.length > 0 && (
-            <div className="mt-2">
-              <div className="font-medium">Errors:</div>
-              <ul className="list-disc list-inside text-xs">
-                {result.errors.map((error: string, index: number) => (
-                  <li key={index}>{error}</li>
-                ))}
-              </ul>
-            </div>
-          )}
         </div>
       )}
 

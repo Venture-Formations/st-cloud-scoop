@@ -30,9 +30,9 @@ export async function POST(request: NextRequest) {
       },
       {
         date: '2025-09-25',
-        word: 'MUSIC',
-        definition: 'Vocal or instrumental sounds combined in such a way as to produce beauty of form, harmony, and expression of emotion.',
-        interesting_fact: 'The word "music" derives from the Greek "mousike," meaning "art of the Muses" - the nine goddesses who inspired the arts.'
+        word: 'DRAPE',
+        definition: 'To cover, dress, or hang with cloth or fabric in graceful folds.',
+        interesting_fact: 'The word "drape" comes from French "draper," meaning "to weave" or "make cloth." Medieval drapers were important merchants who sold fine fabrics.'
       },
       {
         date: '2025-09-26',

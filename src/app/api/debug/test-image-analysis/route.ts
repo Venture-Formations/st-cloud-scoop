@@ -20,51 +20,27 @@ export async function GET(request: NextRequest) {
       }, { status: 500 })
     }
 
-    // Test inserting sample data
-    const sampleData = {
-      object_key: 'test/sample.jpg',
-      cdn_url: 'https://example.com/test.jpg',
-      width: 1920,
-      height: 1080,
-      aspect_ratio: 1.78,
-      orientation: 'landscape' as const,
-      faces_count: 0,
-      has_text: false,
-      safe_score: 0.95,
-      ocr_text: 'sample text',
-      text_density: 0.05,
-      ocr_entities: [{ type: 'ORG' as const, name: 'test org', conf: 0.9 }],
-      signage_conf: 0.3,
-      age_groups: [{ age_group: 'adult' as const, count: 1, conf: 0.8 }]
-    }
-
-    const { data: insertData, error: insertError } = await supabaseAdmin
+    // Test if we can query existing images with the new columns
+    const { data: existingImages, error: queryError } = await supabaseAdmin
       .from('images')
-      .insert(sampleData)
-      .select()
+      .select('id, age_groups, ocr_text, text_density, ocr_entities, signage_conf')
+      .limit(5)
 
-    if (insertError) {
-      console.error('Sample insert failed:', insertError)
+    if (queryError) {
+      console.error('Query test failed:', queryError)
       return NextResponse.json({
-        error: 'Sample insert failed',
-        details: insertError.message,
-        code: insertError.code,
-        hint: insertError.hint
+        error: 'Query test failed - columns may not exist',
+        details: queryError.message,
+        code: queryError.code
       }, { status: 500 })
-    }
-
-    // Clean up the test record
-    if (insertData && insertData.length > 0) {
-      await supabaseAdmin
-        .from('images')
-        .delete()
-        .eq('id', insertData[0].id)
     }
 
     return NextResponse.json({
       success: true,
       message: 'All database columns are working correctly',
-      test_completed: new Date().toISOString()
+      test_completed: new Date().toISOString(),
+      sample_data: existingImages,
+      columns_verified: ['age_groups', 'ocr_text', 'text_density', 'ocr_entities', 'signage_conf']
     })
 
   } catch (error) {

@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { generateDailyRoadWork } from '@/lib/road-work-manager'
-import { checkSchedule } from '@/lib/schedule-checker'
 
 export async function GET(request: NextRequest) {
   try {
@@ -11,23 +10,7 @@ export async function GET(request: NextRequest) {
     const testSecret = searchParams.get('secret')
     const isManualTest = testSecret === 'test-road-work-generation'
 
-    // For Vercel cron (no secret) or manual test with secret
-    if (!isManualTest) {
-      console.log('Vercel cron job - checking schedule...')
-
-      // Check if we should run road work generation at this time
-      const scheduleCheck = await checkSchedule('generate-road-work')
-
-      if (!scheduleCheck.shouldRun) {
-        console.log('⏰ Not time to generate road work yet:', scheduleCheck.reason)
-        return NextResponse.json({
-          success: true,
-          skipped: true,
-          reason: scheduleCheck.reason,
-          nextRun: scheduleCheck.nextRun
-        })
-      }
-    }
+    console.log('Manual test mode:', isManualTest)
 
     console.log('✅ Schedule check passed, generating road work data...')
 

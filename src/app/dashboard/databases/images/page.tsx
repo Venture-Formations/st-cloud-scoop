@@ -591,7 +591,7 @@ export default function ImagesDatabasePage() {
 
             {/* Image */}
             <img
-              src={previewImage.cdn_url}
+              src={previewImage.variant_16x9_url || previewImage.cdn_url}
               alt={previewImage.ai_alt_text || 'Image preview'}
               className="max-w-full max-h-[90vh] object-contain rounded shadow-lg"
             />

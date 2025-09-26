@@ -275,7 +275,16 @@ export default function ImagesDatabasePage() {
       setEditData({ ...editData, ai_tags: [...currentTags, formattedTag] })
     }
     setTagSuggestions(prev => ({ ...prev, [imageId]: [] }))
-    setNewTagInput(prev => ({ ...prev, [imageId]: '' }))
+  }
+
+  const addManualTag = (imageId: string) => {
+    const newTag = (newTagInput[imageId] || '').trim().toLowerCase()
+    const currentTags = editData.ai_tags || []
+    if (newTag && !currentTags.includes(newTag)) {
+      setEditData({ ...editData, ai_tags: [...currentTags, newTag] })
+      setNewTagInput(prev => ({ ...prev, [imageId]: '' }))
+      setTagSuggestions(prev => ({ ...prev, [imageId]: [] }))
+    }
   }
 
   const renderTagBadges = (tags: string[] | null, tagsScored: ImageTag[] | null) => {
@@ -485,23 +494,17 @@ export default function ImagesDatabasePage() {
                             <div className="flex space-x-1">
                               <input
                                 type="text"
-                                placeholder="Type tag name for AI suggestions..."
+                                placeholder="Type tag name..."
                                 value={newTagInput[image.id] || ''}
                                 onChange={(e) => {
                                   const value = e.target.value
                                   setNewTagInput(prev => ({ ...prev, [image.id]: value }))
-                                  fetchTagSuggestions(value, image.id)
                                 }}
                                 onKeyPress={(e) => {
                                   if (e.key === 'Enter') {
-                                    const newTag = (newTagInput[image.id] || '').trim().toLowerCase()
-                                    if (newTag && !(editData.ai_tags || []).includes(newTag)) {
-                                      setEditData({
-                                        ...editData,
-                                        ai_tags: [...(editData.ai_tags || []), newTag]
-                                      })
-                                      setNewTagInput(prev => ({ ...prev, [image.id]: '' }))
-                                      setTagSuggestions(prev => ({ ...prev, [image.id]: [] }))
+                                    const newTag = (newTagInput[image.id] || '').trim()
+                                    if (newTag) {
+                                      fetchTagSuggestions(newTag, image.id)
                                     }
                                   }
                                 }}
@@ -509,14 +512,9 @@ export default function ImagesDatabasePage() {
                               />
                               <button
                                 onClick={() => {
-                                  const newTag = (newTagInput[image.id] || '').trim().toLowerCase()
-                                  if (newTag && !(editData.ai_tags || []).includes(newTag)) {
-                                    setEditData({
-                                      ...editData,
-                                      ai_tags: [...(editData.ai_tags || []), newTag]
-                                    })
-                                    setNewTagInput(prev => ({ ...prev, [image.id]: '' }))
-                                    setTagSuggestions(prev => ({ ...prev, [image.id]: [] }))
+                                  const newTag = (newTagInput[image.id] || '').trim()
+                                  if (newTag) {
+                                    fetchTagSuggestions(newTag, image.id)
                                   }
                                 }}
                                 className="bg-green-600 text-white px-2 py-1 rounded text-xs hover:bg-green-700"
@@ -528,7 +526,24 @@ export default function ImagesDatabasePage() {
                             {/* AI Tag Suggestions */}
                             {(tagSuggestions[image.id] && tagSuggestions[image.id].length > 0) && (
                               <div className="border border-gray-200 rounded bg-white shadow-sm p-2 max-h-32 overflow-y-auto">
-                                <div className="text-xs text-gray-500 mb-1">AI Suggestions:</div>
+                                <div className="flex justify-between items-center mb-1">
+                                  <div className="text-xs text-gray-500">AI Suggestions:</div>
+                                  <div className="flex gap-1">
+                                    <button
+                                      onClick={() => addManualTag(image.id)}
+                                      className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded hover:bg-gray-200"
+                                      title="Add as typed"
+                                    >
+                                      Add "{(newTagInput[image.id] || '').trim()}"
+                                    </button>
+                                    <button
+                                      onClick={() => setTagSuggestions(prev => ({ ...prev, [image.id]: [] }))}
+                                      className="text-xs text-gray-400 hover:text-gray-600"
+                                    >
+                                      ×
+                                    </button>
+                                  </div>
+                                </div>
                                 <div className="flex flex-wrap gap-1">
                                   {tagSuggestions[image.id].map((suggestion: any, idx: number) => (
                                     <button

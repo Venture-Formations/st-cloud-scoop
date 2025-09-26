@@ -207,10 +207,18 @@ export default function ImageReview({ uploadResults, onComplete, onClose, onUpda
     }
   }
 
-  const handleAddTag = () => {
+  const handleAddTag = async () => {
+    if (newTag.trim()) {
+      // Fetch AI suggestions for the current input
+      await fetchTagSuggestions(newTag.trim())
+    }
+  }
+
+  const addManualTag = () => {
     if (newTag.trim() && !tags.includes(newTag.trim().toLowerCase())) {
       setTags([...tags, newTag.trim().toLowerCase()])
       setNewTag('')
+      setTagSuggestions([])
     }
   }
 
@@ -289,6 +297,7 @@ export default function ImageReview({ uploadResults, onComplete, onClose, onUpda
       }
 
       onComplete(finalProcessed)
+      onClose() // Close the upload popup after review is complete
     } catch (error) {
       console.error('Error processing images:', error)
     } finally {
@@ -443,12 +452,9 @@ export default function ImageReview({ uploadResults, onComplete, onClose, onUpda
                   <input
                     type="text"
                     value={newTag}
-                    onChange={(e) => {
-                      setNewTag(e.target.value)
-                      fetchTagSuggestions(e.target.value)
-                    }}
+                    onChange={(e) => setNewTag(e.target.value)}
                     onKeyPress={(e) => e.key === 'Enter' && handleAddTag()}
-                    placeholder="Type tag name for AI suggestions..."
+                    placeholder="Type tag name..."
                     className="flex-1 border border-gray-300 rounded px-2 py-1 text-sm"
                   />
                   <button
@@ -462,7 +468,24 @@ export default function ImageReview({ uploadResults, onComplete, onClose, onUpda
                 {/* AI Tag Suggestions */}
                 {tagSuggestions.length > 0 && (
                   <div className="border border-gray-200 rounded bg-white shadow-sm p-2 max-h-32 overflow-y-auto">
-                    <div className="text-xs text-gray-500 mb-1">AI Suggestions:</div>
+                    <div className="flex justify-between items-center mb-1">
+                      <div className="text-xs text-gray-500">AI Suggestions:</div>
+                      <button
+                        onClick={() => setTagSuggestions([])}
+                        className="text-xs text-gray-400 hover:text-gray-600"
+                        title="Close suggestions"
+                      >
+                        ×
+                      </button>
+                    </div>
+                    <div className="flex flex-wrap gap-1 mb-2">
+                      <button
+                        onClick={() => addManualTag()}
+                        className="inline-flex items-center px-2 py-1 rounded text-xs bg-gray-50 text-gray-700 hover:bg-gray-100 border border-gray-200 transition-colors"
+                      >
+                        Add as typed: "{newTag}"
+                      </button>
+                    </div>
                     <div className="flex flex-wrap gap-1">
                       {tagSuggestions.map((suggestion: any, idx: number) => (
                         <button
@@ -535,13 +558,6 @@ export default function ImageReview({ uploadResults, onComplete, onClose, onUpda
               className="px-4 py-2 border border-gray-300 rounded-md text-sm hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               ← Previous
-            </button>
-            <button
-              onClick={handleNext}
-              disabled={currentIndex === completedUploads.length - 1}
-              className="px-4 py-2 border border-gray-300 rounded-md text-sm hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              Next →
             </button>
           </div>
 

@@ -402,6 +402,9 @@ function generateNewsletterFooter(): string {
   </p>
   <p style="margin: 5px;text-align: center;">©2025 Venture Formations LLC, all rights reserved</p>
 </div>
+    </div>
+  </div>
+</div>
 </body>
 </html>`
 }

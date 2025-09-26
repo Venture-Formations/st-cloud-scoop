@@ -83,21 +83,47 @@ Return valid JSON array only, no other text.`
         typeof suggestion.confidence === 'number'
       )
 
-      return NextResponse.json({ suggestions: validSuggestions })
+      // Add the typed word itself as a suggestion in proper format
+      const inputFormatted = input.toLowerCase().replace(/\s+/g, '_')
+      const directSuggestion = {
+        formatted_tag: `object_${inputFormatted}`,
+        display_name: `Object: ${input}`,
+        confidence: 0.95
+      }
+
+      // Add direct suggestion at the beginning if it's not already included
+      const finalSuggestions = [directSuggestion, ...validSuggestions.filter(s =>
+        s.formatted_tag !== directSuggestion.formatted_tag
+      )]
+
+      return NextResponse.json({ suggestions: finalSuggestions })
 
     } catch (parseError) {
       console.error('Failed to parse AI tag suggestions:', parseError)
       console.error('AI response:', content)
 
-      // Fallback: create basic suggestion from input
-      const fallbackSuggestion = {
-        formatted_tag: `object_${input.toLowerCase().replace(/\s+/g, '_')}`,
-        display_name: `Object: ${input}`,
-        confidence: 0.8
-      }
+      // Fallback: create multiple suggestions from input
+      const inputFormatted = input.toLowerCase().replace(/\s+/g, '_')
+      const fallbackSuggestions = [
+        {
+          formatted_tag: `object_${inputFormatted}`,
+          display_name: `Object: ${input}`,
+          confidence: 0.95
+        },
+        {
+          formatted_tag: `scene_${inputFormatted}`,
+          display_name: `Scene: ${input}`,
+          confidence: 0.8
+        },
+        {
+          formatted_tag: `activity_${inputFormatted}`,
+          display_name: `Activity: ${input}`,
+          confidence: 0.7
+        }
+      ]
 
       return NextResponse.json({
-        suggestions: [fallbackSuggestion],
+        suggestions: fallbackSuggestions,
         fallback: true
       })
     }

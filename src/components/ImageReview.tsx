@@ -38,6 +38,9 @@ export default function ImageReview({ uploadResults, onComplete, onClose, onUpda
   const [location, setLocation] = useState('')
   const [ocrText, setOcrText] = useState('')
   const [isProcessing, setIsProcessing] = useState(false)
+  const [tagSuggestions, setTagSuggestions] = useState<any[]>([])
+  const [loadingSuggestions, setLoadingSuggestions] = useState(false)
+  const [canAdjustVertical, setCanAdjustVertical] = useState(true)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const imageRef = useRef<HTMLImageElement>(null)
 
@@ -95,11 +98,14 @@ export default function ImageReview({ uploadResults, onComplete, onClose, onUpda
     let sourceWidth, sourceHeight, sourceX, sourceY
 
     if (originalAspectRatio > targetAspectRatio) {
-      // Image is wider than 16:9, crop horizontally (keep full height)
+      // Image is wider than 16:9, crop horizontally
       sourceHeight = originalHeight
       sourceWidth = Math.round(sourceHeight * targetAspectRatio)
       sourceX = Math.round((originalWidth - sourceWidth) / 2)
       sourceY = 0
+
+      // Update state to indicate vertical adjustment is not available
+      setCanAdjustVertical(false)
     } else {
       // Image is taller than 16:9, crop vertically
       sourceWidth = originalWidth
@@ -108,6 +114,9 @@ export default function ImageReview({ uploadResults, onComplete, onClose, onUpda
       // Apply vertical offset (matching backend exactly)
       const maxTop = originalHeight - sourceHeight
       sourceY = Math.round(cropOffset * maxTop)
+
+      // Update state to indicate vertical adjustment is available
+      setCanAdjustVertical(true)
     }
 
 
@@ -207,6 +216,41 @@ export default function ImageReview({ uploadResults, onComplete, onClose, onUpda
 
   const handleRemoveTag = (tagToRemove: string) => {
     setTags(tags.filter(tag => tag !== tagToRemove))
+  }
+
+  const fetchTagSuggestions = async (input: string) => {
+    if (input.length < 2) {
+      setTagSuggestions([])
+      return
+    }
+
+    setLoadingSuggestions(true)
+
+    try {
+      const response = await fetch('/api/tags/suggest', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ input })
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        setTagSuggestions(data.suggestions || [])
+      }
+    } catch (error) {
+      console.error('Failed to fetch tag suggestions:', error)
+      setTagSuggestions([])
+    } finally {
+      setLoadingSuggestions(false)
+    }
+  }
+
+  const addSuggestedTag = (formattedTag: string) => {
+    if (!tags.includes(formattedTag)) {
+      setTags([...tags, formattedTag])
+    }
+    setTagSuggestions([])
+    setNewTag('')
   }
 
   const handleFinish = async () => {
@@ -326,22 +370,35 @@ export default function ImageReview({ uploadResults, onComplete, onClose, onUpda
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Vertical Position
                   </label>
-                  <div className="flex items-center space-x-2">
-                    <span className="text-xs text-gray-500">Top</span>
-                    <input
-                      type="range"
-                      min="0"
-                      max="1"
-                      step="0.01"
-                      value={cropOffset}
-                      onChange={(e) => setCropOffset(parseFloat(e.target.value))}
-                      className="flex-1"
-                    />
-                    <span className="text-xs text-gray-500">Bottom</span>
-                  </div>
-                  <div className="text-center text-xs text-gray-500 mt-1">
-                    Position: {Math.round(cropOffset * 100)}%
-                  </div>
+                  {canAdjustVertical ? (
+                    <>
+                      <div className="flex items-center space-x-2">
+                        <span className="text-xs text-gray-500">Top</span>
+                        <input
+                          type="range"
+                          min="0"
+                          max="1"
+                          step="0.01"
+                          value={cropOffset}
+                          onChange={(e) => setCropOffset(parseFloat(e.target.value))}
+                          className="flex-1"
+                        />
+                        <span className="text-xs text-gray-500">Bottom</span>
+                      </div>
+                      <div className="text-center text-xs text-gray-500 mt-1">
+                        Position: {Math.round(cropOffset * 100)}%
+                      </div>
+                    </>
+                  ) : (
+                    <div className="bg-gray-50 border border-gray-200 rounded p-3 text-center">
+                      <div className="text-xs text-gray-500 mb-1">
+                        Vertical position adjustment not available
+                      </div>
+                      <div className="text-xs text-gray-400">
+                        This image is wider than 16:9, so the full height is used for the crop.
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -380,22 +437,52 @@ export default function ImageReview({ uploadResults, onComplete, onClose, onUpda
                 ))}
               </div>
 
-              {/* Add New Tag */}
-              <div className="flex space-x-2">
-                <input
-                  type="text"
-                  value={newTag}
-                  onChange={(e) => setNewTag(e.target.value)}
-                  onKeyPress={(e) => e.key === 'Enter' && handleAddTag()}
-                  placeholder="Add new tag..."
-                  className="flex-1 border border-gray-300 rounded px-2 py-1 text-sm"
-                />
-                <button
-                  onClick={handleAddTag}
-                  className="bg-green-600 text-white px-3 py-1 rounded text-sm hover:bg-green-700"
-                >
-                  +
-                </button>
+              {/* Add New Tag with AI Suggestions */}
+              <div className="space-y-2">
+                <div className="flex space-x-2">
+                  <input
+                    type="text"
+                    value={newTag}
+                    onChange={(e) => {
+                      setNewTag(e.target.value)
+                      fetchTagSuggestions(e.target.value)
+                    }}
+                    onKeyPress={(e) => e.key === 'Enter' && handleAddTag()}
+                    placeholder="Type tag name for AI suggestions..."
+                    className="flex-1 border border-gray-300 rounded px-2 py-1 text-sm"
+                  />
+                  <button
+                    onClick={handleAddTag}
+                    className="bg-green-600 text-white px-3 py-1 rounded text-sm hover:bg-green-700"
+                  >
+                    +
+                  </button>
+                </div>
+
+                {/* AI Tag Suggestions */}
+                {tagSuggestions.length > 0 && (
+                  <div className="border border-gray-200 rounded bg-white shadow-sm p-2 max-h-32 overflow-y-auto">
+                    <div className="text-xs text-gray-500 mb-1">AI Suggestions:</div>
+                    <div className="flex flex-wrap gap-1">
+                      {tagSuggestions.map((suggestion: any, idx: number) => (
+                        <button
+                          key={idx}
+                          onClick={() => addSuggestedTag(suggestion.formatted_tag)}
+                          className="inline-flex items-center px-2 py-1 rounded text-xs bg-blue-50 text-blue-800 hover:bg-blue-100 border border-blue-200 transition-colors"
+                          title={`Confidence: ${Math.round(suggestion.confidence * 100)}%`}
+                        >
+                          {suggestion.display_name}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {loadingSuggestions && (
+                  <div className="text-xs text-gray-500">
+                    Getting AI suggestions...
+                  </div>
+                )}
               </div>
             </div>
 

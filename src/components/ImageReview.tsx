@@ -22,6 +22,7 @@ interface ProcessedImage {
   imageId: string
   tags: string[]
   cropOffset: number
+  location: string
   skipped: boolean
 }
 
@@ -32,6 +33,7 @@ export default function ImageReview({ uploadResults, onComplete, onClose }: Imag
   const [cropOffset, setCropOffset] = useState(0.5) // 0 = top, 0.5 = center, 1 = bottom
   const [tags, setTags] = useState<string[]>([])
   const [newTag, setNewTag] = useState('')
+  const [location, setLocation] = useState('')
   const [isProcessing, setIsProcessing] = useState(false)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const imageRef = useRef<HTMLImageElement>(null)
@@ -50,9 +52,11 @@ export default function ImageReview({ uploadResults, onComplete, onClose }: Imag
       if (existingProcessed) {
         setCropOffset(existingProcessed.cropOffset)
         setTags(existingProcessed.tags)
+        setLocation(existingProcessed.location)
       } else {
         setCropOffset(0.5) // Default to center
         setTags(currentUpload.analysisResult.top_tags || [])
+        setLocation('') // Default to empty
       }
     }
   }, [currentIndex, currentUpload, processedImages])
@@ -120,6 +124,7 @@ export default function ImageReview({ uploadResults, onComplete, onClose }: Imag
       imageId: currentUpload.imageId,
       tags,
       cropOffset,
+      location,
       skipped: false
     }
 
@@ -150,6 +155,7 @@ export default function ImageReview({ uploadResults, onComplete, onClose }: Imag
       imageId: currentUpload.imageId,
       tags: [],
       cropOffset: 0.5,
+      location: '',
       skipped: true
     }
 
@@ -191,6 +197,7 @@ export default function ImageReview({ uploadResults, onComplete, onClose }: Imag
           imageId: currentUpload.imageId,
           tags,
           cropOffset,
+          location,
           skipped: false
         })
       }
@@ -203,7 +210,8 @@ export default function ImageReview({ uploadResults, onComplete, onClose }: Imag
           body: JSON.stringify({
             image_id: processed.imageId,
             tags: processed.tags,
-            crop_v_offset: processed.cropOffset
+            crop_v_offset: processed.cropOffset,
+            location: processed.location
           })
         })
       }
@@ -360,6 +368,21 @@ export default function ImageReview({ uploadResults, onComplete, onClose }: Imag
                     Add
                   </button>
                 </div>
+              </div>
+
+              {/* Location Field */}
+              <div className="mb-4">
+                <p className="text-sm font-medium text-gray-700 mb-2">Location:</p>
+                <input
+                  type="text"
+                  value={location}
+                  onChange={(e) => setLocation(e.target.value)}
+                  placeholder="e.g., St. Cloud Police Department, Downtown St. Cloud, etc."
+                  className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  Specify the location where this photo was taken (optional)
+                </p>
               </div>
 
               {/* AI Analysis Info */}

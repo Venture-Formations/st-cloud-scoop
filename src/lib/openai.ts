@@ -227,7 +227,32 @@ Format: JSON array only
 {"road_name":"Highway 55","road_range":"from Kimball to Annandale","city_or_township":"Kimball","reason":"Road widening","start_date":"Oct 3","expected_reopen":"Oct 28","source_url":"https://www.dot.state.mn.us/d3/"}
 ]
 
-Return similar JSON with 9 road work items for the St. Cloud area.`
+Return similar JSON with 9 road work items for the St. Cloud area.`,
+
+  imageAnalyzer: () => `
+Analyze this image and return strict JSON:
+{
+  "caption": "...",
+  "alt_text": "10–14 words, descriptive, no quotes",
+  "tags_scored": [
+    {"type":"scene","name":"warehouse","conf":0.95},
+    {"type":"object","name":"golf_cart","conf":0.98},
+    {"type":"color","name":"blue","conf":0.85},
+    {"type":"safety","name":"has_text","conf":0.12}
+  ],
+  "top_tags": ["scene_warehouse","object_golf_cart","color_blue"]
+}
+
+GUIDELINES:
+- Caption: Natural, descriptive sentence about the image contents
+- Alt text: 10-14 words maximum, accessible description for screen readers
+- Tags scored: Array of categorized tags with confidence scores (0-1)
+- Tag types: people, scene, theme, style, color, object, safety
+- Tag names: concrete nouns, lowercase with underscores
+- Top tags: 3-5 most relevant tags in "type_name" format
+- Include safety.has_text if text/signage is visible
+- Confidence scores reflect certainty (0.9+ for obvious, 0.5-0.8 for likely, <0.5 for uncertain)
+- Focus on concrete, visible elements rather than abstract concepts`
 }
 
 export async function callOpenAI(prompt: string, maxTokens = 1000, temperature = 0.3) {

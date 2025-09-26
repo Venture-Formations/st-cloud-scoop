@@ -37,6 +37,15 @@ export async function GET(request: NextRequest) {
       // Don't fail the request if table doesn't exist yet
     }
 
+    const { data: imagesCount, error: imagesError } = await supabaseAdmin
+      .from('images')
+      .select('id', { count: 'exact' })
+
+    if (imagesError) {
+      console.error('Error fetching Images count:', imagesError)
+      // Don't fail the request if table doesn't exist yet
+    }
+
     const databases = [
       {
         name: 'Local Events',
@@ -55,6 +64,12 @@ export async function GET(request: NextRequest) {
         description: 'Restaurant specials organized by day of week',
         count: diningCount?.length || 0,
         href: '/dashboard/databases/dining'
+      },
+      {
+        name: 'Images',
+        description: 'AI-tagged image library with crop and tag management',
+        count: imagesCount?.length || 0,
+        href: '/dashboard/databases/images'
       }
     ]
 

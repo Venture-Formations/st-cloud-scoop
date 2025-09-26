@@ -418,3 +418,117 @@ export interface CampaignDiningSelection {
   created_at: string
   deal?: DiningDeal
 }
+
+// Images Database types
+export interface ImageTag {
+  type: 'people' | 'scene' | 'theme' | 'style' | 'color' | 'object' | 'safety'
+  name: string
+  conf: number
+}
+
+export interface Image {
+  id: string
+  object_key: string                    // images/original/{uuid}.jpg
+  cdn_url: string                       // Auto-generated Supabase CDN URL
+  width: number | null
+  height: number | null
+  aspect_ratio: number | null
+  orientation: 'landscape' | 'portrait' | 'square' | null
+  source_url: string | null
+  license: string | null
+  credit: string | null
+  location: string | null
+  faces_count: number
+  has_text: boolean
+  dominant_colors: string[] | null
+  safe_score: number | null
+  ai_caption: string | null
+  ai_alt_text: string | null
+  ai_tags: string[] | null
+  ai_tags_scored: ImageTag[] | null
+  emb_caption: number[] | null          // Vector embedding
+  crop_ratio: string                    // Default '16:9'
+  crop_v_offset: number                 // 0-1, default 0.5
+  variant_16x9_key: string | null
+  variant_16x9_url: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface ImageVariant {
+  id: string
+  image_id: string
+  variant_type: string                  // '16:9', '1:1', '4:3', etc.
+  width: number
+  height: number
+  object_key: string
+  cdn_url: string                       // Auto-generated Supabase CDN URL
+  github_url: string | null
+  crop_v_offset: number
+  crop_h_offset: number
+  created_at: string
+}
+
+export interface ArticleImageChoice {
+  id: string
+  article_id: string
+  image_id: string
+  choice_reason: 'ai_matched' | 'manual_selection' | 'fallback'
+  confidence_score: number | null
+  created_at: string
+  image?: Image
+}
+
+// Image upload and processing types
+export interface ImageUploadRequest {
+  filename: string
+  content_type: string
+  size: number
+}
+
+export interface ImageUploadResponse {
+  upload_url: string
+  object_key: string
+  image_id: string
+}
+
+export interface ImageAnalysisResult {
+  caption: string
+  alt_text: string
+  tags_scored: ImageTag[]
+  top_tags: string[]
+  width: number
+  height: number
+  aspect_ratio: number
+  orientation: 'landscape' | 'portrait' | 'square'
+  faces_count: number
+  has_text: boolean
+  dominant_colors: string[]
+  safe_score: number
+}
+
+export interface ImageReviewRequest {
+  image_id: string
+  ai_caption?: string
+  ai_alt_text?: string
+  ai_tags?: string[]
+  ai_tags_scored?: ImageTag[]
+  license?: string
+  credit?: string
+  location?: string
+  crop_v_offset?: number
+  source_url?: string
+}
+
+export interface ImageSearchFilters {
+  text_search?: string
+  tags?: string[]
+  orientation?: 'landscape' | 'portrait' | 'square'
+  date_from?: string
+  date_to?: string
+  license?: string
+  has_faces?: boolean
+  has_text?: boolean
+  limit?: number
+  offset?: number
+}

@@ -398,4 +398,141 @@ export class GitHubImageStorage {
       return null
     }
   }
+
+  /**
+   * Upload a 16:9 cropped variant of an image to the library folder
+   */
+  async uploadImageVariant(
+    imageBuffer: Buffer,
+    imageId: string,
+    variant: string = '1200x675',
+    description: string = 'Library image variant'
+  ): Promise<string | null> {
+    try {
+      console.log(`Uploading ${variant} variant for image: ${imageId}`)
+
+      // Check file size (limit to 5MB)
+      if (imageBuffer.length > 5 * 1024 * 1024) {
+        console.error(`Image variant too large: ${imageBuffer.length} bytes (max 5MB)`)
+        return null
+      }
+
+      const fileName = `${imageId}.jpg`
+      const filePath = `images/library/${variant}/${fileName}`
+
+      // Check if variant already exists
+      try {
+        const { data: existingFile } = await this.octokit.repos.getContent({
+          owner: this.owner,
+          repo: this.repo,
+          path: filePath,
+        })
+
+        if (existingFile && 'download_url' in existingFile && existingFile.download_url) {
+          console.log(`Image variant already exists: ${fileName}`)
+          return existingFile.download_url
+        }
+      } catch (error: any) {
+        // File doesn't exist, which is fine - we'll create it
+        if (error.status !== 404) {
+          console.error('Error checking existing variant:', error)
+          return null
+        }
+      }
+
+      // Convert buffer to base64 for GitHub API
+      const content = imageBuffer.toString('base64')
+
+      // Upload to GitHub
+      const uploadResponse = await this.octokit.repos.createOrUpdateFileContents({
+        owner: this.owner,
+        repo: this.repo,
+        path: filePath,
+        message: `Add ${variant} variant for image ${imageId}: ${description}`,
+        content: content,
+      })
+
+      if (uploadResponse.data.content?.download_url) {
+        console.log(`Image variant uploaded to GitHub: ${uploadResponse.data.content.download_url}`)
+        return uploadResponse.data.content.download_url
+      } else {
+        console.error('Variant upload successful but no download URL returned')
+        return null
+      }
+
+    } catch (error) {
+      console.error(`Error uploading image variant to GitHub:`, error)
+      return null
+    }
+  }
+
+  /**
+   * Get CDN URL for an image variant (uses jsDelivr CDN)
+   */
+  getCdnUrl(imageId: string, variant: string = '1200x675'): string {
+    return `https://cdn.jsdelivr.net/gh/${this.owner}/${this.repo}@main/images/library/${variant}/${imageId}.jpg`
+  }
+
+  /**
+   * List all image variants in the library
+   */
+  async listImageVariants(variant: string = '1200x675'): Promise<Array<{id: string, url: string}>> {
+    try {
+      const { data } = await this.octokit.repos.getContent({
+        owner: this.owner,
+        repo: this.repo,
+        path: `images/library/${variant}`,
+      })
+
+      if (Array.isArray(data)) {
+        return data
+          .filter(file => file.type === 'file' && file.name?.endsWith('.jpg'))
+          .map(file => ({
+            id: file.name!.replace('.jpg', ''),
+            url: file.download_url!
+          }))
+          .filter(item => item.url)
+      }
+
+      return []
+    } catch (error) {
+      console.error(`Error listing image variants for ${variant}:`, error)
+      return []
+    }
+  }
+
+  /**
+   * Delete an image variant from GitHub
+   */
+  async deleteImageVariant(imageId: string, variant: string = '1200x675'): Promise<boolean> {
+    try {
+      const fileName = `${imageId}.jpg`
+      const filePath = `images/library/${variant}/${fileName}`
+
+      // Get file info first to get the SHA
+      const { data: fileInfo } = await this.octokit.repos.getContent({
+        owner: this.owner,
+        repo: this.repo,
+        path: filePath,
+      })
+
+      if ('sha' in fileInfo) {
+        await this.octokit.repos.deleteFile({
+          owner: this.owner,
+          repo: this.repo,
+          path: filePath,
+          message: `Delete ${variant} variant for image ${imageId}`,
+          sha: fileInfo.sha
+        })
+
+        console.log(`Deleted image variant: ${fileName}`)
+        return true
+      }
+
+      return false
+    } catch (error) {
+      console.error(`Error deleting image variant ${imageId}:`, error)
+      return false
+    }
+  }
 }

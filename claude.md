@@ -1,27 +1,133 @@
 # St. Cloud Scoop Development - Main Content Repository
 
-**Last Updated:** 2025-09-25 (Current Session - Automatic Subject Line Regeneration Save Point)
+**Last Updated:** 2025-09-26 (Current Session - Road Work Section Implementation Complete)
 **Primary Source:** This is now the authoritative development document
-**Session Focus:** Complete Automatic Subject Line Regeneration System
+**Session Focus:** Complete Road Work Newsletter Section Implementation
 
-## 🔒 **SAVE POINT - Automatic Subject Line Regeneration Complete** (2025-09-25)
-**Git Commit:** `08b85ef` - Add real-time UI updates for automatic subject line regeneration
-**System State:** Fully functional with complete automatic subject line regeneration system
+## 🔒 **SAVE POINT - Road Work Section Implementation Complete** (2025-09-26)
+**Git Commit:** `b5fb129` - Fix road work section appearing below footer by closing container divs
+**System State:** Fully functional with complete Road Work newsletter section
 **Working Features:**
 - ✅ RSS Processing with Smart Event Population (8 events per day, random selection)
 - ✅ Subject Line Generation (both AI and manual editing)
-- ✅ **NEW: Automatic Subject Line Regeneration** (when #1 article changes via skip/reorder)
-- ✅ **NEW: Real-Time UI Updates** (subject line updates instantly without page refresh)
+- ✅ Automatic Subject Line Regeneration (when #1 article changes via skip/reorder)
+- ✅ Real-Time UI Updates (subject line updates instantly without page refresh)
 - ✅ Event Management with random selection and featured events
 - ✅ Manual Subject Line Editing (no character limits)
 - ✅ Current incident filtering in AI content evaluation
 - ✅ Campaign workflow (Draft → In Review → Ready to Send → Sent)
 - ✅ Enhanced Slack notifications for RSS processing states
 - ✅ Skip Article functionality with complete audit trail
+- ✅ **NEW: Complete Road Work Newsletter Section** (AI-generated, database-integrated, automated)
+- ✅ **NEW: Preview Loading States** (visual feedback during newsletter generation)
 
-**Purpose:** Safe restore point with fully automated subject line management system
+**Purpose:** Safe restore point with complete Road Work section and improved user experience
 
-## 🆕 Current Session (2025-09-25): Automatic Subject Line Regeneration Implementation
+## 🆕 Current Session (2025-09-26): Road Work Newsletter Section Implementation
+
+### Major Features Implemented ✅
+
+#### 1. **Complete Road Work Newsletter Section**
+- **AI-Powered Generation**: 9 road work items for St. Cloud, MN area using OpenAI API
+- **3x3 Grid Layout**: Email-compatible HTML layout matching newsletter design standards
+- **Government Source Integration**: Road work data sourced from MN DOT, county, and city websites
+- **Database Schema**: `road_work_data` table with JSONB storage and HTML content caching
+- **Newsletter Integration**: Added to newsletter sections with display_order 7
+
+#### 2. **Automated Road Work Generation System**
+- **Daily Cron Job**: Scheduled for 7PM CT daily via `/api/cron/generate-road-work`
+- **Vercel Integration**: Added to vercel.json cron schedule configuration
+- **Smart AI Parsing**: Multi-strategy approach with fallback handling for AI response variations
+- **Data Persistence**: Generated road work stored in database with reuse capability
+
+#### 3. **Preview Loading States & User Experience**
+- **Loading Indicators**: Added spinning circle to Preview Newsletter button during generation
+- **Visual Feedback**: Button shows "Loading..." text with disabled state
+- **Performance Optimization**: Road work section reuses existing data when available
+- **Error Handling**: Comprehensive logging and graceful failure modes
+
+#### 4. **Critical HTML Structure Fixes**
+- **Root Cause Resolution**: Fixed newsletter footer missing closing div tags
+- **Container Structure**: Header opens 3 divs, footer now properly closes all 3
+- **Section Positioning**: Road work now appears correctly within email template, not below footer
+- **HTML Validation**: Proper email client compatibility with valid structure
+
+### Technical Implementation Details
+
+#### Database Schema
+```sql
+CREATE TABLE road_work_data (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  campaign_id TEXT,
+  generated_at TIMESTAMPTZ DEFAULT NOW(),
+  road_work_data JSONB NOT NULL,
+  html_content TEXT NOT NULL,
+  is_active BOOLEAN DEFAULT true,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+```
+
+#### AI Prompt Engineering
+- **Structured Output**: JSON array format with 9 specific road work items
+- **Local Focus**: 15-mile radius from St. Cloud, MN (ZIP 56303)
+- **Government Sources**: Real DOT and county website URLs for authenticity
+- **Date Handling**: Dynamic date generation based on campaign schedule
+
+#### API Endpoints Created
+- `/api/road-work/generate` - Manual road work generation
+- `/api/cron/generate-road-work` - Automated daily generation
+- `/api/debug/test-ai-road-work` - AI generation testing and debugging
+
+### Session Timeline & Problem Resolution
+
+#### Issue 1: Road Work Section Not Appearing
+- **Problem**: Road work not showing in newsletter sections
+- **Root Cause**: Missing entry in `newsletter_sections` table
+- **Solution**: Added Road Work section with display_order 7
+
+#### Issue 2: AI Parsing Failures
+- **Problem**: Complex parsing logic failing on valid AI responses
+- **User Feedback**: "Fix the parsing error. I don't want to rely on a fallback"
+- **Solution**: Simplified parsing to match working debug endpoint pattern
+
+#### Issue 3: TypeScript Compilation Errors
+- **Problem**: Multiple build failures with uninitialized variables
+- **Solution**: Fixed variable initialization and import statements
+
+#### Issue 4: Road Work Appearing Below Footer
+- **Problem**: Road work content breaking out of email template structure
+- **Root Cause**: Newsletter footer missing 3 closing `</div>` tags for header containers
+- **Critical Fix**: Added proper container closure in `generateNewsletterFooter()`
+
+### Files Modified This Session
+
+```
+# Road Work Core Implementation
+src/types/database.ts                              # RoadWorkItem & RoadWorkData interfaces
+src/lib/openai.ts                                  # roadWorkGenerator AI prompt + array parsing
+src/lib/road-work-manager.ts                       # Complete road work generation & HTML system
+src/app/api/road-work/generate/route.ts            # Manual generation endpoint
+src/app/api/cron/generate-road-work/route.ts       # Automated cron endpoint
+src/app/api/debug/test-ai-road-work/route.ts       # AI testing & debugging endpoint
+vercel.json                                        # Added 7PM CT daily cron schedule
+
+# Newsletter Integration
+src/app/api/campaigns/[id]/preview/route.ts        # Road work section generation + HTML structure fix
+
+# User Experience Improvements
+src/app/dashboard/campaigns/[id]/page.tsx          # Preview loading states with spinner
+```
+
+### Current System State
+- **Road Work Generation**: ✅ Working with 9 items per generation
+- **AI Integration**: ✅ Reliable parsing with multi-strategy approach
+- **Database Storage**: ✅ Proper schema with JSONB and HTML caching
+- **Newsletter Integration**: ✅ Appears in correct position before footer
+- **Automation**: ✅ Daily 7PM CT generation via Vercel cron
+- **User Experience**: ✅ Loading indicators and error handling
+
+## 🔒 **PREVIOUS SAVE POINT - Automatic Subject Line Regeneration Complete** (2025-09-25)
 
 ### Major Features Implemented ✅
 

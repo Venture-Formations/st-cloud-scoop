@@ -287,66 +287,69 @@ export default function ImageReview({ uploadResults, onComplete, onClose, onUpda
           </button>
         </div>
 
-        <div className="flex-1 grid grid-cols-1 lg:grid-cols-3 gap-4 min-h-0">
-          {/* Original Image */}
-          <div className="flex flex-col min-h-0">
-            <h3 className="text-md font-medium mb-2">Original Image</h3>
-            <div className="flex-1 flex items-center justify-center min-h-0">
-              <img
-                ref={imageRef}
-                src={imageUrl}
-                alt={currentUpload.file.name}
-                className="max-w-full max-h-full object-contain rounded border shadow-sm"
-                onLoad={updateCropPreview}
-              />
-            </div>
-          </div>
-
-          {/* Crop Preview and Controls */}
-          <div className="flex flex-col min-h-0">
-            <h3 className="text-md font-medium mb-2">16:9 Crop Preview</h3>
-            <div className="flex-1 flex flex-col justify-center min-h-0">
-              {currentUpload?.analysisResult?.variant_16x9_url ? (
+        <div className="flex-1 grid grid-cols-1 lg:grid-cols-2 gap-6 min-h-0">
+          {/* Left Column: Original Image and Crop Preview */}
+          <div className="flex flex-col min-h-0 space-y-4">
+            {/* Original Image */}
+            <div className="flex flex-col min-h-0">
+              <h3 className="text-md font-medium mb-2">Original Image</h3>
+              <div className="flex-1 flex items-center justify-center min-h-0">
                 <img
-                  src={currentUpload.analysisResult.variant_16x9_url}
-                  alt="16:9 variant preview"
-                  className="border rounded shadow-sm mx-auto max-w-full h-auto"
-                  style={{ maxWidth: '500px' }}
+                  ref={imageRef}
+                  src={imageUrl}
+                  alt={currentUpload.file.name}
+                  className="max-w-full max-h-full object-contain rounded border shadow-sm"
+                  onLoad={updateCropPreview}
                 />
-              ) : (
-                <canvas
-                  ref={canvasRef}
-                  className="border rounded shadow-sm mx-auto"
-                  style={{ maxWidth: '100%', height: 'auto' }}
-                />
-              )}
+              </div>
+            </div>
 
-              {/* Crop Adjustment */}
-              <div className="mt-4">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Vertical Position
-                </label>
-                <div className="flex items-center space-x-2">
-                  <span className="text-xs text-gray-500">Top</span>
-                  <input
-                    type="range"
-                    min="0"
-                    max="1"
-                    step="0.01"
-                    value={cropOffset}
-                    onChange={(e) => setCropOffset(parseFloat(e.target.value))}
-                    className="flex-1"
+            {/* Crop Preview and Controls */}
+            <div className="flex flex-col min-h-0">
+              <h3 className="text-md font-medium mb-2">16:9 Crop Preview</h3>
+              <div className="flex flex-col justify-center">
+                {currentUpload?.analysisResult?.variant_16x9_url ? (
+                  <img
+                    src={currentUpload.analysisResult.variant_16x9_url}
+                    alt="16:9 variant preview"
+                    className="border rounded shadow-sm mx-auto max-w-full h-auto"
+                    style={{ maxWidth: '400px' }}
                   />
-                  <span className="text-xs text-gray-500">Bottom</span>
-                </div>
-                <div className="text-center text-xs text-gray-500 mt-1">
-                  Position: {Math.round(cropOffset * 100)}%
+                ) : (
+                  <canvas
+                    ref={canvasRef}
+                    className="border rounded shadow-sm mx-auto"
+                    style={{ maxWidth: '100%', height: 'auto' }}
+                  />
+                )}
+
+                {/* Crop Adjustment */}
+                <div className="mt-4">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Vertical Position
+                  </label>
+                  <div className="flex items-center space-x-2">
+                    <span className="text-xs text-gray-500">Top</span>
+                    <input
+                      type="range"
+                      min="0"
+                      max="1"
+                      step="0.01"
+                      value={cropOffset}
+                      onChange={(e) => setCropOffset(parseFloat(e.target.value))}
+                      className="flex-1"
+                    />
+                    <span className="text-xs text-gray-500">Bottom</span>
+                  </div>
+                  <div className="text-center text-xs text-gray-500 mt-1">
+                    Position: {Math.round(cropOffset * 100)}%
+                  </div>
                 </div>
               </div>
             </div>
           </div>
 
-          {/* Tag Management */}
+          {/* Right Column: Tag Management */}
           <div className="flex flex-col min-h-0 overflow-y-auto">
             <h3 className="text-md font-medium mb-2">Review Tags</h3>
 

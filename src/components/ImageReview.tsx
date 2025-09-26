@@ -63,7 +63,6 @@ export default function ImageReview({ uploadResults, onComplete, onClose }: Imag
 
   // Update crop preview when offset changes
   useEffect(() => {
-    console.log('Crop offset changed to:', cropOffset)
     updateCropPreview()
   }, [cropOffset, currentUpload])
 
@@ -106,9 +105,6 @@ export default function ImageReview({ uploadResults, onComplete, onClose }: Imag
       sourceY = Math.round(cropOffset * maxTop)
     }
 
-    console.log('Updating crop preview with offset:', cropOffset)
-    console.log('Image dimensions:', originalWidth, 'x', originalHeight)
-    console.log('Crop calculations:', { sourceX, sourceY, sourceWidth, sourceHeight })
 
     // Draw the cropped image on canvas
     ctx.drawImage(
@@ -255,11 +251,11 @@ export default function ImageReview({ uploadResults, onComplete, onClose }: Imag
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg p-6 max-w-6xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+      <div className="bg-white rounded-lg p-4 max-w-7xl w-full mx-4 h-[95vh] flex flex-col">
         {/* Header */}
-        <div className="flex justify-between items-center mb-6">
+        <div className="flex justify-between items-center mb-4 flex-shrink-0">
           <div>
-            <h2 className="text-xl font-semibold">Review Images</h2>
+            <h2 className="text-lg font-semibold">Review Images</h2>
             <p className="text-sm text-gray-600">
               Image {currentIndex + 1} of {completedUploads.length}: {currentUpload.file.name}
             </p>
@@ -272,27 +268,28 @@ export default function ImageReview({ uploadResults, onComplete, onClose }: Imag
           </button>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Left Side - Original Image and Crop Preview */}
-          <div className="space-y-4">
-            {/* Original Image */}
-            <div>
-              <h3 className="text-lg font-medium mb-2">Original Image</h3>
+        <div className="flex-1 grid grid-cols-1 lg:grid-cols-3 gap-4 min-h-0">
+          {/* Original Image */}
+          <div className="flex flex-col min-h-0">
+            <h3 className="text-md font-medium mb-2">Original Image</h3>
+            <div className="flex-1 flex items-center justify-center min-h-0">
               <img
                 ref={imageRef}
                 src={imageUrl}
                 alt={currentUpload.file.name}
-                className="w-full max-w-md rounded-lg border shadow-sm"
+                className="max-w-full max-h-full object-contain rounded border shadow-sm"
                 onLoad={updateCropPreview}
               />
             </div>
+          </div>
 
-            {/* Crop Preview */}
-            <div>
-              <h3 className="text-lg font-medium mb-2">16:9 Crop Preview</h3>
+          {/* Crop Preview and Controls */}
+          <div className="flex flex-col min-h-0">
+            <h3 className="text-md font-medium mb-2">16:9 Crop Preview</h3>
+            <div className="flex-1 flex flex-col justify-center min-h-0">
               <canvas
                 ref={canvasRef}
-                className="border rounded-lg shadow-sm"
+                className="border rounded shadow-sm mx-auto"
                 style={{ maxWidth: '100%', height: 'auto' }}
               />
 
@@ -315,99 +312,93 @@ export default function ImageReview({ uploadResults, onComplete, onClose }: Imag
                   <span className="text-xs text-gray-500">Bottom</span>
                 </div>
                 <div className="text-center text-xs text-gray-500 mt-1">
-                  Position: {Math.round(cropOffset * 100)}% (0% = Top, 50% = Center, 100% = Bottom)
+                  Position: {Math.round(cropOffset * 100)}%
                 </div>
               </div>
             </div>
           </div>
 
-          {/* Right Side - Tag Management */}
-          <div className="space-y-4">
-            <div>
-              <h3 className="text-lg font-medium mb-2">Review Tags</h3>
+          {/* Tag Management */}
+          <div className="flex flex-col min-h-0 overflow-y-auto">
+            <h3 className="text-md font-medium mb-2">Review Tags</h3>
 
-              {/* AI Caption */}
-              {currentUpload.analysisResult?.caption && (
-                <div className="mb-4 p-3 bg-blue-50 rounded-lg">
-                  <p className="text-sm font-medium text-blue-900 mb-1">AI Caption:</p>
-                  <p className="text-sm text-blue-800">{currentUpload.analysisResult.caption}</p>
-                </div>
-              )}
-
-              {/* Current Tags */}
-              <div className="mb-4">
-                <p className="text-sm font-medium text-gray-700 mb-2">Current Tags:</p>
-                <div className="flex flex-wrap gap-2">
-                  {tags.map((tag, index) => (
-                    <span
-                      key={index}
-                      className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-blue-100 text-blue-800"
-                    >
-                      {tag}
-                      <button
-                        onClick={() => handleRemoveTag(tag)}
-                        className="ml-1 text-blue-600 hover:text-blue-800"
-                      >
-                        ×
-                      </button>
-                    </span>
-                  ))}
-                </div>
+            {/* AI Caption */}
+            {currentUpload.analysisResult?.caption && (
+              <div className="mb-3 p-2 bg-blue-50 rounded text-xs">
+                <p className="font-medium text-blue-900 mb-1">AI Caption:</p>
+                <p className="text-blue-800">{currentUpload.analysisResult.caption}</p>
               </div>
+            )}
 
-              {/* Add New Tag */}
-              <div className="mb-4">
-                <p className="text-sm font-medium text-gray-700 mb-2">Add New Tag:</p>
-                <div className="flex space-x-2">
-                  <input
-                    type="text"
-                    value={newTag}
-                    onChange={(e) => setNewTag(e.target.value)}
-                    onKeyPress={(e) => e.key === 'Enter' && handleAddTag()}
-                    placeholder="Enter tag name"
-                    className="flex-1 border border-gray-300 rounded-md px-3 py-2 text-sm"
-                  />
-                  <button
-                    onClick={handleAddTag}
-                    className="bg-blue-600 text-white px-4 py-2 rounded-md text-sm hover:bg-blue-700"
+            {/* Current Tags */}
+            <div className="mb-3">
+              <p className="text-sm font-medium text-gray-700 mb-2">Current Tags:</p>
+              <div className="flex flex-wrap gap-1">
+                {tags.map((tag, index) => (
+                  <span
+                    key={index}
+                    className="inline-flex items-center px-2 py-1 rounded text-xs bg-blue-100 text-blue-800"
                   >
-                    Add
-                  </button>
-                </div>
+                    {tag}
+                    <button
+                      onClick={() => handleRemoveTag(tag)}
+                      className="ml-1 text-blue-600 hover:text-blue-800"
+                    >
+                      ×
+                    </button>
+                  </span>
+                ))}
               </div>
+            </div>
 
-              {/* Location Field */}
-              <div className="mb-4">
-                <p className="text-sm font-medium text-gray-700 mb-2">Location:</p>
+            {/* Add New Tag */}
+            <div className="mb-3">
+              <p className="text-sm font-medium text-gray-700 mb-2">Add New Tag:</p>
+              <div className="flex space-x-2">
                 <input
                   type="text"
-                  value={location}
-                  onChange={(e) => setLocation(e.target.value)}
-                  placeholder="e.g., St. Cloud Police Department, Downtown St. Cloud, etc."
-                  className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
+                  value={newTag}
+                  onChange={(e) => setNewTag(e.target.value)}
+                  onKeyPress={(e) => e.key === 'Enter' && handleAddTag()}
+                  placeholder="Enter tag name"
+                  className="flex-1 border border-gray-300 rounded px-2 py-1 text-sm"
                 />
-                <p className="text-xs text-gray-500 mt-1">
-                  Specify the location where this photo was taken (optional)
-                </p>
+                <button
+                  onClick={handleAddTag}
+                  className="bg-blue-600 text-white px-3 py-1 rounded text-sm hover:bg-blue-700"
+                >
+                  Add
+                </button>
               </div>
-
-              {/* AI Analysis Info */}
-              {currentUpload.analysisResult && (
-                <div className="text-xs text-gray-500 space-y-1">
-                  <p>Dimensions: {currentUpload.analysisResult.width} × {currentUpload.analysisResult.height}</p>
-                  <p>Orientation: {currentUpload.analysisResult.orientation}</p>
-                  <p>Safety Score: {Math.round((currentUpload.analysisResult.safe_score || 0) * 100)}%</p>
-                  {currentUpload.analysisResult.faces_count > 0 && (
-                    <p>Faces Detected: {currentUpload.analysisResult.faces_count}</p>
-                  )}
-                </div>
-              )}
             </div>
+
+            {/* Location Field */}
+            <div className="mb-3">
+              <p className="text-sm font-medium text-gray-700 mb-2">Location:</p>
+              <input
+                type="text"
+                value={location}
+                onChange={(e) => setLocation(e.target.value)}
+                placeholder="e.g., St. Cloud Police Department"
+                className="w-full border border-gray-300 rounded px-2 py-1 text-sm"
+              />
+            </div>
+
+            {/* AI Analysis Info */}
+            {currentUpload.analysisResult && (
+              <div className="text-xs text-gray-500 space-y-1 mt-auto">
+                <p>Dimensions: {currentUpload.analysisResult.width} × {currentUpload.analysisResult.height}</p>
+                <p>Safety Score: {Math.round((currentUpload.analysisResult.safe_score || 0) * 100)}%</p>
+                {currentUpload.analysisResult.faces_count > 0 && (
+                  <p>Faces: {currentUpload.analysisResult.faces_count}</p>
+                )}
+              </div>
+            )}
           </div>
         </div>
 
         {/* Navigation Footer */}
-        <div className="flex justify-between items-center mt-6 pt-4 border-t">
+        <div className="flex justify-between items-center mt-4 pt-3 border-t flex-shrink-0">
           <div className="flex space-x-2">
             <button
               onClick={handlePrevious}

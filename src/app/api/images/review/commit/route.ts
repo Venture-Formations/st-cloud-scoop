@@ -18,7 +18,8 @@ export async function POST(request: NextRequest) {
       license,
       credit,
       location,
-      source_url
+      source_url,
+      ocr_text
     } = body
 
     // Get current image data
@@ -53,6 +54,7 @@ export async function POST(request: NextRequest) {
     if (location !== undefined) updateData.location = location
     if (source_url !== undefined) updateData.source_url = source_url
     if (crop_v_offset !== undefined) updateData.crop_v_offset = crop_v_offset
+    if (ocr_text !== undefined) updateData.ocr_text = ocr_text
 
     const { error: updateError } = await supabaseAdmin
       .from('images')

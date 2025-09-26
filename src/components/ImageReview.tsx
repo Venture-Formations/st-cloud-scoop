@@ -24,6 +24,7 @@ interface ProcessedImage {
   tags: string[]
   cropOffset: number
   location: string
+  ocrText: string
   skipped: boolean
 }
 
@@ -35,6 +36,7 @@ export default function ImageReview({ uploadResults, onComplete, onClose, onUpda
   const [tags, setTags] = useState<string[]>([])
   const [newTag, setNewTag] = useState('')
   const [location, setLocation] = useState('')
+  const [ocrText, setOcrText] = useState('')
   const [isProcessing, setIsProcessing] = useState(false)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const imageRef = useRef<HTMLImageElement>(null)
@@ -54,10 +56,12 @@ export default function ImageReview({ uploadResults, onComplete, onClose, onUpda
         setCropOffset(existingProcessed.cropOffset)
         setTags(existingProcessed.tags)
         setLocation(existingProcessed.location)
+        setOcrText(existingProcessed.ocrText)
       } else {
         setCropOffset(0.5) // Default to center
         setTags(currentUpload.analysisResult.top_tags || [])
         setLocation('') // Default to empty
+        setOcrText(currentUpload.analysisResult.ocr_text || '') // Initialize with OCR text from analysis
       }
     }
   }, [currentIndex, currentUpload, processedImages])
@@ -128,6 +132,7 @@ export default function ImageReview({ uploadResults, onComplete, onClose, onUpda
       tags,
       cropOffset,
       location,
+      ocrText,
       skipped: false
     }
 
@@ -219,6 +224,7 @@ export default function ImageReview({ uploadResults, onComplete, onClose, onUpda
           tags,
           cropOffset,
           location,
+          ocrText,
           skipped: false
         })
       }
@@ -232,7 +238,8 @@ export default function ImageReview({ uploadResults, onComplete, onClose, onUpda
             image_id: processed.imageId,
             tags: processed.tags,
             crop_v_offset: processed.cropOffset,
-            location: processed.location
+            location: processed.location,
+            ocr_text: processed.ocrText
           })
         })
       }
@@ -308,20 +315,11 @@ export default function ImageReview({ uploadResults, onComplete, onClose, onUpda
             <div className="flex flex-col min-h-0">
               <h3 className="text-md font-medium mb-2">16:9 Crop Preview</h3>
               <div className="flex flex-col justify-center">
-                {currentUpload?.analysisResult?.variant_16x9_url ? (
-                  <img
-                    src={currentUpload.analysisResult.variant_16x9_url}
-                    alt="16:9 variant preview"
-                    className="border rounded shadow-sm mx-auto max-w-full h-auto"
-                    style={{ maxWidth: '400px' }}
-                  />
-                ) : (
-                  <canvas
-                    ref={canvasRef}
-                    className="border rounded shadow-sm mx-auto"
-                    style={{ maxWidth: '100%', height: 'auto' }}
-                  />
-                )}
+                <canvas
+                  ref={canvasRef}
+                  className="border rounded shadow-sm mx-auto"
+                  style={{ maxWidth: '100%', height: 'auto' }}
+                />
 
                 {/* Crop Adjustment */}
                 <div className="mt-4">
@@ -411,6 +409,21 @@ export default function ImageReview({ uploadResults, onComplete, onClose, onUpda
                 placeholder="e.g., St. Cloud Police Department"
                 className="w-full border border-gray-300 rounded px-2 py-1 text-sm"
               />
+            </div>
+
+            {/* OCR Text Field */}
+            <div className="mb-3">
+              <p className="text-sm font-medium text-gray-700 mb-2">OCR Text:</p>
+              <textarea
+                value={ocrText}
+                onChange={(e) => setOcrText(e.target.value)}
+                placeholder="Text found in image (editable)"
+                className="w-full border border-gray-300 rounded px-2 py-1 text-sm"
+                rows={3}
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                Edit or add text that appears in the image for better searchability
+              </p>
             </div>
 
             {/* AI Analysis Info */}

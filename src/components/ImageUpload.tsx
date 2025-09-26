@@ -179,11 +179,19 @@ export default function ImageUpload({
       upload => upload.status === 'completed' && upload.analysisResult
     )
 
+    console.log('Upload complete - checking for review:', {
+      totalUploads: newUploads.length,
+      completedWithAnalysis: completedUploads.length,
+      uploads: newUploads.map(u => ({ status: u.status, hasAnalysis: !!u.analysisResult }))
+    })
+
     if (completedUploads.length > 0) {
       // Show review page for completed uploads
+      console.log('Setting showReview to true')
       setShowReview(true)
     } else {
       // No successful uploads, close directly
+      console.log('No completed uploads with analysis, closing directly')
       if (onComplete) {
         onComplete(newUploads)
       }
@@ -257,6 +265,7 @@ export default function ImageUpload({
 
   // Show review page if requested
   if (showReview) {
+    console.log('Rendering ImageReview component with uploads:', uploads.length)
     return (
       <ImageReview
         uploadResults={uploads}

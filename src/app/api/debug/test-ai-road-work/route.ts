@@ -41,7 +41,7 @@ export async function GET(request: NextRequest) {
     console.log('=== END RESPONSE ===')
 
     // Test parsing logic from road-work-manager.ts
-    let roadWorkItems: any[]
+    let roadWorkItems: any[] = []
     let parseError: any = null
 
     try {

@@ -5,15 +5,13 @@ import Layout from '@/components/Layout'
 import ImageUpload from '@/components/ImageUpload'
 import { Image, ImageTag, ImageSearchFilters } from '@/types/database'
 
-type SortField = 'ai_caption' | 'created_at' | 'orientation' | 'safe_score' | 'faces_count'
+type SortField = 'ai_caption' | 'created_at' | 'safe_score' | 'faces_count'
 type SortDirection = 'asc' | 'desc'
 
 interface ImagesFilter {
   search: string
-  orientation: 'all' | 'landscape' | 'portrait' | 'square'
   hasText: 'all' | 'true' | 'false'
   hasFaces: 'all' | 'true' | 'false'
-  license: string
   dateRange: 'all' | 'week' | 'month' | 'year'
 }
 
@@ -24,10 +22,8 @@ export default function ImagesDatabasePage() {
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc')
   const [filter, setFilter] = useState<ImagesFilter>({
     search: '',
-    orientation: 'all',
     hasText: 'all',
     hasFaces: 'all',
-    license: '',
     dateRange: 'all'
   })
   const [showUploadModal, setShowUploadModal] = useState(false)
@@ -66,9 +62,6 @@ export default function ImagesDatabasePage() {
         if (!matchesCaption && !matchesAltText && !matchesTags) return false
       }
 
-      // Orientation filter
-      if (filter.orientation !== 'all' && image.orientation !== filter.orientation) return false
-
       // Text filter
       if (filter.hasText !== 'all') {
         const hasText = filter.hasText === 'true'
@@ -81,9 +74,6 @@ export default function ImagesDatabasePage() {
         const imageHasFaces = (image.faces_count || 0) > 0
         if (imageHasFaces !== hasFaces) return false
       }
-
-      // License filter
-      if (filter.license && image.license !== filter.license) return false
 
       // Date range filter
       if (filter.dateRange !== 'all') {
@@ -122,10 +112,6 @@ export default function ImagesDatabasePage() {
           aValue = new Date(a.created_at)
           bValue = new Date(b.created_at)
           break
-        case 'orientation':
-          aValue = a.orientation || ''
-          bValue = b.orientation || ''
-          break
         case 'safe_score':
           aValue = a.safe_score || 0
           bValue = b.safe_score || 0
@@ -160,7 +146,7 @@ export default function ImagesDatabasePage() {
     setEditData({
       ai_caption: image.ai_caption,
       ai_alt_text: image.ai_alt_text,
-      license: image.license,
+      ai_tags: image.ai_tags,
       credit: image.credit,
       location: image.location,
       source_url: image.source_url
@@ -291,7 +277,7 @@ export default function ImagesDatabasePage() {
 
         {/* Filters */}
         <div className="bg-white p-4 rounded-lg shadow space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Search
@@ -303,22 +289,6 @@ export default function ImagesDatabasePage() {
                 placeholder="Search captions, tags..."
                 className="w-full px-3 py-2 border border-gray-300 rounded-md"
               />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Orientation
-              </label>
-              <select
-                value={filter.orientation}
-                onChange={(e) => setFilter({ ...filter, orientation: e.target.value as any })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md"
-              >
-                <option value="all">All</option>
-                <option value="landscape">Landscape</option>
-                <option value="portrait">Portrait</option>
-                <option value="square">Square</option>
-              </select>
             </div>
 
             <div>
@@ -363,7 +333,7 @@ export default function ImagesDatabasePage() {
           )}
         </div>
 
-        {/* Images Grid */}
+        {/* Images Table */}
         {loading ? (
           <div className="text-center py-8">Loading images...</div>
         ) : filteredAndSortedImages.length === 0 ? (
@@ -371,134 +341,172 @@ export default function ImagesDatabasePage() {
             No images found matching your filters.
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {filteredAndSortedImages.map((image) => (
-              <div key={image.id} className="bg-white rounded-lg shadow overflow-hidden">
-                {/* Image Preview */}
-                <div className="aspect-video bg-gray-100 relative">
-                  <img
-                    src={image.cdn_url}
-                    alt={image.ai_alt_text || 'Image'}
-                    className="w-full h-full object-cover"
-                    onError={(e) => {
-                      e.currentTarget.style.display = 'none'
-                    }}
-                  />
-
-                  {/* Selection Checkbox */}
-                  <div className="absolute top-2 left-2">
+          <div className="bg-white rounded-lg shadow overflow-hidden">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-4 py-3 text-left">
                     <input
                       type="checkbox"
-                      checked={selectedImages.has(image.id)}
-                      onChange={(e) => handleSelectImage(image.id, e.target.checked)}
+                      checked={selectedImages.size === filteredAndSortedImages.length && filteredAndSortedImages.length > 0}
+                      onChange={(e) => handleSelectAll(e.target.checked)}
                       className="w-4 h-4"
                     />
-                  </div>
-
-                  {/* Image Stats */}
-                  <div className="absolute top-2 right-2 bg-black bg-opacity-50 text-white text-xs px-2 py-1 rounded">
-                    {image.width}×{image.height}
-                  </div>
-
-                  {/* Orientation Badge */}
-                  <div className="absolute bottom-2 left-2">
-                    <span className={`text-xs px-2 py-1 rounded ${
-                      image.orientation === 'landscape' ? 'bg-green-100 text-green-800' :
-                      image.orientation === 'portrait' ? 'bg-blue-100 text-blue-800' :
-                      'bg-yellow-100 text-yellow-800'
-                    }`}>
-                      {image.orientation}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Image Details */}
-                <div className="p-4 space-y-3">
-                  {editingImage === image.id ? (
-                    // Edit Mode
-                    <div className="space-y-2">
-                      <textarea
-                        value={editData.ai_caption || ''}
-                        onChange={(e) => setEditData({ ...editData, ai_caption: e.target.value })}
-                        placeholder="Caption"
-                        className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
-                        rows={2}
-                      />
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Preview
+                  </th>
+                  <th
+                    className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                    onClick={() => handleSort('ai_caption')}
+                  >
+                    Caption {sortField === 'ai_caption' && (sortDirection === 'asc' ? '↑' : '↓')}
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Tags
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Location
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Info
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Actions
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {filteredAndSortedImages.map((image) => (
+                  <tr key={image.id} className="hover:bg-gray-50">
+                    <td className="px-4 py-4">
                       <input
-                        type="text"
-                        value={editData.license || ''}
-                        onChange={(e) => setEditData({ ...editData, license: e.target.value })}
-                        placeholder="License"
-                        className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
+                        type="checkbox"
+                        checked={selectedImages.has(image.id)}
+                        onChange={(e) => handleSelectImage(image.id, e.target.checked)}
+                        className="w-4 h-4"
                       />
-                      <input
-                        type="text"
-                        value={editData.credit || ''}
-                        onChange={(e) => setEditData({ ...editData, credit: e.target.value })}
-                        placeholder="Credit"
-                        className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
+                    </td>
+
+                    <td className="px-4 py-4">
+                      <img
+                        src={image.cdn_url}
+                        alt={image.ai_alt_text || 'Image'}
+                        className="w-16 h-10 object-cover rounded border"
+                        onError={(e) => {
+                          e.currentTarget.src = '/placeholder-image.png'
+                        }}
                       />
-                      <div className="flex gap-2">
-                        <button
-                          onClick={() => handleSaveEdit(image.id)}
-                          disabled={updating}
-                          className="flex-1 bg-green-600 text-white px-2 py-1 rounded text-sm hover:bg-green-700 disabled:opacity-50"
-                        >
-                          {updating ? 'Saving...' : 'Save'}
-                        </button>
-                        <button
-                          onClick={handleCancelEdit}
-                          className="flex-1 bg-gray-500 text-white px-2 py-1 rounded text-sm hover:bg-gray-600"
-                        >
-                          Cancel
-                        </button>
-                      </div>
-                    </div>
-                  ) : (
-                    // View Mode
-                    <>
-                      <div className="text-sm text-gray-900 line-clamp-2">
-                        {image.ai_caption || 'No caption'}
-                      </div>
+                    </td>
 
-                      {renderTagBadges(image.ai_tags, image.ai_tags_scored)}
+                    <td className="px-4 py-4">
+                      {editingImage === image.id ? (
+                        <textarea
+                          value={editData.ai_caption || ''}
+                          onChange={(e) => setEditData({ ...editData, ai_caption: e.target.value })}
+                          placeholder="Caption"
+                          className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
+                          rows={3}
+                        />
+                      ) : (
+                        <div className="text-sm text-gray-900 max-w-xs">
+                          {image.ai_caption || 'No caption'}
+                        </div>
+                      )}
+                    </td>
 
-                      <div className="flex items-center justify-between text-xs text-gray-500">
-                        <span>{new Date(image.created_at).toLocaleDateString()}</span>
-                        <div className="flex gap-2">
+                    <td className="px-4 py-4">
+                      {editingImage === image.id ? (
+                        <textarea
+                          value={editData.ai_tags?.join(', ') || ''}
+                          onChange={(e) => setEditData({
+                            ...editData,
+                            ai_tags: e.target.value.split(',').map(tag => tag.trim()).filter(tag => tag.length > 0)
+                          })}
+                          placeholder="tag1, tag2, tag3..."
+                          className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
+                          rows={3}
+                        />
+                      ) : (
+                        <div className="max-w-xs">
+                          {renderTagBadges(image.ai_tags, image.ai_tags_scored)}
+                        </div>
+                      )}
+                    </td>
+
+                    <td className="px-4 py-4">
+                      {editingImage === image.id ? (
+                        <input
+                          type="text"
+                          value={editData.location || ''}
+                          onChange={(e) => setEditData({ ...editData, location: e.target.value })}
+                          placeholder="Location"
+                          className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
+                        />
+                      ) : (
+                        <div className="text-sm text-gray-900">
+                          {image.location || '-'}
+                        </div>
+                      )}
+                    </td>
+
+                    <td className="px-4 py-4">
+                      <div className="text-sm text-gray-500 space-y-1">
+                        <div>{image.width}×{image.height}</div>
+                        <div className="flex gap-1">
                           {image.faces_count > 0 && (
-                            <span className="bg-purple-100 text-purple-800 px-1 py-0.5 rounded">
+                            <span className="bg-purple-100 text-purple-800 px-1 py-0.5 rounded text-xs">
                               {image.faces_count} face{image.faces_count !== 1 ? 's' : ''}
                             </span>
                           )}
                           {image.has_text && (
-                            <span className="bg-orange-100 text-orange-800 px-1 py-0.5 rounded">
+                            <span className="bg-orange-100 text-orange-800 px-1 py-0.5 rounded text-xs">
                               Text
                             </span>
                           )}
                         </div>
                       </div>
+                    </td>
 
-                      <div className="flex gap-2">
-                        <button
-                          onClick={() => handleEdit(image)}
-                          className="flex-1 bg-blue-600 text-white px-2 py-1 rounded text-sm hover:bg-blue-700"
-                        >
-                          Edit
-                        </button>
-                        <button
-                          onClick={() => handleDelete(image.id)}
-                          disabled={deleting === image.id}
-                          className="flex-1 bg-red-600 text-white px-2 py-1 rounded text-sm hover:bg-red-700 disabled:opacity-50"
-                        >
-                          {deleting === image.id ? 'Deleting...' : 'Delete'}
-                        </button>
-                      </div>
-                    </>
-                  )}
-                </div>
-              </div>
-            ))}
+                    <td className="px-4 py-4">
+                      {editingImage === image.id ? (
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => handleSaveEdit(image.id)}
+                            disabled={updating}
+                            className="bg-green-600 text-white px-3 py-1 rounded text-sm hover:bg-green-700 disabled:opacity-50"
+                          >
+                            {updating ? 'Saving...' : 'Save'}
+                          </button>
+                          <button
+                            onClick={handleCancelEdit}
+                            className="bg-gray-500 text-white px-3 py-1 rounded text-sm hover:bg-gray-600"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => handleEdit(image)}
+                            className="bg-blue-600 text-white px-3 py-1 rounded text-sm hover:bg-blue-700"
+                          >
+                            Edit
+                          </button>
+                          <button
+                            onClick={() => handleDelete(image.id)}
+                            disabled={deleting === image.id}
+                            className="bg-red-600 text-white px-3 py-1 rounded text-sm hover:bg-red-700 disabled:opacity-50"
+                          >
+                            {deleting === image.id ? 'Deleting...' : 'Delete'}
+                          </button>
+                        </div>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         )}
       </div>

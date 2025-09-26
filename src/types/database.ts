@@ -505,6 +505,7 @@ export interface ImageAnalysisResult {
   has_text: boolean
   dominant_colors: string[]
   safe_score: number
+  variant_16x9_url?: string | null
 }
 
 export interface ImageReviewRequest {

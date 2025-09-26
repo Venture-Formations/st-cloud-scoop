@@ -169,7 +169,8 @@ export async function POST(request: NextRequest) {
         faces_count: facesCount,
         has_text: hasText || false,
         dominant_colors: dominantColors,
-        safe_score: safeScore
+        safe_score: safeScore,
+        variant_16x9_url: image.variant_16x9_url // Include existing variant URL if available
       }
 
       return NextResponse.json(result)

@@ -6,7 +6,7 @@ import ImageReview from './ImageReview'
 
 interface UploadProgress {
   file: File
-  status: 'pending' | 'uploading' | 'analyzing' | 'completed' | 'error'
+  status: 'pending' | 'uploading' | 'analyzing' | 'completed' | 'error' | 'skipped'
   progress: number
   error?: string
   imageId?: string
@@ -265,6 +265,7 @@ export default function ImageUpload({
         uploadResults={uploads}
         onComplete={handleReviewComplete}
         onClose={handleReviewClose}
+        onUpdateUploadResults={setUploads}
       />
     )
   }

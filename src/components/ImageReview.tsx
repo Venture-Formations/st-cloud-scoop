@@ -16,6 +16,7 @@ interface ImageReviewProps {
   uploadResults: UploadResult[]
   onComplete: (processedImages: ProcessedImage[]) => void
   onClose: () => void
+  onUpdateUploadResults: (updatedResults: UploadResult[]) => void
 }
 
 interface ProcessedImage {
@@ -26,7 +27,7 @@ interface ProcessedImage {
   skipped: boolean
 }
 
-export default function ImageReview({ uploadResults, onComplete, onClose }: ImageReviewProps) {
+export default function ImageReview({ uploadResults, onComplete, onClose, onUpdateUploadResults }: ImageReviewProps) {
 
   const [currentIndex, setCurrentIndex] = useState(0)
   const [processedImages, setProcessedImages] = useState<ProcessedImage[]>([])
@@ -150,27 +151,45 @@ export default function ImageReview({ uploadResults, onComplete, onClose }: Imag
     }
   }
 
-  const handleSkip = () => {
+  const handleSkip = async () => {
     if (!currentUpload?.imageId) return
 
-    const skipped: ProcessedImage = {
-      imageId: currentUpload.imageId,
-      tags: [],
-      cropOffset: 0.5,
-      location: '',
-      skipped: true
-    }
+    try {
+      // Delete the image from the database
+      const response = await fetch(`/api/images/${currentUpload.imageId}`, {
+        method: 'DELETE'
+      })
 
-    setProcessedImages(prev => {
-      const filtered = prev.filter(p => p.imageId !== currentUpload.imageId)
-      return [...filtered, skipped]
-    })
+      if (!response.ok) {
+        throw new Error('Failed to delete image')
+      }
 
-    if (currentIndex < completedUploads.length - 1) {
-      setCurrentIndex(currentIndex + 1)
-    } else {
-      // Last image, finish up
-      handleFinish()
+      // Remove from uploadResults and update parent component
+      const updatedUploads = uploadResults.filter(upload => upload.imageId !== currentUpload.imageId)
+      onUpdateUploadResults(updatedUploads)
+
+      // Update the completedUploads array
+      const newCompletedUploads = updatedUploads.filter(
+        result => result.status === 'completed' && result.analysisResult && result.imageId
+      )
+
+      if (newCompletedUploads.length === 0) {
+        // No more images, close the review
+        onComplete([])
+        return
+      }
+
+      // Navigate to next image or previous if this was the last
+      if (currentIndex >= newCompletedUploads.length) {
+        // Was the last image, go to previous
+        setCurrentIndex(Math.max(0, newCompletedUploads.length - 1))
+      }
+      // If still images left, stay on current index (will show next image)
+      // If this was the last image and there are no more, it will handle automatically
+
+    } catch (error) {
+      console.error('Error deleting image:', error)
+      alert('Failed to delete image. Please try again.')
     }
   }
 
@@ -287,11 +306,20 @@ export default function ImageReview({ uploadResults, onComplete, onClose }: Imag
           <div className="flex flex-col min-h-0">
             <h3 className="text-md font-medium mb-2">16:9 Crop Preview</h3>
             <div className="flex-1 flex flex-col justify-center min-h-0">
-              <canvas
-                ref={canvasRef}
-                className="border rounded shadow-sm mx-auto"
-                style={{ maxWidth: '100%', height: 'auto' }}
-              />
+              {currentUpload?.analysisResult?.variant_16x9_url ? (
+                <img
+                  src={currentUpload.analysisResult.variant_16x9_url}
+                  alt="16:9 variant preview"
+                  className="border rounded shadow-sm mx-auto max-w-full h-auto"
+                  style={{ maxWidth: '500px' }}
+                />
+              ) : (
+                <canvas
+                  ref={canvasRef}
+                  className="border rounded shadow-sm mx-auto"
+                  style={{ maxWidth: '100%', height: 'auto' }}
+                />
+              )}
 
               {/* Crop Adjustment */}
               <div className="mt-4">
@@ -322,52 +350,46 @@ export default function ImageReview({ uploadResults, onComplete, onClose }: Imag
           <div className="flex flex-col min-h-0 overflow-y-auto">
             <h3 className="text-md font-medium mb-2">Review Tags</h3>
 
-            {/* AI Caption */}
-            {currentUpload.analysisResult?.caption && (
+            {/* AI Caption - only show if caption exists and is not empty */}
+            {currentUpload.analysisResult?.caption && currentUpload.analysisResult.caption.trim() && (
               <div className="mb-3 p-2 bg-blue-50 rounded text-xs">
                 <p className="font-medium text-blue-900 mb-1">AI Caption:</p>
                 <p className="text-blue-800">{currentUpload.analysisResult.caption}</p>
               </div>
             )}
 
-            {/* Current Tags */}
+            {/* Tag Management */}
             <div className="mb-3">
-              <p className="text-sm font-medium text-gray-700 mb-2">Current Tags:</p>
-              <div className="flex flex-wrap gap-1">
+              <p className="text-sm font-medium text-gray-700 mb-2">Tags:</p>
+              <div className="flex flex-wrap gap-1 mb-2">
                 {tags.map((tag, index) => (
-                  <span
+                  <button
                     key={index}
-                    className="inline-flex items-center px-2 py-1 rounded text-xs bg-blue-100 text-blue-800"
+                    onClick={() => handleRemoveTag(tag)}
+                    className="inline-flex items-center px-2 py-1 rounded text-xs bg-blue-100 text-blue-800 hover:bg-red-100 hover:text-red-800 transition-colors"
+                    title="Click to remove"
                   >
                     {tag}
-                    <button
-                      onClick={() => handleRemoveTag(tag)}
-                      className="ml-1 text-blue-600 hover:text-blue-800"
-                    >
-                      ×
-                    </button>
-                  </span>
+                    <span className="ml-1">×</span>
+                  </button>
                 ))}
               </div>
-            </div>
 
-            {/* Add New Tag */}
-            <div className="mb-3">
-              <p className="text-sm font-medium text-gray-700 mb-2">Add New Tag:</p>
+              {/* Add New Tag */}
               <div className="flex space-x-2">
                 <input
                   type="text"
                   value={newTag}
                   onChange={(e) => setNewTag(e.target.value)}
                   onKeyPress={(e) => e.key === 'Enter' && handleAddTag()}
-                  placeholder="Enter tag name"
+                  placeholder="Add new tag..."
                   className="flex-1 border border-gray-300 rounded px-2 py-1 text-sm"
                 />
                 <button
                   onClick={handleAddTag}
-                  className="bg-blue-600 text-white px-3 py-1 rounded text-sm hover:bg-blue-700"
+                  className="bg-green-600 text-white px-3 py-1 rounded text-sm hover:bg-green-700"
                 >
-                  Add
+                  +
                 </button>
               </div>
             </div>
@@ -423,22 +445,13 @@ export default function ImageReview({ uploadResults, onComplete, onClose }: Imag
             >
               Skip This Image
             </button>
-            {currentIndex === completedUploads.length - 1 ? (
-              <button
-                onClick={handleFinish}
-                disabled={isProcessing}
-                className="bg-green-600 text-white px-6 py-2 rounded-md text-sm hover:bg-green-700 disabled:opacity-50"
-              >
-                {isProcessing ? 'Processing...' : 'Finish'}
-              </button>
-            ) : (
-              <button
-                onClick={handleNext}
-                className="bg-blue-600 text-white px-6 py-2 rounded-md text-sm hover:bg-blue-700"
-              >
-                Next →
-              </button>
-            )}
+            <button
+              onClick={currentIndex === completedUploads.length - 1 ? handleFinish : handleNext}
+              disabled={isProcessing}
+              className="bg-blue-600 text-white px-6 py-2 rounded-md text-sm hover:bg-blue-700 disabled:opacity-50"
+            >
+              {isProcessing ? 'Processing...' : (currentIndex === completedUploads.length - 1 ? 'Finish' : 'Next →')}
+            </button>
           </div>
         </div>
       </div>

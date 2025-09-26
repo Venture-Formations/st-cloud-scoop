@@ -6,9 +6,11 @@ import sharp from 'sharp'
 
 export async function POST(request: NextRequest) {
   try {
-    const body: ImageReviewRequest = await request.json()
+    const body = await request.json()
     const {
       image_id,
+      tags,
+      crop_v_offset,
       ai_caption,
       ai_alt_text,
       ai_tags,
@@ -16,7 +18,6 @@ export async function POST(request: NextRequest) {
       license,
       credit,
       location,
-      crop_v_offset,
       source_url
     } = body
 
@@ -39,7 +40,10 @@ export async function POST(request: NextRequest) {
       updated_at: new Date().toISOString()
     }
 
-    // Only update fields that were provided
+    // Update tags from review page if provided
+    if (tags !== undefined) updateData.ai_tags = tags
+
+    // Only update other fields that were provided
     if (ai_caption !== undefined) updateData.ai_caption = ai_caption
     if (ai_alt_text !== undefined) updateData.ai_alt_text = ai_alt_text
     if (ai_tags !== undefined) updateData.ai_tags = ai_tags

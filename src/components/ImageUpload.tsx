@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useRef } from 'react'
 import { ImageUploadRequest, ImageUploadResponse, ImageAnalysisResult } from '@/types/database'
+import ImageReview from './ImageReview'
 
 interface UploadProgress {
   file: File
@@ -28,6 +29,7 @@ export default function ImageUpload({
   const [uploads, setUploads] = useState<UploadProgress[]>([])
   const [isDragging, setIsDragging] = useState(false)
   const [isProcessing, setIsProcessing] = useState(false)
+  const [showReview, setShowReview] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const validateFile = (file: File): string | null => {
@@ -172,8 +174,19 @@ export default function ImageUpload({
 
     setIsProcessing(false)
 
-    if (onComplete) {
-      onComplete(newUploads)
+    // Check if we have any successfully analyzed images
+    const completedUploads = newUploads.filter(
+      upload => upload.status === 'completed' && upload.analysisResult
+    )
+
+    if (completedUploads.length > 0) {
+      // Show review page for completed uploads
+      setShowReview(true)
+    } else {
+      // No successful uploads, close directly
+      if (onComplete) {
+        onComplete(newUploads)
+      }
     }
   }
 
@@ -223,9 +236,35 @@ export default function ImageUpload({
     }
   }
 
+  const handleReviewComplete = (processedImages: any[]) => {
+    console.log('Review completed with processed images:', processedImages)
+    setShowReview(false)
+    if (onComplete) {
+      onComplete(uploads)
+    }
+  }
+
+  const handleReviewClose = () => {
+    setShowReview(false)
+    if (onComplete) {
+      onComplete(uploads)
+    }
+  }
+
   const completedCount = uploads.filter(u => u.status === 'completed').length
   const errorCount = uploads.filter(u => u.status === 'error').length
   const allCompleted = uploads.length > 0 && uploads.every(u => u.status === 'completed' || u.status === 'error')
+
+  // Show review page if requested
+  if (showReview) {
+    return (
+      <ImageReview
+        uploadResults={uploads}
+        onComplete={handleReviewComplete}
+        onClose={handleReviewClose}
+      />
+    )
+  }
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">

@@ -36,7 +36,7 @@ Return ONLY a JSON array of tag suggestions with this exact structure:
 
 Tag formatting rules:
 - Use format: "type_name" (e.g., "object_car", "scene_outdoor", "people_group")
-- Types: object, scene, people, sport, activity, color, style, theme, location, weather, time
+- Types: object, scene, people, sport, activity, color, style, theme, location, weather, time, mood
 - Names: lowercase, underscores for spaces, descriptive but concise
 - Display names: Proper case with colon separator (e.g., "Object: Car")
 - Confidence: 0.0-1.0 based on relevance to input
@@ -46,6 +46,9 @@ For input "${input}", think of:
 2. Related concepts (if "football" → "sport_team_sport", "activity_playing")
 3. Context variations (if "football" → "scene_sports_field", "object_ball")
 4. Broader categories (if "football" → "people_athletes", "activity_recreation")
+5. Mood/emotion context (if "celebration" → "mood_joyful", "mood_energetic")
+
+Mood categories include: happy, sad, energetic, calm, serious, playful, contemplative, excited, peaceful, dramatic, romantic, mysterious, nostalgic, professional, casual, festive, solemn
 
 Return valid JSON array only, no other text.`
 

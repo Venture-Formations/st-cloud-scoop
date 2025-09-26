@@ -238,9 +238,10 @@ Analyze this image and return strict JSON:
     {"type":"scene","name":"warehouse","conf":0.95},
     {"type":"object","name":"golf_cart","conf":0.98},
     {"type":"color","name":"blue","conf":0.85},
+    {"type":"mood","name":"professional","conf":0.78},
     {"type":"safety","name":"has_text","conf":0.12}
   ],
-  "top_tags": ["scene_warehouse","object_golf_cart","color_blue"],
+  "top_tags": ["scene_warehouse","object_golf_cart","color_blue","mood_professional"],
   "ocr_text": "extracted text in lowercase",
   "text_density": 0.15,
   "ocr_entities": [
@@ -258,12 +259,13 @@ GUIDELINES:
 - Caption: Natural, descriptive sentence about the image contents
 - Alt text: 10-14 words maximum, accessible description for screen readers
 - Tags scored: Array of categorized tags with confidence scores (0-1)
-- Tag types: people, scene, theme, style, color, object, safety
+- Tag types: people, scene, theme, style, color, object, safety, mood
 - Tag names: concrete nouns, lowercase with underscores
 - Top tags: 5-15 most relevant tags in "type_name" format
 - Include safety.has_text if text/signage is visible
 - Confidence scores reflect certainty (0.9+ for obvious, 0.5-0.8 for likely, <0.5 for uncertain)
 - Focus on concrete, visible elements rather than abstract concepts
+- Mood tags: emotional atmosphere/feeling conveyed (happy, energetic, calm, serious, playful, etc.)
 
 OCR ANALYSIS:
 - ocr_text: Extract ALL readable text from the image, convert to lowercase, normalize spacing

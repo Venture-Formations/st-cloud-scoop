@@ -33,6 +33,9 @@ export default function ImagesDatabasePage() {
   const [deleting, setDeleting] = useState<string | null>(null)
   const [selectedImages, setSelectedImages] = useState<Set<string>>(new Set())
   const [previewImage, setPreviewImage] = useState<Image | null>(null)
+  const [tagSuggestions, setTagSuggestions] = useState<{[key: string]: any[]}>({})
+  const [loadingSuggestions, setLoadingSuggestions] = useState<{[key: string]: boolean}>({})
+  const [newTagInput, setNewTagInput] = useState<{[key: string]: string}>({})
 
   useEffect(() => {
     fetchImages()
@@ -239,6 +242,42 @@ export default function ImagesDatabasePage() {
     }
   }
 
+  const fetchTagSuggestions = async (input: string, imageId: string) => {
+    if (input.length < 2) {
+      setTagSuggestions(prev => ({ ...prev, [imageId]: [] }))
+      return
+    }
+
+    setLoadingSuggestions(prev => ({ ...prev, [imageId]: true }))
+
+    try {
+      const response = await fetch('/api/tags/suggest', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ input })
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        setTagSuggestions(prev => ({ ...prev, [imageId]: data.suggestions || [] }))
+      }
+    } catch (error) {
+      console.error('Failed to fetch tag suggestions:', error)
+      setTagSuggestions(prev => ({ ...prev, [imageId]: [] }))
+    } finally {
+      setLoadingSuggestions(prev => ({ ...prev, [imageId]: false }))
+    }
+  }
+
+  const addSuggestedTag = (imageId: string, formattedTag: string) => {
+    const currentTags = editData.ai_tags || []
+    if (!currentTags.includes(formattedTag)) {
+      setEditData({ ...editData, ai_tags: [...currentTags, formattedTag] })
+    }
+    setTagSuggestions(prev => ({ ...prev, [imageId]: [] }))
+    setNewTagInput(prev => ({ ...prev, [imageId]: '' }))
+  }
+
   const renderTagBadges = (tags: string[] | null, tagsScored: ImageTag[] | null) => {
     if (!tags || tags.length === 0) return null
 
@@ -441,41 +480,75 @@ export default function ImagesDatabasePage() {
                             ))}
                           </div>
 
-                          {/* Add new tag input */}
-                          <div className="flex space-x-1">
-                            <input
-                              type="text"
-                              placeholder="Add new tag..."
-                              className="flex-1 px-2 py-1 border border-gray-300 rounded text-xs"
-                              onKeyPress={(e) => {
-                                if (e.key === 'Enter') {
-                                  const newTag = e.currentTarget.value.trim().toLowerCase()
+                          {/* Add new tag input with AI suggestions */}
+                          <div className="space-y-2">
+                            <div className="flex space-x-1">
+                              <input
+                                type="text"
+                                placeholder="Type tag name for AI suggestions..."
+                                value={newTagInput[image.id] || ''}
+                                onChange={(e) => {
+                                  const value = e.target.value
+                                  setNewTagInput(prev => ({ ...prev, [image.id]: value }))
+                                  fetchTagSuggestions(value, image.id)
+                                }}
+                                onKeyPress={(e) => {
+                                  if (e.key === 'Enter') {
+                                    const newTag = (newTagInput[image.id] || '').trim().toLowerCase()
+                                    if (newTag && !(editData.ai_tags || []).includes(newTag)) {
+                                      setEditData({
+                                        ...editData,
+                                        ai_tags: [...(editData.ai_tags || []), newTag]
+                                      })
+                                      setNewTagInput(prev => ({ ...prev, [image.id]: '' }))
+                                      setTagSuggestions(prev => ({ ...prev, [image.id]: [] }))
+                                    }
+                                  }
+                                }}
+                                className="flex-1 px-2 py-1 border border-gray-300 rounded text-xs"
+                              />
+                              <button
+                                onClick={() => {
+                                  const newTag = (newTagInput[image.id] || '').trim().toLowerCase()
                                   if (newTag && !(editData.ai_tags || []).includes(newTag)) {
                                     setEditData({
                                       ...editData,
                                       ai_tags: [...(editData.ai_tags || []), newTag]
                                     })
-                                    e.currentTarget.value = ''
+                                    setNewTagInput(prev => ({ ...prev, [image.id]: '' }))
+                                    setTagSuggestions(prev => ({ ...prev, [image.id]: [] }))
                                   }
-                                }
-                              }}
-                            />
-                            <button
-                              onClick={(e) => {
-                                const input = e.currentTarget.previousElementSibling as HTMLInputElement
-                                const newTag = input.value.trim().toLowerCase()
-                                if (newTag && !(editData.ai_tags || []).includes(newTag)) {
-                                  setEditData({
-                                    ...editData,
-                                    ai_tags: [...(editData.ai_tags || []), newTag]
-                                  })
-                                  input.value = ''
-                                }
-                              }}
-                              className="bg-green-600 text-white px-2 py-1 rounded text-xs hover:bg-green-700"
-                            >
-                              +
-                            </button>
+                                }}
+                                className="bg-green-600 text-white px-2 py-1 rounded text-xs hover:bg-green-700"
+                              >
+                                +
+                              </button>
+                            </div>
+
+                            {/* AI Tag Suggestions */}
+                            {(tagSuggestions[image.id] && tagSuggestions[image.id].length > 0) && (
+                              <div className="border border-gray-200 rounded bg-white shadow-sm p-2 max-h-32 overflow-y-auto">
+                                <div className="text-xs text-gray-500 mb-1">AI Suggestions:</div>
+                                <div className="flex flex-wrap gap-1">
+                                  {tagSuggestions[image.id].map((suggestion: any, idx: number) => (
+                                    <button
+                                      key={idx}
+                                      onClick={() => addSuggestedTag(image.id, suggestion.formatted_tag)}
+                                      className="inline-flex items-center px-2 py-1 rounded text-xs bg-blue-50 text-blue-800 hover:bg-blue-100 border border-blue-200 transition-colors"
+                                      title={`Confidence: ${Math.round(suggestion.confidence * 100)}%`}
+                                    >
+                                      {suggestion.display_name}
+                                    </button>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+
+                            {loadingSuggestions[image.id] && (
+                              <div className="text-xs text-gray-500">
+                                Getting AI suggestions...
+                              </div>
+                            )}
                           </div>
                         </div>
                       ) : (
@@ -509,6 +582,25 @@ export default function ImagesDatabasePage() {
                             <span className="bg-purple-100 text-purple-800 px-1 py-0.5 rounded text-xs">
                               {image.faces_count} face{image.faces_count !== 1 ? 's' : ''}
                             </span>
+                          )}
+                          {image.age_groups && image.age_groups.length > 0 && (
+                            <>
+                              {image.age_groups.map((ageGroup, idx) => (
+                                <span
+                                  key={idx}
+                                  className={`px-1 py-0.5 rounded text-xs ${
+                                    ageGroup.age_group === 'preschool' ? 'bg-pink-100 text-pink-800' :
+                                    ageGroup.age_group === 'elementary' ? 'bg-green-100 text-green-800' :
+                                    ageGroup.age_group === 'high_school' ? 'bg-blue-100 text-blue-800' :
+                                    ageGroup.age_group === 'adult' ? 'bg-indigo-100 text-indigo-800' :
+                                    'bg-gray-100 text-gray-800'
+                                  }`}
+                                  title={`${Math.round(ageGroup.conf * 100)}% confidence`}
+                                >
+                                  {ageGroup.count} {ageGroup.age_group}
+                                </span>
+                              ))}
+                            </>
                           )}
                         </div>
                         {image.ocr_text && (

@@ -1,0 +1,109 @@
+import { NextRequest, NextResponse } from 'next/server'
+import { openai } from '@/lib/openai'
+
+interface TagSuggestion {
+  formatted_tag: string
+  display_name: string
+  confidence: number
+}
+
+export async function POST(request: NextRequest) {
+  try {
+    const { input } = await request.json()
+
+    if (!input || typeof input !== 'string') {
+      return NextResponse.json(
+        { error: 'Input text is required' },
+        { status: 400 }
+      )
+    }
+
+    const prompt = `Given the user input "${input}", suggest 5-8 relevant image tags in the proper format.
+
+Return ONLY a JSON array of tag suggestions with this exact structure:
+[
+  {
+    "formatted_tag": "object_football",
+    "display_name": "Object: Football",
+    "confidence": 0.95
+  },
+  {
+    "formatted_tag": "sport_american_football",
+    "display_name": "Sport: American Football",
+    "confidence": 0.90
+  }
+]
+
+Tag formatting rules:
+- Use format: "type_name" (e.g., "object_car", "scene_outdoor", "people_group")
+- Types: object, scene, people, sport, activity, color, style, theme, location, weather, time
+- Names: lowercase, underscores for spaces, descriptive but concise
+- Display names: Proper case with colon separator (e.g., "Object: Car")
+- Confidence: 0.0-1.0 based on relevance to input
+
+For input "${input}", think of:
+1. Direct matches (if "football" → "object_football", "sport_american_football")
+2. Related concepts (if "football" → "sport_team_sport", "activity_playing")
+3. Context variations (if "football" → "scene_sports_field", "object_ball")
+4. Broader categories (if "football" → "people_athletes", "activity_recreation")
+
+Return valid JSON array only, no other text.`
+
+    const response = await openai.chat.completions.create({
+      model: 'gpt-4o',
+      messages: [{ role: 'user', content: prompt }],
+      max_tokens: 1000,
+      temperature: 0.3
+    })
+
+    const content = response.choices[0]?.message?.content
+    if (!content) {
+      return NextResponse.json(
+        { error: 'No response from AI' },
+        { status: 500 }
+      )
+    }
+
+    try {
+      // Parse AI response
+      const suggestions: TagSuggestion[] = JSON.parse(content.trim())
+
+      // Validate response format
+      if (!Array.isArray(suggestions)) {
+        throw new Error('Response is not an array')
+      }
+
+      // Validate each suggestion
+      const validSuggestions = suggestions.filter(suggestion =>
+        suggestion.formatted_tag &&
+        suggestion.display_name &&
+        typeof suggestion.confidence === 'number'
+      )
+
+      return NextResponse.json({ suggestions: validSuggestions })
+
+    } catch (parseError) {
+      console.error('Failed to parse AI tag suggestions:', parseError)
+      console.error('AI response:', content)
+
+      // Fallback: create basic suggestion from input
+      const fallbackSuggestion = {
+        formatted_tag: `object_${input.toLowerCase().replace(/\s+/g, '_')}`,
+        display_name: `Object: ${input}`,
+        confidence: 0.8
+      }
+
+      return NextResponse.json({
+        suggestions: [fallbackSuggestion],
+        fallback: true
+      })
+    }
+
+  } catch (error) {
+    console.error('Tag suggestion API error:', error)
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    )
+  }
+}

@@ -150,6 +150,7 @@ export async function POST(request: NextRequest) {
         text_density: analysisResult.text_density || null,
         ocr_entities: analysisResult.ocr_entities || null,
         signage_conf: analysisResult.signage_conf || null,
+        age_groups: analysisResult.age_groups || null,
         updated_at: new Date().toISOString()
       }
 
@@ -256,7 +257,8 @@ export async function POST(request: NextRequest) {
         ocr_text: analysisResult.ocr_text || null,
         text_density: analysisResult.text_density || null,
         ocr_entities: analysisResult.ocr_entities || null,
-        signage_conf: analysisResult.signage_conf || null
+        signage_conf: analysisResult.signage_conf || null,
+        age_groups: analysisResult.age_groups || null
       }
 
       return NextResponse.json(result)

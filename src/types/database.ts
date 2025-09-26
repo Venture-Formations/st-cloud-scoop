@@ -432,6 +432,12 @@ export interface OCREntity {
   conf: number
 }
 
+export interface AgeGroupDetection {
+  age_group: 'preschool' | 'elementary' | 'high_school' | 'adult' | 'elderly'
+  count: number
+  conf: number
+}
+
 export interface Image {
   id: string
   object_key: string                    // images/original/{uuid}.jpg
@@ -452,6 +458,7 @@ export interface Image {
   text_density: number | null          // Percent of pixels covered by text (0-1)
   ocr_entities: OCREntity[] | null     // Extracted entities from OCR (NER)
   signage_conf: number | null          // Confidence it's venue signage vs poster/ad
+  age_groups: AgeGroupDetection[] | null // Detected age groups of people in image
   ai_caption: string | null
   ai_alt_text: string | null
   ai_tags: string[] | null
@@ -520,6 +527,7 @@ export interface ImageAnalysisResult {
   text_density: number | null
   ocr_entities: OCREntity[] | null
   signage_conf: number | null
+  age_groups: AgeGroupDetection[] | null
 }
 
 export interface ImageReviewRequest {

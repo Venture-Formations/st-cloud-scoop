@@ -247,7 +247,11 @@ Analyze this image and return strict JSON:
     {"type":"ORG","name":"st cloud police department","conf":0.93},
     {"type":"DATE","name":"march 15","conf":0.87}
   ],
-  "signage_conf": 0.78
+  "signage_conf": 0.78,
+  "age_groups": [
+    {"age_group":"adult","count":2,"conf":0.92},
+    {"age_group":"high_school","count":1,"conf":0.87}
+  ]
 }
 
 GUIDELINES:
@@ -277,7 +281,14 @@ OCR ANALYSIS:
   * 0.2-0.5 = Probably poster/ad/document
   * <0.2 = Clearly not signage
 
-IMPORTANT: Only include OCR fields if readable text is actually present. Set to null if no text detected.`
+AGE GROUP ANALYSIS:
+- age_groups: Only include if people are clearly visible and identifiable
+- Age categories: "preschool" (0-4), "elementary" (5-11), "high_school" (12-17), "adult" (18-64), "elderly" (65+)
+- count: Number of people in each age group
+- conf: Confidence level (0-1) for age group classification
+- Set to null if no people detected or ages cannot be determined
+
+IMPORTANT: Only include OCR fields if readable text is actually present. Only include age_groups if people are visible and ages can be reasonably estimated. Set to null if not detected.`
 }
 
 export async function callOpenAI(prompt: string, maxTokens = 1000, temperature = 0.3) {

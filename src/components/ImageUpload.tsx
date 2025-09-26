@@ -176,22 +176,14 @@ export default function ImageUpload({
 
     // Check if we have any successfully analyzed images
     const completedUploads = newUploads.filter(
-      upload => upload.status === 'completed' && upload.analysisResult
+      upload => upload.status === 'completed' && upload.analysisResult && upload.imageId
     )
-
-    console.log('Upload complete - checking for review:', {
-      totalUploads: newUploads.length,
-      completedWithAnalysis: completedUploads.length,
-      uploads: newUploads.map(u => ({ status: u.status, hasAnalysis: !!u.analysisResult }))
-    })
 
     if (completedUploads.length > 0) {
       // Show review page for completed uploads
-      console.log('Setting showReview to true')
       setShowReview(true)
     } else {
       // No successful uploads, close directly
-      console.log('No completed uploads with analysis, closing directly')
       if (onComplete) {
         onComplete(newUploads)
       }
@@ -245,7 +237,6 @@ export default function ImageUpload({
   }
 
   const handleReviewComplete = (processedImages: any[]) => {
-    console.log('Review completed with processed images:', processedImages)
     setShowReview(false)
     if (onComplete) {
       onComplete(uploads)
@@ -265,7 +256,6 @@ export default function ImageUpload({
 
   // Show review page if requested
   if (showReview) {
-    console.log('Rendering ImageReview component with uploads:', uploads.length)
     return (
       <ImageReview
         uploadResults={uploads}
@@ -415,18 +405,6 @@ export default function ImageUpload({
               </button>
 
               <div className="space-x-3">
-                {/* Test button for review page */}
-                {uploads.length > 0 && (
-                  <button
-                    onClick={() => {
-                      console.log('Manual test: setting showReview to true')
-                      setShowReview(true)
-                    }}
-                    className="bg-purple-600 text-white px-4 py-2 rounded-md hover:bg-purple-700 text-sm"
-                  >
-                    Test Review
-                  </button>
-                )}
                 {allCompleted && onClose && (
                   <button
                     onClick={onClose}

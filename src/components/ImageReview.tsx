@@ -26,7 +26,6 @@ interface ProcessedImage {
 }
 
 export default function ImageReview({ uploadResults, onComplete, onClose }: ImageReviewProps) {
-  console.log('ImageReview component loaded with uploadResults:', uploadResults.length)
 
   const [currentIndex, setCurrentIndex] = useState(0)
   const [processedImages, setProcessedImages] = useState<ProcessedImage[]>([])
@@ -42,15 +41,6 @@ export default function ImageReview({ uploadResults, onComplete, onClose }: Imag
     result => result.status === 'completed' && result.analysisResult && result.imageId
   )
 
-  console.log('ImageReview filtering results:', {
-    totalUploads: uploadResults.length,
-    completedUploads: completedUploads.length,
-    uploadStatuses: uploadResults.map(u => ({
-      status: u.status,
-      hasAnalysis: !!u.analysisResult,
-      hasImageId: !!u.imageId
-    }))
-  })
 
   const currentUpload = completedUploads[currentIndex]
 

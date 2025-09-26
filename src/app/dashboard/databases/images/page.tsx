@@ -510,21 +510,6 @@ export default function ImagesDatabasePage() {
                               {image.faces_count} face{image.faces_count !== 1 ? 's' : ''}
                             </span>
                           )}
-                          {image.has_text && (
-                            <span className="bg-orange-100 text-orange-800 px-1 py-0.5 rounded text-xs">
-                              Text
-                            </span>
-                          )}
-                          {image.text_density && image.text_density > 0 && (
-                            <span className="bg-blue-100 text-blue-800 px-1 py-0.5 rounded text-xs">
-                              {Math.round(image.text_density * 100)}% text
-                            </span>
-                          )}
-                          {image.signage_conf && image.signage_conf > 0.5 && (
-                            <span className="bg-green-100 text-green-800 px-1 py-0.5 rounded text-xs">
-                              Signage ({Math.round(image.signage_conf * 100)}%)
-                            </span>
-                          )}
                         </div>
                         {image.ocr_text && (
                           <div className="mt-1 p-1 bg-gray-50 rounded text-xs max-w-xs">

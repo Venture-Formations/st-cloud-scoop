@@ -106,9 +106,19 @@ export async function POST(request: NextRequest) {
       const aspectRatio = width / height
       const orientation = aspectRatio > 1.3 ? 'landscape' : aspectRatio < 0.8 ? 'portrait' : 'square'
 
-      // Detect faces and text (placeholder logic - would use actual image analysis)
+      // Detect faces and text based on AI analysis
       const facesCount = analysisResult.tags_scored?.find((tag: ImageTag) => tag.type === 'people')?.conf > 0.7 ? 1 : 0
-      const hasText = analysisResult.tags_scored?.some((tag: ImageTag) => tag.name.includes('text') || tag.name.includes('sign'))
+
+      // More accurate text detection based on AI tags
+      const hasText = analysisResult.tags_scored?.some((tag: ImageTag) => {
+        const tagName = tag.name.toLowerCase()
+        const textRelatedTerms = [
+          'text', 'sign', 'writing', 'letter', 'word', 'document', 'book',
+          'newspaper', 'magazine', 'banner', 'poster', 'billboard', 'label',
+          'caption', 'subtitle', 'menu', 'license', 'certificate', 'card'
+        ]
+        return textRelatedTerms.some(term => tagName.includes(term)) && tag.conf > 0.3
+      }) || false
 
       // Extract dominant colors (placeholder)
       const dominantColors = analysisResult.tags_scored
@@ -134,7 +144,7 @@ export async function POST(request: NextRequest) {
         credit,
         location,
         faces_count: facesCount,
-        has_text: hasText || false,
+        has_text: hasText,
         dominant_colors: dominantColors,
         safe_score: safeScore,
         ai_caption: analysisResult.caption,
@@ -241,7 +251,7 @@ export async function POST(request: NextRequest) {
         aspect_ratio: aspectRatio,
         orientation,
         faces_count: facesCount,
-        has_text: hasText || false,
+        has_text: hasText,
         dominant_colors: dominantColors,
         safe_score: safeScore,
         variant_16x9_url: variantUrl // Include generated or existing variant URL

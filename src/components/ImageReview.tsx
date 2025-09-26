@@ -76,33 +76,39 @@ export default function ImageReview({ uploadResults, onComplete, onClose }: Imag
 
     if (!ctx || !img.complete) return
 
-    console.log('Updating crop preview with offset:', cropOffset)
-
     // Set canvas size to 16:9 aspect ratio
     const targetWidth = 400
     const targetHeight = Math.round(targetWidth / (16/9))
     canvas.width = targetWidth
     canvas.height = targetHeight
 
-    // Calculate crop area from original image
-    const imgAspectRatio = img.naturalWidth / img.naturalHeight
-    const targetAspectRatio = 16/9
+    // Calculate crop area from original image (matching backend Sharp.js logic exactly)
+    const originalWidth = img.naturalWidth
+    const originalHeight = img.naturalHeight
+    const targetAspectRatio = 16 / 9
+    const originalAspectRatio = originalWidth / originalHeight
 
     let sourceWidth, sourceHeight, sourceX, sourceY
 
-    if (imgAspectRatio > targetAspectRatio) {
-      // Image is wider than 16:9, crop sides
-      sourceHeight = img.naturalHeight
-      sourceWidth = sourceHeight * targetAspectRatio
-      sourceX = (img.naturalWidth - sourceWidth) / 2
+    if (originalAspectRatio > targetAspectRatio) {
+      // Image is wider than 16:9, crop horizontally (keep full height)
+      sourceHeight = originalHeight
+      sourceWidth = Math.round(sourceHeight * targetAspectRatio)
+      sourceX = Math.round((originalWidth - sourceWidth) / 2)
       sourceY = 0
     } else {
-      // Image is taller than 16:9, crop top/bottom based on offset
-      sourceWidth = img.naturalWidth
-      sourceHeight = sourceWidth / targetAspectRatio
+      // Image is taller than 16:9, crop vertically
+      sourceWidth = originalWidth
+      sourceHeight = Math.round(sourceWidth / targetAspectRatio)
       sourceX = 0
-      sourceY = (img.naturalHeight - sourceHeight) * cropOffset
+      // Apply vertical offset (matching backend exactly)
+      const maxTop = originalHeight - sourceHeight
+      sourceY = Math.round(cropOffset * maxTop)
     }
+
+    console.log('Updating crop preview with offset:', cropOffset)
+    console.log('Image dimensions:', originalWidth, 'x', originalHeight)
+    console.log('Crop calculations:', { sourceX, sourceY, sourceWidth, sourceHeight })
 
     // Draw the cropped image on canvas
     ctx.drawImage(
@@ -426,14 +432,22 @@ export default function ImageReview({ uploadResults, onComplete, onClose }: Imag
             >
               Skip This Image
             </button>
-            <button
-              onClick={handleFinish}
-              disabled={isProcessing}
-              className="bg-green-600 text-white px-6 py-2 rounded-md text-sm hover:bg-green-700 disabled:opacity-50"
-            >
-              {isProcessing ? 'Processing...' :
-               currentIndex === completedUploads.length - 1 ? 'Finish' : 'Save & Finish'}
-            </button>
+            {currentIndex === completedUploads.length - 1 ? (
+              <button
+                onClick={handleFinish}
+                disabled={isProcessing}
+                className="bg-green-600 text-white px-6 py-2 rounded-md text-sm hover:bg-green-700 disabled:opacity-50"
+              >
+                {isProcessing ? 'Processing...' : 'Finish'}
+              </button>
+            ) : (
+              <button
+                onClick={handleNext}
+                className="bg-blue-600 text-white px-6 py-2 rounded-md text-sm hover:bg-blue-700"
+              >
+                Next →
+              </button>
+            )}
           </div>
         </div>
       </div>

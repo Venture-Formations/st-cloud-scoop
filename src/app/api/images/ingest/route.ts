@@ -75,6 +75,7 @@ export async function POST(request: NextRequest) {
         } else {
           analysisResult = JSON.parse(content.trim())
         }
+        console.log('Parsed AI analysis result:', JSON.stringify(analysisResult, null, 2))
       } catch (parseError) {
         console.error('Failed to parse AI response:', parseError)
         console.error('Content:', content)
@@ -161,8 +162,14 @@ export async function POST(request: NextRequest) {
 
       if (updateError) {
         console.error('Database update error:', updateError)
+        console.error('Update data that failed:', JSON.stringify(updateData, null, 2))
         return NextResponse.json(
-          { error: 'Failed to save analysis results' },
+          {
+            error: 'Failed to save analysis results',
+            details: updateError.message,
+            code: updateError.code,
+            hint: updateError.hint
+          },
           { status: 500 }
         )
       }

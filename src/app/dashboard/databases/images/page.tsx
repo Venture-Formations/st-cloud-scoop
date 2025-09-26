@@ -54,13 +54,15 @@ export default function ImagesDatabasePage() {
 
   const filteredAndSortedImages = useMemo(() => {
     let filtered = images.filter(image => {
-      // Search filter (caption, alt text, tags)
+      // Search filter (caption, alt text, tags, OCR text)
       if (filter.search) {
         const searchLower = filter.search.toLowerCase()
         const matchesCaption = image.ai_caption?.toLowerCase().includes(searchLower)
         const matchesAltText = image.ai_alt_text?.toLowerCase().includes(searchLower)
         const matchesTags = image.ai_tags?.some(tag => tag.toLowerCase().includes(searchLower))
-        if (!matchesCaption && !matchesAltText && !matchesTags) return false
+        const matchesOCR = image.ocr_text?.toLowerCase().includes(searchLower)
+        const matchesEntities = image.ocr_entities?.some(entity => entity.name.toLowerCase().includes(searchLower))
+        if (!matchesCaption && !matchesAltText && !matchesTags && !matchesOCR && !matchesEntities) return false
       }
 
       // Text filter
@@ -502,7 +504,7 @@ export default function ImagesDatabasePage() {
                     <td className="px-4 py-4">
                       <div className="text-sm text-gray-500 space-y-1">
                         <div>{image.width}×{image.height}</div>
-                        <div className="flex gap-1">
+                        <div className="flex flex-wrap gap-1">
                           {image.faces_count > 0 && (
                             <span className="bg-purple-100 text-purple-800 px-1 py-0.5 rounded text-xs">
                               {image.faces_count} face{image.faces_count !== 1 ? 's' : ''}
@@ -513,7 +515,42 @@ export default function ImagesDatabasePage() {
                               Text
                             </span>
                           )}
+                          {image.text_density && image.text_density > 0 && (
+                            <span className="bg-blue-100 text-blue-800 px-1 py-0.5 rounded text-xs">
+                              {Math.round(image.text_density * 100)}% text
+                            </span>
+                          )}
+                          {image.signage_conf && image.signage_conf > 0.5 && (
+                            <span className="bg-green-100 text-green-800 px-1 py-0.5 rounded text-xs">
+                              Signage ({Math.round(image.signage_conf * 100)}%)
+                            </span>
+                          )}
                         </div>
+                        {image.ocr_text && (
+                          <div className="mt-1 p-1 bg-gray-50 rounded text-xs max-w-xs">
+                            <span className="font-medium">OCR:</span> {image.ocr_text.substring(0, 100)}{image.ocr_text.length > 100 ? '...' : ''}
+                          </div>
+                        )}
+                        {image.ocr_entities && image.ocr_entities.length > 0 && (
+                          <div className="flex flex-wrap gap-1 mt-1">
+                            {image.ocr_entities.map((entity, idx) => (
+                              <span
+                                key={idx}
+                                className={`px-1 py-0.5 rounded text-xs ${
+                                  entity.type === 'ORG' ? 'bg-red-100 text-red-800' :
+                                  entity.type === 'PERSON' ? 'bg-yellow-100 text-yellow-800' :
+                                  entity.type === 'LOC' ? 'bg-green-100 text-green-800' :
+                                  entity.type === 'DATE' ? 'bg-blue-100 text-blue-800' :
+                                  entity.type === 'TIME' ? 'bg-purple-100 text-purple-800' :
+                                  'bg-gray-100 text-gray-800'
+                                }`}
+                                title={`${entity.type}: ${Math.round(entity.conf * 100)}% confidence`}
+                              >
+                                {entity.name}
+                              </span>
+                            ))}
+                          </div>
+                        )}
                       </div>
                     </td>
 

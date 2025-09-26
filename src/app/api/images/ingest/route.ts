@@ -109,16 +109,10 @@ export async function POST(request: NextRequest) {
       // Detect faces and text based on AI analysis
       const facesCount = analysisResult.tags_scored?.find((tag: ImageTag) => tag.type === 'people')?.conf > 0.7 ? 1 : 0
 
-      // More accurate text detection based on AI tags
-      const hasText = analysisResult.tags_scored?.some((tag: ImageTag) => {
-        const tagName = tag.name.toLowerCase()
-        const textRelatedTerms = [
-          'text', 'sign', 'writing', 'letter', 'word', 'document', 'book',
-          'newspaper', 'magazine', 'banner', 'poster', 'billboard', 'label',
-          'caption', 'subtitle', 'menu', 'license', 'certificate', 'card'
-        ]
-        return textRelatedTerms.some(term => tagName.includes(term)) && tag.conf > 0.3
-      }) || false
+      // Use OCR results for accurate text detection
+      const hasText = analysisResult.ocr_text &&
+                     analysisResult.ocr_text.trim().length > 0 &&
+                     analysisResult.text_density > 0.01
 
       // Extract dominant colors (placeholder)
       const dominantColors = analysisResult.tags_scored
@@ -152,6 +146,10 @@ export async function POST(request: NextRequest) {
         ai_tags: aiTags,
         ai_tags_scored: analysisResult.tags_scored,
         emb_caption: embeddingVector,
+        ocr_text: analysisResult.ocr_text || null,
+        text_density: analysisResult.text_density || null,
+        ocr_entities: analysisResult.ocr_entities || null,
+        signage_conf: analysisResult.signage_conf || null,
         updated_at: new Date().toISOString()
       }
 
@@ -254,7 +252,11 @@ export async function POST(request: NextRequest) {
         has_text: hasText,
         dominant_colors: dominantColors,
         safe_score: safeScore,
-        variant_16x9_url: variantUrl // Include generated or existing variant URL
+        variant_16x9_url: variantUrl, // Include generated or existing variant URL
+        ocr_text: analysisResult.ocr_text || null,
+        text_density: analysisResult.text_density || null,
+        ocr_entities: analysisResult.ocr_entities || null,
+        signage_conf: analysisResult.signage_conf || null
       }
 
       return NextResponse.json(result)

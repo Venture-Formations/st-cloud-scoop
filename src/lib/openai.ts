@@ -240,7 +240,14 @@ Analyze this image and return strict JSON:
     {"type":"color","name":"blue","conf":0.85},
     {"type":"safety","name":"has_text","conf":0.12}
   ],
-  "top_tags": ["scene_warehouse","object_golf_cart","color_blue"]
+  "top_tags": ["scene_warehouse","object_golf_cart","color_blue"],
+  "ocr_text": "extracted text in lowercase",
+  "text_density": 0.15,
+  "ocr_entities": [
+    {"type":"ORG","name":"st cloud police department","conf":0.93},
+    {"type":"DATE","name":"march 15","conf":0.87}
+  ],
+  "signage_conf": 0.78
 }
 
 GUIDELINES:
@@ -252,7 +259,25 @@ GUIDELINES:
 - Top tags: 5-15 most relevant tags in "type_name" format
 - Include safety.has_text if text/signage is visible
 - Confidence scores reflect certainty (0.9+ for obvious, 0.5-0.8 for likely, <0.5 for uncertain)
-- Focus on concrete, visible elements rather than abstract concepts`
+- Focus on concrete, visible elements rather than abstract concepts
+
+OCR ANALYSIS:
+- ocr_text: Extract ALL readable text from the image, convert to lowercase, normalize spacing
+- text_density: Estimate what percentage of the image area is covered by text (0.0 to 1.0)
+- ocr_entities: Extract named entities from the OCR text using these types:
+  * ORG: Organizations, businesses, government agencies
+  * PERSON: People's names
+  * LOC: Locations, addresses, place names
+  * DATE: Dates, times, temporal references
+  * TIME: Specific times, hours
+  * MISC: Other important entities (phone numbers, websites, etc.)
+- signage_conf: Confidence (0-1) that this is venue signage vs poster/advertisement
+  * 0.8+ = Clear business signage, building signs
+  * 0.5-0.8 = Likely signage but could be promotional
+  * 0.2-0.5 = Probably poster/ad/document
+  * <0.2 = Clearly not signage
+
+IMPORTANT: Only include OCR fields if readable text is actually present. Set to null if no text detected.`
 }
 
 export async function callOpenAI(prompt: string, maxTokens = 1000, temperature = 0.3) {

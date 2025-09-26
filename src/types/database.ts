@@ -426,6 +426,12 @@ export interface ImageTag {
   conf: number
 }
 
+export interface OCREntity {
+  type: 'ORG' | 'PERSON' | 'LOC' | 'DATE' | 'TIME' | 'MISC'
+  name: string
+  conf: number
+}
+
 export interface Image {
   id: string
   object_key: string                    // images/original/{uuid}.jpg
@@ -442,6 +448,10 @@ export interface Image {
   has_text: boolean
   dominant_colors: string[] | null
   safe_score: number | null
+  ocr_text: string | null              // Full OCR'd text (lowercased, normalized)
+  text_density: number | null          // Percent of pixels covered by text (0-1)
+  ocr_entities: OCREntity[] | null     // Extracted entities from OCR (NER)
+  signage_conf: number | null          // Confidence it's venue signage vs poster/ad
   ai_caption: string | null
   ai_alt_text: string | null
   ai_tags: string[] | null
@@ -506,6 +516,10 @@ export interface ImageAnalysisResult {
   dominant_colors: string[]
   safe_score: number
   variant_16x9_url?: string | null
+  ocr_text: string | null
+  text_density: number | null
+  ocr_entities: OCREntity[] | null
+  signage_conf: number | null
 }
 
 export interface ImageReviewRequest {

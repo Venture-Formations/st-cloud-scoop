@@ -415,6 +415,18 @@ export default function ImageUpload({
               </button>
 
               <div className="space-x-3">
+                {/* Test button for review page */}
+                {uploads.length > 0 && (
+                  <button
+                    onClick={() => {
+                      console.log('Manual test: setting showReview to true')
+                      setShowReview(true)
+                    }}
+                    className="bg-purple-600 text-white px-4 py-2 rounded-md hover:bg-purple-700 text-sm"
+                  >
+                    Test Review
+                  </button>
+                )}
                 {allCompleted && onClose && (
                   <button
                     onClick={onClose}

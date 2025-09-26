@@ -292,8 +292,39 @@ export async function generateDailyRoadWork(campaignDate?: string): Promise<Road
       })
       console.log('❌ Raw AI response:', JSON.stringify(aiResponse, null, 2))
 
-      // User explicitly asked not to use fallback - throw the error instead
-      throw new Error(`Failed to parse road work data from AI response: ${parseError instanceof Error ? parseError.message : 'Unknown parsing error'}`)
+      // User requested no fallback - debug the actual parsing issue
+      console.error('❌ CRITICAL: Road work AI parsing failed after all attempts')
+      console.error('Raw AI Response Type:', typeof aiResponse)
+      console.error('Raw AI Response Content:', aiResponse)
+
+      // Try one more extremely simple parsing approach
+      if (aiResponse) {
+        let finalAttempt = ''
+        if (typeof aiResponse === 'string') {
+          finalAttempt = aiResponse
+        } else if (aiResponse && aiResponse.raw) {
+          finalAttempt = aiResponse.raw
+        } else {
+          finalAttempt = JSON.stringify(aiResponse)
+        }
+
+        // Extract anything that looks like a JSON array
+        const arrayPattern = /\[[^]*\]/
+        const match = finalAttempt.match(arrayPattern)
+        if (match) {
+          try {
+            roadWorkItems = JSON.parse(match[0])
+            console.log('✅ Emergency parsing succeeded:', roadWorkItems.length, 'items')
+          } catch (finalError) {
+            console.error('❌ Even emergency parsing failed:', finalError)
+            throw new Error(`Complete parsing failure - Raw response: ${JSON.stringify(aiResponse)}`)
+          }
+        } else {
+          throw new Error(`No JSON array found in AI response: ${finalAttempt.substring(0, 500)}`)
+        }
+      } else {
+        throw new Error('AI response is null or undefined')
+      }
     }
 
     // Validate we have exactly 9 items

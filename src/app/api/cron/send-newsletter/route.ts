@@ -68,12 +68,12 @@ export async function POST(request: NextRequest) {
       })
     }
 
-    // Check if campaign has active, non-skipped articles
-    const activeArticles = campaign.articles.filter((article: any) => article.is_active && !article.skipped)
+    // Check if campaign has active articles
+    const activeArticles = campaign.articles.filter((article: any) => article.is_active)
     if (activeArticles.length === 0) {
       return NextResponse.json({
         success: false,
-        error: 'No active, non-skipped articles found for newsletter send',
+        error: 'No active articles found for newsletter send',
         campaignId: campaign.id
       }, { status: 400 })
     }

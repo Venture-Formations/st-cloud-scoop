@@ -45,11 +45,11 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       }, { status: 400 })
     }
 
-    // Check if we have active, non-skipped articles
-    const activeArticles = campaign.articles.filter((article: any) => article.is_active && !article.skipped)
+    // Check if we have active articles
+    const activeArticles = campaign.articles.filter((article: any) => article.is_active)
     if (activeArticles.length === 0) {
       return NextResponse.json({
-        error: 'Cannot send campaign with no active, non-skipped articles'
+        error: 'Cannot send campaign with no active articles'
       }, { status: 400 })
     }
 

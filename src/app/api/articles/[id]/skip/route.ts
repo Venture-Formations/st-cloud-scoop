@@ -40,10 +40,11 @@ export async function POST(
       console.log('This is the current #1 article - will regenerate subject line after skipping')
     }
 
-    // Mark article as skipped
+    // Mark article as inactive and record that it was skipped
     const { error: updateError } = await supabaseAdmin
       .from('articles')
       .update({
+        is_active: false,
         skipped: true,
         updated_at: new Date().toISOString()
       })
@@ -110,9 +111,10 @@ export async function POST(
 
     return NextResponse.json({
       success: true,
-      message: 'Article skipped successfully',
+      message: 'Article skipped successfully (marked as inactive)',
       article: {
         id: articleId,
+        is_active: false,
         skipped: true
       },
       subject_line_regenerated: isCurrentTopArticle,

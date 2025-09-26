@@ -655,7 +655,22 @@ async function generateRoadWorkSection(campaign: any): Promise<string> {
   try {
     console.log('Generating Road Work section for campaign:', campaign?.id)
 
-    // Generate road work data for the campaign date
+    // First, try to find existing road work data for this campaign
+    const { data: existingRoadWork } = await supabaseAdmin
+      .from('road_work_data')
+      .select('*')
+      .eq('is_active', true)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .single()
+
+    if (existingRoadWork && existingRoadWork.html_content) {
+      console.log(`Using existing road work data (ID: ${existingRoadWork.id})`)
+      return existingRoadWork.html_content
+    }
+
+    // If no existing data, generate new road work data
+    console.log('No existing road work found, generating new data...')
     const campaignDateStr = campaign.date // Format: YYYY-MM-DD
     const campaignDate = new Date(campaignDateStr)
 

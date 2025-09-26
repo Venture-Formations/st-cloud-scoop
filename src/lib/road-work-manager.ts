@@ -40,8 +40,6 @@ export function generateRoadWorkHTML(roadWorkItems: RoadWorkItem[]): string {
   }
 
   return `
-</table>
-<br>
 <table width="100%" cellpadding="0" cellspacing="0" style="border: 1px solid #f7f7f7; border-radius: 10px; margin-top: 10px; max-width: 990px; margin: 0 auto; background-color: #f7f7f7; font-family: Arial, sans-serif;">
   <tr>
     <td style="padding: 5px;">
@@ -49,7 +47,8 @@ export function generateRoadWorkHTML(roadWorkItems: RoadWorkItem[]): string {
     </td>
   </tr>
   ${rows.join('')}
-`
+</table>
+<br>`
 }
 
 /**

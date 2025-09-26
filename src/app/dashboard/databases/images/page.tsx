@@ -390,11 +390,11 @@ export default function ImagesDatabasePage() {
 
                     <td className="px-4 py-4">
                       <img
-                        src={image.cdn_url}
+                        src={image.variant_16x9_url || image.cdn_url}
                         alt={image.ai_alt_text || 'Image'}
-                        className="w-16 h-10 object-cover rounded border"
+                        className="w-24 h-16 object-cover rounded border"
                         onError={(e) => {
-                          e.currentTarget.src = '/placeholder-image.png'
+                          e.currentTarget.src = image.cdn_url || '/placeholder-image.png'
                         }}
                       />
                     </td>
@@ -417,16 +417,62 @@ export default function ImagesDatabasePage() {
 
                     <td className="px-4 py-4">
                       {editingImage === image.id ? (
-                        <textarea
-                          value={editData.ai_tags?.join(', ') || ''}
-                          onChange={(e) => setEditData({
-                            ...editData,
-                            ai_tags: e.target.value.split(',').map(tag => tag.trim()).filter(tag => tag.length > 0)
-                          })}
-                          placeholder="tag1, tag2, tag3..."
-                          className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
-                          rows={3}
-                        />
+                        <div className="max-w-xs space-y-2">
+                          {/* Existing tags as removable buttons */}
+                          <div className="flex flex-wrap gap-1">
+                            {(editData.ai_tags || []).map((tag, index) => (
+                              <button
+                                key={index}
+                                onClick={() => {
+                                  const newTags = editData.ai_tags?.filter((_, i) => i !== index) || []
+                                  setEditData({ ...editData, ai_tags: newTags })
+                                }}
+                                className="inline-flex items-center px-2 py-1 rounded text-xs bg-blue-100 text-blue-800 hover:bg-red-100 hover:text-red-800 transition-colors"
+                                title="Click to remove"
+                              >
+                                {tag}
+                                <span className="ml-1">×</span>
+                              </button>
+                            ))}
+                          </div>
+
+                          {/* Add new tag input */}
+                          <div className="flex space-x-1">
+                            <input
+                              type="text"
+                              placeholder="Add new tag..."
+                              className="flex-1 px-2 py-1 border border-gray-300 rounded text-xs"
+                              onKeyPress={(e) => {
+                                if (e.key === 'Enter') {
+                                  const newTag = e.currentTarget.value.trim().toLowerCase()
+                                  if (newTag && !(editData.ai_tags || []).includes(newTag)) {
+                                    setEditData({
+                                      ...editData,
+                                      ai_tags: [...(editData.ai_tags || []), newTag]
+                                    })
+                                    e.currentTarget.value = ''
+                                  }
+                                }
+                              }}
+                            />
+                            <button
+                              onClick={(e) => {
+                                const input = e.currentTarget.previousElementSibling as HTMLInputElement
+                                const newTag = input.value.trim().toLowerCase()
+                                if (newTag && !(editData.ai_tags || []).includes(newTag)) {
+                                  setEditData({
+                                    ...editData,
+                                    ai_tags: [...(editData.ai_tags || []), newTag]
+                                  })
+                                  input.value = ''
+                                }
+                              }}
+                              className="bg-green-600 text-white px-2 py-1 rounded text-xs hover:bg-green-700"
+                            >
+                              +
+                            </button>
+                          </div>
+                        </div>
                       ) : (
                         <div className="max-w-xs">
                           {renderTagBadges(image.ai_tags, image.ai_tags_scored)}

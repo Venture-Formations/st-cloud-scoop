@@ -9,7 +9,7 @@ CREATE TABLE IF NOT EXISTS images (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   object_key TEXT NOT NULL,                              -- original/{uuid}.jpg
   cdn_url TEXT GENERATED ALWAYS AS (
-    'https://zvyzhmhsubazkvcsxbjs.supabase.co/storage/v1/object/public/images/' || object_key
+    'https://ktmuicyailtbcpmworxf.supabase.co/storage/v1/object/public/images/' || object_key
   ) STORED,
   width INT,
   height INT,

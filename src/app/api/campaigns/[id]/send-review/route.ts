@@ -76,21 +76,21 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       subject_line: campaign.subject_line,
       subject_line_type: typeof campaign.subject_line,
       subject_line_length: campaign.subject_line?.length || 0,
-      active_articles_count: campaign.articles?.filter((a: any) => a.is_active).length || 0
+      active_articles_count: campaign.articles?.filter((a: any) => a.is_active && !a.skipped).length || 0
     })
 
     // IMPORTANT: Log article positions FIRST, before MailerLite service call
     // This ensures position logging happens even if MailerLite call fails or times out
     console.log('=== LOGGING ARTICLE POSITIONS FOR REVIEW SEND ===')
 
-    // Get active articles sorted by rank (same logic as MailerLite service)
+    // Get active, non-skipped articles sorted by rank (same logic as MailerLite service)
     const activeArticles = campaign.articles
-      .filter((article: any) => article.is_active)
+      .filter((article: any) => article.is_active && !article.skipped)
       .sort((a: any, b: any) => (a.rank || 999) - (b.rank || 999))
       .slice(0, 5) // Only log positions 1-5
 
     const activeManualArticles = campaign.manual_articles
-      .filter((article: any) => article.is_active)
+      .filter((article: any) => article.is_active && !article.skipped)
       .sort((a: any, b: any) => (a.rank || 999) - (b.rank || 999))
       .slice(0, 5) // Only log positions 1-5
 

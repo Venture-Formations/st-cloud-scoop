@@ -37,6 +37,7 @@ export async function GET(
           word_count,
           fact_check_score,
           is_active,
+          skipped,
           rank,
           rss_post:rss_posts(
             source_url,
@@ -81,14 +82,14 @@ export async function GET(
     console.log('Campaign found, articles count:', campaign.articles?.length || 0)
     console.log('Campaign events count:', campaign.campaign_events?.length || 0)
 
-    // Filter to only active articles (max 5)
+    // Filter to only active, non-skipped articles (max 5)
     if (campaign.articles) {
       const beforeFilter = campaign.articles.length
       campaign.articles = campaign.articles
-        .filter((article: any) => article.is_active)
+        .filter((article: any) => article.is_active && !article.skipped)
         .sort((a: any, b: any) => (b.rss_post?.post_rating?.[0]?.total_score || 0) - (a.rss_post?.post_rating?.[0]?.total_score || 0))
         .slice(0, 5) // Limit to 5 articles maximum
-      console.log('Active articles after filter:', campaign.articles.length, 'from', beforeFilter, '(max 5)')
+      console.log('Active, non-skipped articles after filter:', campaign.articles.length, 'from', beforeFilter, '(max 5)')
     }
 
     // Filter to only selected events and group by date
@@ -685,9 +686,9 @@ async function generateNewsletterHtml(campaign: any): Promise<string> {
   try {
     console.log('Generating HTML for campaign:', campaign?.id)
 
-    // Filter active articles and sort by rank (custom order)
+    // Filter active, non-skipped articles and sort by rank (custom order)
     const activeArticles = (campaign.articles || [])
-      .filter((article: any) => article.is_active)
+      .filter((article: any) => article.is_active && !article.skipped)
       .sort((a: any, b: any) => (a.rank || 999) - (b.rank || 999))
 
     console.log('PREVIEW - Active articles to render:', activeArticles.length)

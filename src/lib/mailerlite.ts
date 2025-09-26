@@ -206,9 +206,9 @@ export class MailerLiteService {
 
 
   private async generateEmailHTML(campaign: CampaignWithEvents, isReview: boolean): Promise<string> {
-    // Filter active articles and sort by rank (custom order)
+    // Filter active, non-skipped articles and sort by rank (custom order)
     const activeArticles = campaign.articles
-      .filter(article => article.is_active)
+      .filter(article => article.is_active && !article.skipped)
       .sort((a, b) => (a.rank || 999) - (b.rank || 999))
 
     console.log('MAILERLITE - Active articles to render:', activeArticles.length)

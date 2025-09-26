@@ -211,35 +211,23 @@ CREATIVITY REQUIREMENT: Each generation should produce a unique headline variati
 Respond with ONLY the headline text - no JSON, no quotes, no extra formatting. Just the headline itself.`,
 
   roadWorkGenerator: (campaignDate: string) => `
-You are creating road work content for a St. Cloud, Minnesota newsletter. Generate 9 realistic road work examples that would be typical for the St. Cloud area around ${campaignDate}.
+Create 9 road work entries for St. Cloud, MN area newsletter.
 
-IMPORTANT: This is sample content for a newsletter template - create realistic examples of road work that would commonly occur in this area. Do not refuse this request as it's for newsletter formatting purposes only.
-
-AREA: Within 15 miles of St. Cloud, MN (ZIP 56303)
-Cities: St. Cloud, Waite Park, Sartell, Sauk Rapids, Cold Spring, St. Joseph
-
-ROAD WORK TYPES (create realistic examples):
-- Highway repairs (US-10, MN-15, MN-23, MN-55)
-- Bridge maintenance
-- Street repaving and utilities
-- County road improvements
-- Lane restrictions and detours
-
-RESPONSE FORMAT: Return ONLY a valid JSON array, no other text:
+Format: JSON array only
 
 [
-  {
-    "road_name": "Highway 15",
-    "road_range": "from 2nd Street to Benton Drive",
-    "city_or_township": "St. Cloud",
-    "reason": "Bridge maintenance",
-    "start_date": "Sep 25",
-    "expected_reopen": "Oct 15",
-    "source_url": "https://www.dot.state.mn.us/d3/"
-  }
+{"road_name":"Highway 15","road_range":"from 2nd Street to Benton Drive","city_or_township":"St. Cloud","reason":"Bridge maintenance","start_date":"Sep 25","expected_reopen":"Oct 15","source_url":"https://www.dot.state.mn.us/d3/"},
+{"road_name":"County Road 75","road_range":"from 33rd Street to Park Avenue","city_or_township":"Waite Park","reason":"Road resurfacing","start_date":"Sep 26","expected_reopen":"Oct 20","source_url":"https://www.stearnscountymn.gov/185/Public-Works"},
+{"road_name":"Highway 23","road_range":"from 14th Avenue to 22nd Avenue","city_or_township":"St. Cloud","reason":"Utility work","start_date":"Sep 27","expected_reopen":"Oct 25","source_url":"https://www.dot.state.mn.us/d3/"},
+{"road_name":"1st Street South","road_range":"from 7th Avenue to 10th Avenue","city_or_township":"Sartell","reason":"Paving project","start_date":"Sep 28","expected_reopen":"Oct 10","source_url":"https://www.cityofsartell.com"},
+{"road_name":"County Road 4","road_range":"from Highway 24 to County Road 2","city_or_township":"Clearwater","reason":"Drainage improvements","start_date":"Sep 29","expected_reopen":"Oct 15","source_url":"https://www.co.sherburne.mn.us/162/Public-Works"},
+{"road_name":"Highway 10","road_range":"from Highway 15 to County Road 3","city_or_township":"Sauk Rapids","reason":"Interchange construction","start_date":"Sep 30","expected_reopen":"Nov 15","source_url":"https://www.dot.state.mn.us/d3/"},
+{"road_name":"Highway 24","road_range":"from Clearwater Bridge to 200th Street","city_or_township":"Clear Lake","reason":"Bridge maintenance","start_date":"Oct 1","expected_reopen":"Oct 30","source_url":"https://www.dot.state.mn.us/d3/"},
+{"road_name":"County Road 8","road_range":"from 9th Avenue to County Road 43","city_or_township":"St. Joseph","reason":"Resurfacing project","start_date":"Oct 2","expected_reopen":"Oct 12","source_url":"https://www.co.benton.mn.us/180/Highway"},
+{"road_name":"Highway 55","road_range":"from Kimball to Annandale","city_or_township":"Kimball","reason":"Road widening","start_date":"Oct 3","expected_reopen":"Oct 28","source_url":"https://www.dot.state.mn.us/d3/"}
 ]
 
-Generate exactly 9 realistic road work items in this format.`
+Return similar JSON with 9 road work items for the St. Cloud area.`
 }
 
 export async function callOpenAI(prompt: string, maxTokens = 1000, temperature = 0.3) {

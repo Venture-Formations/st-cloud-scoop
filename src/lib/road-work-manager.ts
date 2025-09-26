@@ -194,12 +194,44 @@ export async function generateDailyRoadWork(campaignDate?: string): Promise<Road
 
     console.log('Generating road work data for date:', targetDate)
 
-    // Call AI to generate road work data
-    const prompt = AI_PROMPTS.roadWorkGenerator(targetDate)
+    // Try multiple AI approaches with fallback strategies
     console.log('Calling AI for road work generation...')
 
-    const aiResponse = await callOpenAI(prompt, 3000, 0.7) // Higher tokens and temperature for comprehensive search
-    console.log('AI response received:', typeof aiResponse, aiResponse?.length || 'N/A')
+    let aiResponse: any = null
+    let attemptNumber = 1
+
+    // Strategy 1: Main road work prompt
+    try {
+      const prompt = AI_PROMPTS.roadWorkGenerator(targetDate)
+      console.log(`Attempt ${attemptNumber}: Using main road work prompt`)
+      aiResponse = await callOpenAI(prompt, 2000, 0.5)
+      console.log('✅ Main prompt succeeded:', typeof aiResponse, aiResponse?.length || 'N/A')
+    } catch (error) {
+      console.log(`❌ Attempt ${attemptNumber} failed:`, error instanceof Error ? error.message : error)
+      attemptNumber++
+
+      // Strategy 2: Simplified prompt with direct instruction
+      try {
+        const simplePrompt = `Generate a JSON array of 9 road work items for St. Cloud, MN area. Each item should have: road_name, road_range, city_or_township, reason, start_date, expected_reopen, source_url. Return only valid JSON array starting with [ and ending with ].`
+        console.log(`Attempt ${attemptNumber}: Using simplified prompt`)
+        aiResponse = await callOpenAI(simplePrompt, 1500, 0.3)
+        console.log('✅ Simplified prompt succeeded:', typeof aiResponse, aiResponse?.length || 'N/A')
+      } catch (error2) {
+        console.log(`❌ Attempt ${attemptNumber} failed:`, error2 instanceof Error ? error2.message : error2)
+        attemptNumber++
+
+        // Strategy 3: Very basic prompt with example
+        try {
+          const basicPrompt = `Return JSON: [{"road_name":"Highway 15","road_range":"St. Cloud area","city_or_township":"St. Cloud","reason":"Construction","start_date":"Sep 25","expected_reopen":"Oct 15","source_url":"https://dot.state.mn.us"}] - make 9 similar entries for St. Cloud MN road work`
+          console.log(`Attempt ${attemptNumber}: Using basic prompt with example`)
+          aiResponse = await callOpenAI(basicPrompt, 1000, 0.1)
+          console.log('✅ Basic prompt succeeded:', typeof aiResponse, aiResponse?.length || 'N/A')
+        } catch (error3) {
+          console.log(`❌ All AI attempts failed. Last error:`, error3 instanceof Error ? error3.message : error3)
+          throw new Error(`All AI generation strategies failed after ${attemptNumber} attempts`)
+        }
+      }
+    }
 
     // Parse AI response with enhanced error handling and debugging
     let roadWorkItems: RoadWorkItem[]

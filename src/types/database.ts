@@ -433,7 +433,7 @@ export interface OCREntity {
 }
 
 export interface AgeGroupDetection {
-  age_group: 'preschool' | 'elementary' | 'high_school' | 'adult' | 'elderly'
+  age_group: 'preschool' | 'elementary' | 'high_school' | 'adult' | 'older_adult'
   count: number
   conf: number
 }

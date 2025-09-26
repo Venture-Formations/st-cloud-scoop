@@ -283,7 +283,7 @@ OCR ANALYSIS:
 
 AGE GROUP ANALYSIS:
 - age_groups: Only include if people are clearly visible and identifiable
-- Age categories: "preschool" (0-4), "elementary" (5-11), "high_school" (12-17), "adult" (18-64), "elderly" (65+)
+- Age categories: "preschool" (0-4), "elementary" (5-11), "high_school" (12-17), "adult" (18-64), "older_adult" (65+)
 - count: Number of people in each age group
 - conf: Confidence level (0-1) for age group classification
 - Set to null if no people detected or ages cannot be determined

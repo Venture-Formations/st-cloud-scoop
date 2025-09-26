@@ -593,6 +593,7 @@ export default function ImagesDatabasePage() {
                                     ageGroup.age_group === 'elementary' ? 'bg-green-100 text-green-800' :
                                     ageGroup.age_group === 'high_school' ? 'bg-blue-100 text-blue-800' :
                                     ageGroup.age_group === 'adult' ? 'bg-indigo-100 text-indigo-800' :
+                                    ageGroup.age_group === 'older_adult' ? 'bg-gray-100 text-gray-800' :
                                     'bg-gray-100 text-gray-800'
                                   }`}
                                   title={`${Math.round(ageGroup.conf * 100)}% confidence`}

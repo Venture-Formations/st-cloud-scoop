@@ -353,8 +353,12 @@ export default function ImageReview({ uploadResults, onComplete, onClose, onUpda
           <div className="flex flex-col min-h-0 overflow-y-auto">
             <h3 className="text-md font-medium mb-2">Review Tags</h3>
 
-            {/* AI Caption - only show if caption exists and is not empty */}
-            {currentUpload.analysisResult?.caption && currentUpload.analysisResult.caption.trim() && (
+            {/* AI Caption - only show if caption exists and has meaningful content */}
+            {currentUpload.analysisResult?.caption &&
+             currentUpload.analysisResult.caption.trim().length > 0 &&
+             currentUpload.analysisResult.caption.trim() !== 'No caption' &&
+             currentUpload.analysisResult.caption.trim() !== 'None' &&
+             currentUpload.analysisResult.caption.trim() !== 'N/A' && (
               <div className="mb-3 p-2 bg-blue-50 rounded text-xs">
                 <p className="font-medium text-blue-900 mb-1">AI Caption:</p>
                 <p className="text-blue-800">{currentUpload.analysisResult.caption}</p>

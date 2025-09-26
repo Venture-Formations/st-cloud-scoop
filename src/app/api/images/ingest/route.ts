@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
 import { openai, AI_PROMPTS } from '@/lib/openai'
 import { ImageAnalysisResult, ImageTag } from '@/types/database'
+import { GitHubImageStorage } from '@/lib/github-storage'
+import sharp from 'sharp'
 
 interface IngestRequest {
   image_id: string
@@ -156,6 +158,78 @@ export async function POST(request: NextRequest) {
         )
       }
 
+      // Generate 16:9 variant if it doesn't exist
+      let variantUrl = image.variant_16x9_url
+      if (!variantUrl) {
+        try {
+          console.log(`Generating 16:9 variant for image ${image_id}`)
+
+          // Download the original image
+          const imageResponse = await fetch(image.cdn_url)
+          if (!imageResponse.ok) {
+            throw new Error(`Failed to fetch image: ${imageResponse.statusText}`)
+          }
+
+          const imageBuffer = Buffer.from(await imageResponse.arrayBuffer())
+
+          // Get image metadata
+          const metadata = await sharp(imageBuffer).metadata()
+          const originalWidth = metadata.width!
+          const originalHeight = metadata.height!
+          const targetAspectRatio = 16 / 9
+          const originalAspectRatio = originalWidth / originalHeight
+
+          let cropOptions: any
+          if (originalAspectRatio > targetAspectRatio) {
+            // Image is wider than 16:9, crop horizontally
+            const newWidth = Math.round(originalHeight * targetAspectRatio)
+            const left = Math.round((originalWidth - newWidth) / 2)
+            cropOptions = { left, top: 0, width: newWidth, height: originalHeight }
+          } else {
+            // Image is taller than 16:9, crop vertically (default center crop)
+            const newHeight = Math.round(originalWidth / targetAspectRatio)
+            const top = Math.round((originalHeight - newHeight) / 2) // Default to center
+            cropOptions = { left: 0, top, width: originalWidth, height: newHeight }
+          }
+
+          // Process image to 1200x675 (16:9)
+          const processedBuffer = await sharp(imageBuffer)
+            .extract(cropOptions)
+            .resize(1200, 675)
+            .jpeg({ quality: 90, progressive: true })
+            .toBuffer()
+
+          // Upload to GitHub
+          const githubStorage = new GitHubImageStorage()
+          const githubUrl = await githubStorage.uploadImageVariant(
+            processedBuffer,
+            image_id,
+            '1200x675',
+            'Generated 16:9 variant'
+          )
+
+          if (githubUrl) {
+            variantUrl = githubStorage.getCdnUrl(image_id, '1200x675')
+
+            // Update database with variant info
+            const variantKey = `images/variants/1200x675/${image_id}.jpg`
+            await supabaseAdmin
+              .from('images')
+              .update({
+                variant_16x9_key: variantKey,
+                variant_16x9_url: variantUrl,
+                updated_at: new Date().toISOString()
+              })
+              .eq('id', image_id)
+          }
+
+          console.log(`Generated 16:9 variant for image ${image_id}: ${variantUrl}`)
+        } catch (variantError) {
+          console.error(`Error generating 16:9 variant for image ${image_id}:`, variantError)
+          // Continue without variant - not critical for analysis
+        }
+      }
+
       // Return analysis results
       const result: ImageAnalysisResult = {
         caption: analysisResult.caption,
@@ -170,7 +244,7 @@ export async function POST(request: NextRequest) {
         has_text: hasText || false,
         dominant_colors: dominantColors,
         safe_score: safeScore,
-        variant_16x9_url: image.variant_16x9_url // Include existing variant URL if available
+        variant_16x9_url: variantUrl // Include generated or existing variant URL
       }
 
       return NextResponse.json(result)

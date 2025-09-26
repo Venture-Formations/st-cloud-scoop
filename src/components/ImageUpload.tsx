@@ -179,11 +179,26 @@ export default function ImageUpload({
       upload => upload.status === 'completed' && upload.analysisResult && upload.imageId
     )
 
+    console.log('UPLOAD DEBUG - Final filtering results:', {
+      totalUploads: newUploads.length,
+      completedCount: completedUploads.length,
+      uploads: newUploads.map(u => ({
+        fileName: u.file.name,
+        status: u.status,
+        hasAnalysisResult: !!u.analysisResult,
+        hasImageId: !!u.imageId,
+        progress: u.progress,
+        error: u.error
+      }))
+    })
+
     if (completedUploads.length > 0) {
       // Show review page for completed uploads
+      console.log('SETTING showReview = true for', completedUploads.length, 'uploads')
       setShowReview(true)
     } else {
       // No successful uploads, close directly
+      console.log('NO COMPLETED UPLOADS - not showing review')
       if (onComplete) {
         onComplete(newUploads)
       }
@@ -256,6 +271,7 @@ export default function ImageUpload({
 
   // Show review page if requested
   if (showReview) {
+    console.log('RENDERING ImageReview with showReview =', showReview, 'uploads:', uploads.length)
     return (
       <ImageReview
         uploadResults={uploads}
@@ -405,6 +421,18 @@ export default function ImageUpload({
               </button>
 
               <div className="space-x-3">
+                {uploads.length > 0 && (
+                  <button
+                    onClick={() => {
+                      console.log('MANUAL TEST: Current uploads state:', uploads)
+                      console.log('MANUAL TEST: Setting showReview = true')
+                      setShowReview(true)
+                    }}
+                    className="bg-purple-600 text-white px-4 py-2 rounded-md hover:bg-purple-700 text-sm"
+                  >
+                    Force Review Test
+                  </button>
+                )}
                 {allCompleted && onClose && (
                   <button
                     onClick={onClose}

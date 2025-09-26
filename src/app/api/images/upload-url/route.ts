@@ -29,7 +29,7 @@ export async function POST(request: NextRequest) {
     // Generate unique ID and object key
     const imageId = uuidv4()
     const fileExtension = content_type.split('/')[1] === 'jpeg' ? 'jpg' : content_type.split('/')[1]
-    const objectKey = `images/original/${imageId}.${fileExtension}`
+    const objectKey = `original/${imageId}.${fileExtension}`
 
     // Create database record first
     const { error: dbError } = await supabaseAdmin

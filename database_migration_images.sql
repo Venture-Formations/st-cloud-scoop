@@ -7,9 +7,9 @@ CREATE EXTENSION IF NOT EXISTS vector;
 -- Create images table
 CREATE TABLE IF NOT EXISTS images (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  object_key TEXT NOT NULL,                              -- images/original/{uuid}.jpg
+  object_key TEXT NOT NULL,                              -- original/{uuid}.jpg
   cdn_url TEXT GENERATED ALWAYS AS (
-    'https://zvyzhmhsubazkvcsxbjs.supabase.co/storage/v1/object/public/' || object_key
+    'https://zvyzhmhsubazkvcsxbjs.supabase.co/storage/v1/object/public/images/' || object_key
   ) STORED,
   width INT,
   height INT,

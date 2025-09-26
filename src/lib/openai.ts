@@ -286,16 +286,24 @@ export async function callOpenAI(prompt: string, maxTokens = 1000, temperature =
 
       // Try to parse as JSON, fallback to raw content
       try {
-        // Clean the content - remove any text before/after JSON
-        const jsonMatch = content.match(/\{[\s\S]*\}/)
-        if (jsonMatch) {
-          return JSON.parse(jsonMatch[0])
+        // Clean the content - remove any text before/after JSON (support both objects {} and arrays [])
+        const objectMatch = content.match(/\{[\s\S]*\}/)
+        const arrayMatch = content.match(/\[[\s\S]*\]/)
+
+        if (arrayMatch) {
+          // Prefer array match for prompts that expect arrays (like road work)
+          return JSON.parse(arrayMatch[0])
+        } else if (objectMatch) {
+          // Use object match for other prompts
+          return JSON.parse(objectMatch[0])
         } else {
-          return JSON.parse(content)
+          // Try parsing the entire content
+          return JSON.parse(content.trim())
         }
       } catch (parseError) {
-        console.warn('Failed to parse OpenAI response as JSON:', content)
-        console.warn('Parse error:', parseError)
+        console.warn('Failed to parse OpenAI response as JSON. Content length:', content.length)
+        console.warn('Content preview:', content.substring(0, 200))
+        console.warn('Parse error:', parseError instanceof Error ? parseError.message : parseError)
         return { raw: content }
       }
     } catch (error) {

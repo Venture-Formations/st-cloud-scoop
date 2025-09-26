@@ -201,7 +201,7 @@ export async function generateDailyRoadWork(campaignDate?: string): Promise<Road
     const aiResponse = await callOpenAI(prompt, 3000, 0.7) // Higher tokens and temperature for comprehensive search
     console.log('AI response received:', typeof aiResponse, aiResponse?.length || 'N/A')
 
-    // Parse AI response
+    // Parse AI response with enhanced error handling and debugging
     let roadWorkItems: RoadWorkItem[]
     try {
       let jsonString = ''
@@ -211,28 +211,57 @@ export async function generateDailyRoadWork(campaignDate?: string): Promise<Road
       } else if (Array.isArray(aiResponse)) {
         roadWorkItems = aiResponse
         jsonString = '' // Skip parsing
-      } else if (aiResponse && typeof aiResponse === 'object' && aiResponse.raw) {
-        jsonString = aiResponse.raw
+      } else if (aiResponse && typeof aiResponse === 'object' && 'raw' in aiResponse) {
+        jsonString = (aiResponse as any).raw
       } else {
-        throw new Error('Unexpected AI response format')
+        console.error('❌ Unexpected AI response format:', typeof aiResponse, aiResponse)
+        throw new Error(`Unexpected AI response format: ${typeof aiResponse}`)
       }
 
       if (jsonString) {
+        console.log('🔍 Original AI response length:', jsonString.length)
+        console.log('🔍 First 200 chars:', jsonString.substring(0, 200))
+        console.log('🔍 Last 200 chars:', jsonString.substring(Math.max(0, jsonString.length - 200)))
+
+        // Enhanced JSON extraction - handle various AI response formats
+        let cleanedJson = jsonString.trim()
+
         // Remove markdown code block wrappers if present
-        const cleanedJson = jsonString
+        cleanedJson = cleanedJson
           .replace(/^```json\s*/i, '')
+          .replace(/^```\s*/i, '')
           .replace(/\s*```$/i, '')
-          .trim()
+
+        // Remove any text before the first [ or {
+        const jsonStart = Math.max(cleanedJson.indexOf('['), cleanedJson.indexOf('{'))
+        if (jsonStart > 0) {
+          cleanedJson = cleanedJson.substring(jsonStart)
+        }
+
+        // Remove any text after the last ] or }
+        const lastBracket = cleanedJson.lastIndexOf(']')
+        const lastBrace = cleanedJson.lastIndexOf('}')
+        const jsonEnd = Math.max(lastBracket, lastBrace)
+        if (jsonEnd >= 0 && jsonEnd < cleanedJson.length - 1) {
+          cleanedJson = cleanedJson.substring(0, jsonEnd + 1)
+        }
+
+        console.log('🔍 Cleaned JSON length:', cleanedJson.length)
+        console.log('🔍 Cleaned JSON preview:', cleanedJson.substring(0, 300))
 
         roadWorkItems = JSON.parse(cleanedJson)
+        console.log('✅ Successfully parsed JSON - got', roadWorkItems.length, 'items')
       }
     } catch (parseError) {
-      console.error('Failed to parse AI response:', parseError)
-      console.log('Raw AI response:', aiResponse)
-      console.log('⚠️  Falling back to placeholder road work data')
+      console.error('❌ Failed to parse AI response:', parseError)
+      console.error('❌ Parse error details:', {
+        message: parseError instanceof Error ? parseError.message : 'Unknown error',
+        stack: parseError instanceof Error ? parseError.stack : undefined
+      })
+      console.log('❌ Raw AI response:', JSON.stringify(aiResponse, null, 2))
 
-      // Generate fallback data when AI parsing fails
-      roadWorkItems = generateFallbackRoadWorkData(targetDate)
+      // User explicitly asked not to use fallback - throw the error instead
+      throw new Error(`Failed to parse road work data from AI response: ${parseError instanceof Error ? parseError.message : 'Unknown parsing error'}`)
     }
 
     // Validate we have exactly 9 items

@@ -59,6 +59,7 @@ export default function ImageReview({ uploadResults, onComplete, onClose }: Imag
 
   // Update crop preview when offset changes
   useEffect(() => {
+    console.log('Crop offset changed to:', cropOffset)
     updateCropPreview()
   }, [cropOffset, currentUpload])
 
@@ -70,6 +71,8 @@ export default function ImageReview({ uploadResults, onComplete, onClose }: Imag
     const img = imageRef.current
 
     if (!ctx || !img.complete) return
+
+    console.log('Updating crop preview with offset:', cropOffset)
 
     // Set canvas size to 16:9 aspect ratio
     const targetWidth = 400
@@ -103,6 +106,11 @@ export default function ImageReview({ uploadResults, onComplete, onClose }: Imag
       sourceX, sourceY, sourceWidth, sourceHeight,
       0, 0, targetWidth, targetHeight
     )
+
+    // Add a subtle border to show the crop area
+    ctx.strokeStyle = '#3B82F6'
+    ctx.lineWidth = 2
+    ctx.strokeRect(0, 0, targetWidth, targetHeight)
   }
 
   const saveCurrentImage = () => {
@@ -293,7 +301,7 @@ export default function ImageReview({ uploadResults, onComplete, onClose }: Imag
                   <span className="text-xs text-gray-500">Bottom</span>
                 </div>
                 <div className="text-center text-xs text-gray-500 mt-1">
-                  Position: {Math.round(cropOffset * 100)}%
+                  Position: {Math.round(cropOffset * 100)}% (0% = Top, 50% = Center, 100% = Bottom)
                 </div>
               </div>
             </div>

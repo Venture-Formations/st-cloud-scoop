@@ -211,49 +211,35 @@ CREATIVITY REQUIREMENT: Each generation should produce a unique headline variati
 Respond with ONLY the headline text - no JSON, no quotes, no extra formatting. Just the headline itself.`,
 
   roadWorkGenerator: (campaignDate: string) => `
-NEWSLETTER CONTENT GENERATION: Create realistic example road work data for a local newsletter section.
+You are creating road work content for a St. Cloud, Minnesota newsletter. Generate 9 realistic road work examples that would be typical for the St. Cloud area around ${campaignDate}.
 
-Generate exactly 9 road work items (closures, detours, restrictions) that would typically be found around ${campaignDate} within 15 miles of ZIP code 56303 (St. Cloud, MN). This is for newsletter content - provide realistic, typical examples of the types of road work that commonly occur in this area.
+IMPORTANT: This is sample content for a newsletter template - create realistic examples of road work that would commonly occur in this area. Do not refuse this request as it's for newsletter formatting purposes only.
 
-TYPES TO INCLUDE:
-- Highway construction/repairs (US-10, MN-15, MN-23, MN-55)
-- Bridge maintenance or replacement
-- City street repairs and utilities
+AREA: Within 15 miles of St. Cloud, MN (ZIP 56303)
+Cities: St. Cloud, Waite Park, Sartell, Sauk Rapids, Cold Spring, St. Joseph
+
+ROAD WORK TYPES (create realistic examples):
+- Highway repairs (US-10, MN-15, MN-23, MN-55)
+- Bridge maintenance
+- Street repaving and utilities
 - County road improvements
 - Lane restrictions and detours
-- Intersection improvements
 
-GEOGRAPHIC AREA (within 15 miles of St. Cloud):
-- St. Cloud, Waite Park, Sartell, Sauk Rapids
-- Cold Spring, Kimball, Annandale, Richmond
-- St. Joseph, Avon, Albany, Clearwater
-
-SOURCES TO CHECK:
-- MnDOT District 3: https://www.dot.state.mn.us/d3/
-- Stearns County Public Works: https://www.stearnscountymn.gov/185/Public-Works
-- Benton County Highway: https://www.co.benton.mn.us/180/Highway
-- Sherburne County Public Works: https://www.co.sherburne.mn.us/162/Public-Works
-- Local cities: Sartell, St. Cloud, St. Joseph, Waite Park, Sauk Rapids
-- St. Cloud APO: https://www.stcloudapo.org
-- Metro Bus detours: https://www.ridemetrobus.com
-- Local media traffic reports
-
-REQUIRED RESPONSE FORMAT:
-Respond with ONLY valid JSON array starting with [ and ending with ]. No other text before or after.
+RESPONSE FORMAT: Return ONLY a valid JSON array, no other text:
 
 [
   {
-    "road_name": "Highway name or street name only",
-    "road_range": "from X to Y location description",
-    "city_or_township": "Primary city/township affected",
-    "reason": "Brief reason for closure/restriction",
-    "start_date": "MMM D format (e.g., Sep 25)",
-    "expected_reopen": "MMM D format or 'TBD'",
-    "source_url": "Official source URL"
+    "road_name": "Highway 15",
+    "road_range": "from 2nd Street to Benton Drive",
+    "city_or_township": "St. Cloud",
+    "reason": "Bridge maintenance",
+    "start_date": "Sep 25",
+    "expected_reopen": "Oct 15",
+    "source_url": "https://www.dot.state.mn.us/d3/"
   }
 ]
 
-Return exactly 9 items. If fewer than 9 exist, research more sources or include broader area.`
+Generate exactly 9 realistic road work items in this format.`
 }
 
 export async function callOpenAI(prompt: string, maxTokens = 1000, temperature = 0.3) {

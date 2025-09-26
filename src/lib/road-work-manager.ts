@@ -234,7 +234,7 @@ export async function generateDailyRoadWork(campaignDate?: string): Promise<Road
     }
 
     // Parse AI response with enhanced error handling and debugging
-    let roadWorkItems: RoadWorkItem[]
+    let roadWorkItems: RoadWorkItem[] = []
     try {
       let jsonString = ''
 

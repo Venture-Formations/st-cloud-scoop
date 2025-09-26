@@ -71,8 +71,15 @@ export default function ImageUpload({
       })
 
       if (!uploadResponse.ok) {
-        const error = await uploadResponse.json()
-        throw new Error(error.error || 'Failed to get upload URL')
+        const errorText = await uploadResponse.text()
+        console.error('Upload URL error:', uploadResponse.status, errorText)
+        let error
+        try {
+          error = JSON.parse(errorText)
+        } catch {
+          error = { error: errorText }
+        }
+        throw new Error(error.error || `Failed to get upload URL: ${uploadResponse.status} ${uploadResponse.statusText}`)
       }
 
       const uploadData: ImageUploadResponse = await uploadResponse.json()
@@ -88,7 +95,9 @@ export default function ImageUpload({
       })
 
       if (!uploadFileResponse.ok) {
-        throw new Error('Failed to upload file')
+        const errorText = await uploadFileResponse.text()
+        console.error('Upload file error:', uploadFileResponse.status, errorText)
+        throw new Error(`Failed to upload file: ${uploadFileResponse.status} ${uploadFileResponse.statusText} - ${errorText}`)
       }
 
       updateUpload(index, { progress: 60 })
@@ -105,8 +114,15 @@ export default function ImageUpload({
       })
 
       if (!analysisResponse.ok) {
-        const error = await analysisResponse.json()
-        throw new Error(error.error || 'Failed to analyze image')
+        const errorText = await analysisResponse.text()
+        console.error('Analysis error:', analysisResponse.status, errorText)
+        let error
+        try {
+          error = JSON.parse(errorText)
+        } catch {
+          error = { error: errorText }
+        }
+        throw new Error(error.error || `Failed to analyze image: ${analysisResponse.status} ${analysisResponse.statusText}`)
       }
 
       const analysisResult: ImageAnalysisResult = await analysisResponse.json()

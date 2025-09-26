@@ -85,13 +85,14 @@ export default function ImageUpload({
       const uploadData: ImageUploadResponse = await uploadResponse.json()
       updateUpload(index, { progress: 30, imageId: uploadData.image_id })
 
-      // Step 2: Upload file to Supabase
-      const formData = new FormData()
-      formData.append('file', file)
-
+      // Step 2: Upload file to Supabase using proper headers
       const uploadFileResponse = await fetch(uploadData.upload_url, {
-        method: 'POST',
-        body: formData
+        method: 'PUT',
+        headers: {
+          'Content-Type': file.type,
+          'Content-Length': file.size.toString()
+        },
+        body: file
       })
 
       if (!uploadFileResponse.ok) {

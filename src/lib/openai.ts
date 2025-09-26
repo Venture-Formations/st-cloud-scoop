@@ -249,7 +249,7 @@ GUIDELINES:
 - Tags scored: Array of categorized tags with confidence scores (0-1)
 - Tag types: people, scene, theme, style, color, object, safety
 - Tag names: concrete nouns, lowercase with underscores
-- Top tags: 5-8 most relevant tags in "type_name" format
+- Top tags: 5-15 most relevant tags in "type_name" format
 - Include safety.has_text if text/signage is visible
 - Confidence scores reflect certainty (0.9+ for obvious, 0.5-0.8 for likely, <0.5 for uncertain)
 - Focus on concrete, visible elements rather than abstract concepts`

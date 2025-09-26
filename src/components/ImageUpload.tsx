@@ -56,10 +56,8 @@ export default function ImageUpload({
   }
 
   const processFile = async (file: File, index: number) => {
-    console.log(`PROCESSING FILE: ${file.name} at index ${index}`)
     try {
       // Step 1: Get upload URL
-      console.log(`Step 1: Getting upload URL for ${file.name}`)
       updateUpload(index, { status: 'uploading', progress: 10 })
 
       const uploadRequest: ImageUploadRequest = {
@@ -87,11 +85,9 @@ export default function ImageUpload({
       }
 
       const uploadData: ImageUploadResponse = await uploadResponse.json()
-      console.log(`Step 1 complete: Got imageId ${uploadData.image_id} for ${file.name}`)
       updateUpload(index, { progress: 30, imageId: uploadData.image_id })
 
       // Step 2: Upload file to Supabase using proper headers
-      console.log(`Step 2: Uploading file to Supabase for ${file.name}`)
       const uploadFileResponse = await fetch(uploadData.upload_url, {
         method: 'PUT',
         headers: {
@@ -107,11 +103,9 @@ export default function ImageUpload({
         throw new Error(`Failed to upload file: ${uploadFileResponse.status} ${uploadFileResponse.statusText} - ${errorText}`)
       }
 
-      console.log(`Step 2 complete: File uploaded to Supabase for ${file.name}`)
       updateUpload(index, { progress: 60 })
 
       // Step 3: Analyze with AI
-      console.log(`Step 3: Starting AI analysis for ${file.name}`)
       updateUpload(index, { status: 'analyzing', progress: 70 })
 
       const analysisResponse = await fetch('/api/images/ingest', {
@@ -135,18 +129,15 @@ export default function ImageUpload({
       }
 
       const analysisResult: ImageAnalysisResult = await analysisResponse.json()
-      console.log(`Step 3 complete: AI analysis done for ${file.name}`, analysisResult)
 
-      console.log(`MARKING AS COMPLETED: ${file.name} with imageId ${uploadData.image_id}`)
       updateUpload(index, {
         status: 'completed',
         progress: 100,
         analysisResult
       })
-      console.log(`STATUS UPDATE COMPLETE for ${file.name}`)
 
     } catch (error) {
-      console.error(`UPLOAD ERROR for ${file.name}:`, error)
+      console.error('Upload error:', error)
       updateUpload(index, {
         status: 'error',
         progress: 0,
@@ -174,48 +165,25 @@ export default function ImageUpload({
 
     // Process valid files
     const validUploads = newUploads.filter(upload => !upload.error)
-    console.log(`STARTING PARALLEL PROCESSING of ${validUploads.length} valid uploads`)
-
     await Promise.all(
       validUploads.map((upload, index) => {
         const originalIndex = newUploads.findIndex(u => u.file === upload.file)
-        console.log(`Starting processing for ${upload.file.name} at originalIndex ${originalIndex}`)
         return processFile(upload.file, originalIndex)
       })
     )
 
-    console.log('ALL PROCESSING COMPLETE - checking final states')
     setIsProcessing(false)
 
     // Wait for state updates to complete, then check current uploads state
     setTimeout(() => {
       setUploads(currentUploads => {
-        console.log('CHECKING CURRENT UPLOADS STATE:', currentUploads)
-
         const completedUploads = currentUploads.filter(
           upload => upload.status === 'completed' && upload.analysisResult && upload.imageId
         )
 
-        console.log('UPLOAD DEBUG - Final filtering results:', {
-          totalUploads: currentUploads.length,
-          completedCount: completedUploads.length,
-          uploads: currentUploads.map(u => ({
-            fileName: u.file.name,
-            status: u.status,
-            hasAnalysisResult: !!u.analysisResult,
-            hasImageId: !!u.imageId,
-            progress: u.progress,
-            error: u.error,
-            actualAnalysisResult: u.analysisResult,
-            actualImageId: u.imageId
-          }))
-        })
-
         if (completedUploads.length > 0) {
-          console.log('SETTING showReview = true for', completedUploads.length, 'uploads')
           setShowReview(true)
         } else {
-          console.log('NO COMPLETED UPLOADS - not showing review')
           if (onComplete) {
             onComplete(currentUploads)
           }
@@ -292,7 +260,6 @@ export default function ImageUpload({
 
   // Show review page if requested
   if (showReview) {
-    console.log('RENDERING ImageReview with showReview =', showReview, 'uploads:', uploads.length)
     return (
       <ImageReview
         uploadResults={uploads}
@@ -442,18 +409,6 @@ export default function ImageUpload({
               </button>
 
               <div className="space-x-3">
-                {uploads.length > 0 && (
-                  <button
-                    onClick={() => {
-                      console.log('MANUAL TEST: Current uploads state:', uploads)
-                      console.log('MANUAL TEST: Setting showReview = true')
-                      setShowReview(true)
-                    }}
-                    className="bg-purple-600 text-white px-4 py-2 rounded-md hover:bg-purple-700 text-sm"
-                  >
-                    Force Review Test
-                  </button>
-                )}
                 {allCompleted && onClose && (
                   <button
                     onClick={onClose}

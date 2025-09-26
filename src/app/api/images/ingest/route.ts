@@ -111,9 +111,17 @@ export async function POST(request: NextRequest) {
       const facesCount = analysisResult.tags_scored?.find((tag: ImageTag) => tag.type === 'people')?.conf > 0.7 ? 1 : 0
 
       // Use OCR results for accurate text detection
-      const hasText = analysisResult.ocr_text &&
-                     analysisResult.ocr_text.trim().length > 0 &&
-                     analysisResult.text_density > 0.01
+      const hasText = Boolean(
+        analysisResult.ocr_text &&
+        analysisResult.ocr_text.trim().length > 0 &&
+        analysisResult.text_density > 0.01
+      )
+      console.log('Text detection:', {
+        ocr_text: analysisResult.ocr_text,
+        text_density: analysisResult.text_density,
+        hasText: hasText,
+        hasTextType: typeof hasText
+      })
 
       // Extract dominant colors (placeholder)
       const dominantColors = analysisResult.tags_scored

@@ -233,98 +233,61 @@ export async function generateDailyRoadWork(campaignDate?: string): Promise<Road
       }
     }
 
-    // Parse AI response with enhanced error handling and debugging
+    // Parse AI response - simplified logic matching working debug endpoint
     let roadWorkItems: RoadWorkItem[] = []
-    try {
-      let jsonString = ''
 
-      if (typeof aiResponse === 'string') {
-        jsonString = aiResponse
-      } else if (Array.isArray(aiResponse)) {
-        roadWorkItems = aiResponse
-        jsonString = '' // Skip parsing
-      } else if (aiResponse && typeof aiResponse === 'object' && 'raw' in aiResponse) {
-        jsonString = (aiResponse as any).raw
-      } else {
-        console.error('❌ Unexpected AI response format:', typeof aiResponse, aiResponse)
-        throw new Error(`Unexpected AI response format: ${typeof aiResponse}`)
-      }
+    console.log('🔍 AI Response Type:', typeof aiResponse)
+    console.log('🔍 AI Response Is Array:', Array.isArray(aiResponse))
+    console.log('🔍 AI Response Length:', aiResponse?.length || 'N/A')
 
-      if (jsonString) {
-        console.log('🔍 Original AI response length:', jsonString.length)
-        console.log('🔍 First 200 chars:', jsonString.substring(0, 200))
-        console.log('🔍 Last 200 chars:', jsonString.substring(Math.max(0, jsonString.length - 200)))
-
-        // Enhanced JSON extraction - handle various AI response formats
-        let cleanedJson = jsonString.trim()
-
-        // Remove markdown code block wrappers if present
+    // Direct array handling (debug endpoint shows this works)
+    if (Array.isArray(aiResponse)) {
+      console.log('✅ AI returned direct array, using as-is')
+      roadWorkItems = aiResponse
+    }
+    // String handling
+    else if (typeof aiResponse === 'string') {
+      console.log('🔍 AI returned string, parsing JSON')
+      try {
+        // Clean and parse JSON string
+        let cleanedJson = aiResponse.trim()
         cleanedJson = cleanedJson
           .replace(/^```json\s*/i, '')
           .replace(/^```\s*/i, '')
           .replace(/\s*```$/i, '')
 
-        // Remove any text before the first [ or {
-        const jsonStart = Math.max(cleanedJson.indexOf('['), cleanedJson.indexOf('{'))
-        if (jsonStart > 0) {
-          cleanedJson = cleanedJson.substring(jsonStart)
-        }
-
-        // Remove any text after the last ] or }
-        const lastBracket = cleanedJson.lastIndexOf(']')
-        const lastBrace = cleanedJson.lastIndexOf('}')
-        const jsonEnd = Math.max(lastBracket, lastBrace)
-        if (jsonEnd >= 0 && jsonEnd < cleanedJson.length - 1) {
-          cleanedJson = cleanedJson.substring(0, jsonEnd + 1)
-        }
-
-        console.log('🔍 Cleaned JSON length:', cleanedJson.length)
-        console.log('🔍 Cleaned JSON preview:', cleanedJson.substring(0, 300))
-
         roadWorkItems = JSON.parse(cleanedJson)
-        console.log('✅ Successfully parsed JSON - got', roadWorkItems.length, 'items')
+        console.log('✅ Successfully parsed string to array:', roadWorkItems.length, 'items')
+      } catch (stringParseError) {
+        console.error('❌ Failed to parse AI string response:', stringParseError)
+        throw new Error(`Failed to parse AI string response: ${stringParseError instanceof Error ? stringParseError.message : 'Unknown error'}`)
       }
-    } catch (parseError) {
-      console.error('❌ Failed to parse AI response:', parseError)
-      console.error('❌ Parse error details:', {
-        message: parseError instanceof Error ? parseError.message : 'Unknown error',
-        stack: parseError instanceof Error ? parseError.stack : undefined
+    }
+    // Object with raw property handling
+    else if (aiResponse && typeof aiResponse === 'object' && 'raw' in aiResponse) {
+      console.log('🔍 AI returned object with raw property, parsing')
+      try {
+        const rawContent = (aiResponse as any).raw
+        if (typeof rawContent === 'string') {
+          roadWorkItems = JSON.parse(rawContent)
+          console.log('✅ Successfully parsed raw content:', roadWorkItems.length, 'items')
+        } else {
+          throw new Error('Raw property is not a string')
+        }
+      } catch (rawParseError) {
+        console.error('❌ Failed to parse raw content:', rawParseError)
+        throw new Error(`Failed to parse raw content: ${rawParseError instanceof Error ? rawParseError.message : 'Unknown error'}`)
+      }
+    }
+    // Unexpected format
+    else {
+      console.error('❌ Unexpected AI response format:', {
+        type: typeof aiResponse,
+        isArray: Array.isArray(aiResponse),
+        hasRaw: aiResponse && typeof aiResponse === 'object' && 'raw' in aiResponse,
+        content: JSON.stringify(aiResponse, null, 2)
       })
-      console.log('❌ Raw AI response:', JSON.stringify(aiResponse, null, 2))
-
-      // User requested no fallback - debug the actual parsing issue
-      console.error('❌ CRITICAL: Road work AI parsing failed after all attempts')
-      console.error('Raw AI Response Type:', typeof aiResponse)
-      console.error('Raw AI Response Content:', aiResponse)
-
-      // Try one more extremely simple parsing approach
-      if (aiResponse) {
-        let finalAttempt = ''
-        if (typeof aiResponse === 'string') {
-          finalAttempt = aiResponse
-        } else if (aiResponse && aiResponse.raw) {
-          finalAttempt = aiResponse.raw
-        } else {
-          finalAttempt = JSON.stringify(aiResponse)
-        }
-
-        // Extract anything that looks like a JSON array
-        const arrayPattern = /\[[^]*\]/
-        const match = finalAttempt.match(arrayPattern)
-        if (match) {
-          try {
-            roadWorkItems = JSON.parse(match[0])
-            console.log('✅ Emergency parsing succeeded:', roadWorkItems.length, 'items')
-          } catch (finalError) {
-            console.error('❌ Even emergency parsing failed:', finalError)
-            throw new Error(`Complete parsing failure - Raw response: ${JSON.stringify(aiResponse)}`)
-          }
-        } else {
-          throw new Error(`No JSON array found in AI response: ${finalAttempt.substring(0, 500)}`)
-        }
-      } else {
-        throw new Error('AI response is null or undefined')
-      }
+      throw new Error(`Unexpected AI response format: ${typeof aiResponse}`)
     }
 
     // Validate we have exactly 9 items

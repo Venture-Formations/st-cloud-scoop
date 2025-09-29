@@ -12,7 +12,7 @@ function createWordlePrompt(date: string) {
     day: 'numeric'
   })
 
-  return `Search the web for the NYT Wordle answer for ${formattedDate}. Return only JSON: [{"word":"","definition":"","interesting_fact":""}]. If not found, return [].`
+  return `Find the Wordle answer for ${formattedDate}.`
 }
 
 async function collectWordleData(date: string, forceRefresh = false) {

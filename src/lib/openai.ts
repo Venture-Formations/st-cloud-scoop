@@ -293,7 +293,7 @@ AGE GROUP ANALYSIS:
 IMPORTANT: Only include OCR fields if readable text is actually present. Only include age_groups if people are visible and ages can be reasonably estimated. Set to null if not detected.`
 }
 
-export async function callOpenAIWithWeb(prompt: string, maxTokens = 1000, temperature = 0) {
+export async function callOpenAIWithWeb(userPrompt: string, maxTokens = 1000, temperature = 0) {
   try {
     console.log('Calling OpenAI API with web tools...')
 
@@ -305,10 +305,34 @@ export async function callOpenAIWithWeb(prompt: string, maxTokens = 1000, temper
       console.log('Using GPT-4o model with web tools...')
       const response = await openai.chat.completions.create({
         model: 'gpt-4o',
-        messages: [{ role: 'user', content: prompt }],
-        max_tokens: maxTokens,
+        tools: [{ type: 'web' }],
         temperature: temperature,
-        tools: [{ type: 'web_search' }],
+        messages: [
+          {
+            role: 'system',
+            content: `You are a research assistant that can search the live web.
+
+Search trusted Wordle spoiler sources (Tom's Guide, r/wordle daily thread,
+wordlesolver.net, NYT WordleBot) for the New York Times Wordle answer for the
+specified date.
+
+Rules:
+- Search the web if needed to find the answer.
+- Output ONLY a JSON array in this exact format:
+  [{
+    "word": "string",
+    "definition": "string (≤ 30 words, concise dictionary style)",
+    "interesting_fact": "string (≤ 50 words, fun trivia or etymology)"
+  }]
+- If no answer is found with high confidence, output [].
+- Do not include explanations, markdown, or extra text—JSON only.`
+          },
+          {
+            role: 'user',
+            content: userPrompt
+          }
+        ],
+        max_tokens: maxTokens,
       }, {
         signal: controller.signal
       })

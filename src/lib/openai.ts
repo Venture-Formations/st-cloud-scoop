@@ -236,19 +236,12 @@ INCLUDE ALL TYPES:
 - Cold patching, resurfacing, maintenance work affecting traffic
 
 EXPLICITLY INCLUDE:
-- Hwy 55, Hwy 15, Hwy 10, Hwy 23, County Roads (especially CR47, CR75)
-- Closures near Kimball, Annandale, Sartell, Waite Park, St. Joseph, St. Augusta, Sauk Rapids
+- State highways: Hwy 55, Hwy 15, Hwy 10, Hwy 23
+- County Roads in the area
+- Closures in nearby cities: Sartell, Waite Park, St. Joseph, St. Augusta, Sauk Rapids
 - Metro Bus route detours and schedule changes
-- Roundabout construction projects (especially in St. Joseph)
-- County road projects in St. Augusta and surrounding townships
+- All types of construction projects (roundabouts, bridges, resurfacing)
 - Projects that started before ${campaignDate} but are still ongoing
-
-PRIORITY SEARCH AREAS:
-- St. Joseph main highway/roundabout construction
-- County Road 47 (CR47) in St. Augusta area
-- St. Cloud metro area (within 10 miles of downtown)
-- Stearns County road projects
-- Active city street projects in St. Cloud, Sartell, Waite Park
 
 STRICTLY EXCLUDE:
 - Completed closures (reopen date before ${campaignDate})

@@ -211,23 +211,38 @@ CREATIVITY REQUIREMENT: Each generation should produce a unique headline variati
 Respond with ONLY the headline text - no JSON, no quotes, no extra formatting. Just the headline itself.`,
 
   roadWorkGenerator: (campaignDate: string) => `
-Create 9 road work entries for St. Cloud, MN area newsletter.
+List every active road, lane, or bridge closure, detour, or major traffic restriction in effect on ${campaignDate} within 15 miles of ZIP code 56303 (St. Cloud, MN).
 
-Format: JSON array only
+SEARCH CRITERIA:
+- Date: ${campaignDate}
+- Location: Within 15 miles of ZIP 56303 (St. Cloud, MN)
+- Include: Full closures, lane closures, bridge closures, detours, major traffic restrictions
+- Include: Current closures from all road types (state, county, city streets)
+- Include: Direction-specific lane closures, construction impacts, travel advisories
+- Explicitly include: Hwy 55, Hwy 15, closures near Kimball, Annandale, Sartell, Waite Park, St. Joseph, Sauk Rapids
+- Exclude: Completed closures, planned/future closures, shoulder-only work
+
+REQUIRED SOURCES TO CHECK:
+- https://www.dot.state.mn.us/d3/ (MnDOT District 3)
+- https://www.stearnscountymn.gov/185/Public-Works
+- https://www.co.benton.mn.us/180/Highway
+- https://www.co.sherburne.mn.us/162/Public-Works
+- https://www.ci.stcloud.mn.us (St. Cloud)
+- https://www.cityofsartell.com/engineering/
+- https://www.cityofstjoseph.com/
+- https://www.ci.waitepark.mn.us/
+- https://ci.sauk-rapids.mn.us/
+- Local media: WJON Traffic, St. Cloud Times Roads section
+- 511mn.org (Minnesota road conditions)
+
+REQUIRED OUTPUT FORMAT:
+Return ONLY a JSON array with exactly 9 road work entries. If fewer than 9 real closures exist, include the actual ones found and do not make up fictional entries.
 
 [
-{"road_name":"Highway 15","road_range":"from 2nd Street to Benton Drive","city_or_township":"St. Cloud","reason":"Bridge maintenance","start_date":"Sep 25","expected_reopen":"Oct 15","source_url":"https://www.dot.state.mn.us/d3/"},
-{"road_name":"County Road 75","road_range":"from 33rd Street to Park Avenue","city_or_township":"Waite Park","reason":"Road resurfacing","start_date":"Sep 26","expected_reopen":"Oct 20","source_url":"https://www.stearnscountymn.gov/185/Public-Works"},
-{"road_name":"Highway 23","road_range":"from 14th Avenue to 22nd Avenue","city_or_township":"St. Cloud","reason":"Utility work","start_date":"Sep 27","expected_reopen":"Oct 25","source_url":"https://www.dot.state.mn.us/d3/"},
-{"road_name":"1st Street South","road_range":"from 7th Avenue to 10th Avenue","city_or_township":"Sartell","reason":"Paving project","start_date":"Sep 28","expected_reopen":"Oct 10","source_url":"https://www.cityofsartell.com"},
-{"road_name":"County Road 4","road_range":"from Highway 24 to County Road 2","city_or_township":"Clearwater","reason":"Drainage improvements","start_date":"Sep 29","expected_reopen":"Oct 15","source_url":"https://www.co.sherburne.mn.us/162/Public-Works"},
-{"road_name":"Highway 10","road_range":"from Highway 15 to County Road 3","city_or_township":"Sauk Rapids","reason":"Interchange construction","start_date":"Sep 30","expected_reopen":"Nov 15","source_url":"https://www.dot.state.mn.us/d3/"},
-{"road_name":"Highway 24","road_range":"from Clearwater Bridge to 200th Street","city_or_township":"Clear Lake","reason":"Bridge maintenance","start_date":"Oct 1","expected_reopen":"Oct 30","source_url":"https://www.dot.state.mn.us/d3/"},
-{"road_name":"County Road 8","road_range":"from 9th Avenue to County Road 43","city_or_township":"St. Joseph","reason":"Resurfacing project","start_date":"Oct 2","expected_reopen":"Oct 12","source_url":"https://www.co.benton.mn.us/180/Highway"},
-{"road_name":"Highway 55","road_range":"from Kimball to Annandale","city_or_township":"Kimball","reason":"Road widening","start_date":"Oct 3","expected_reopen":"Oct 28","source_url":"https://www.dot.state.mn.us/d3/"}
+{"road_name":"[actual road name]","road_range":"from [start] to [end]","city_or_township":"[actual city]","reason":"[actual reason from source]","start_date":"[actual date from source]","expected_reopen":"[actual date or TBD]","source_url":"[actual URL where info was found]"}
 ]
 
-Return similar JSON with 9 road work items for the St. Cloud area.`,
+CRITICAL: Only return real, verified road work from actual government sources. Do not create fictional entries.`,
 
   imageAnalyzer: () => `
 Analyze this image and return strict JSON:
@@ -296,6 +311,79 @@ IMPORTANT: Only include OCR fields if readable text is actually present. Only in
 // This function is no longer needed since we use web scraping instead of AI
 export async function callOpenAIWithWeb(userPrompt: string, maxTokens = 1000, temperature = 0) {
   throw new Error('Web-enabled AI calls have been replaced with direct web scraping. Use wordle-scraper.ts instead.')
+}
+
+// Special function for road work generation using Responses API with web search
+export async function callOpenAIWithWebSearch(systemPrompt: string, userPrompt: string): Promise<any> {
+  const controller = new AbortController()
+  try {
+    console.log('Making OpenAI Responses API request with web search...')
+    console.log('System prompt length:', systemPrompt.length)
+    console.log('User prompt length:', userPrompt.length)
+
+    const timeoutId = setTimeout(() => controller.abort(), 60000) // 60 second timeout for web search
+
+    try {
+      console.log('Using GPT-4o model with web search tools...')
+
+      // Use the Responses API with web tools as provided by the user
+      const response = await (openai as any).responses.create({
+        model: 'gpt-4o',
+        tools: [{ type: 'web_search_preview' }], // correct web search tool type
+        input: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userPrompt }
+        ],
+        temperature: 0
+      }, {
+        signal: controller.signal
+      })
+
+      clearTimeout(timeoutId)
+
+      // Extract the response text using the format from the user's example
+      const text = response.output_text ?? response.output?.[0]?.content?.[0]?.text ?? ""
+
+      if (!text) {
+        throw new Error('No response from OpenAI Responses API')
+      }
+
+      console.log('OpenAI Responses API response received, length:', text.length)
+
+      // Extract JSON array from the response
+      const start = text.indexOf("[")
+      const end = text.lastIndexOf("]")
+
+      if (start === -1 || end === -1) {
+        console.warn('No JSON array found in response, returning raw text')
+        return { raw: text }
+      }
+
+      const jsonString = text.slice(start, end + 1)
+      console.log('Extracted JSON string length:', jsonString.length)
+
+      try {
+        const parsedData = JSON.parse(jsonString)
+        console.log('Successfully parsed road work data:', parsedData.length, 'items')
+        return parsedData
+      } catch (parseError) {
+        console.error('Failed to parse extracted JSON:', parseError)
+        console.error('JSON string:', jsonString.substring(0, 500))
+        return { raw: text }
+      }
+
+    } catch (error) {
+      clearTimeout(timeoutId)
+      throw error
+    }
+  } catch (error) {
+    console.error('OpenAI Responses API error:', error)
+    if (error instanceof Error) {
+      console.error('Error details:', error.message)
+      console.error('Error name:', error.name)
+    }
+    throw error
+  }
 }
 
 function parseJSONResponse(content: string) {

@@ -21,8 +21,13 @@ export async function GET(request: Request) {
       .eq('id', campaignId)
       .single()
 
-    if (campaignError || !campaign) {
-      throw new Error('Campaign not found')
+    if (campaignError) {
+      console.error('Campaign query error:', campaignError)
+      throw new Error(`Campaign not found: ${campaignError.message}`)
+    }
+
+    if (!campaign) {
+      throw new Error('Campaign not found - no data returned')
     }
 
     // Calculate 3-day range from campaign date
@@ -54,16 +59,18 @@ export async function GET(request: Request) {
     for (const dateStr of dates) {
       console.log(`\nProcessing events for ${dateStr}...`)
 
-      // Get events for this date
+      // Get events for this date (events that occur on this date)
       const dateStart = new Date(dateStr + 'T00:00:00-05:00')
       const dateEnd = new Date(dateStr + 'T23:59:59-05:00')
+
+      console.log(`Querying events between ${dateStart.toISOString()} and ${dateEnd.toISOString()}`)
 
       const { data: availableEvents, error: eventsError } = await supabaseAdmin
         .from('events')
         .select('*')
         .eq('active', true)
-        .gte('start_date', dateStart.toISOString())
         .lte('start_date', dateEnd.toISOString())
+        .or(`end_date.gte.${dateStart.toISOString()},end_date.is.null`)
         .order('start_date', { ascending: true })
         .limit(8)
 

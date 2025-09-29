@@ -37,57 +37,48 @@ async function getWordleAnswer(dateStr: string): Promise<string | null> {
     // Load HTML with cheerio to extract clean text content
     const $ = cheerio.load(html)
 
-    // Extract the main article content and remove scripts/styles
-    $('script, style, nav, header, footer, .advertisement, .ad').remove()
-    const articleText = $('.article-content, .entry-content, main, article').text() || $('body').text()
+    // Remove only scripts and styles, keep all other content for AI analysis
+    $('script, style').remove()
+    const fullPageText = $('body').text()
 
-    // Limit content length for AI processing (keep most relevant parts)
-    const contentForAI = articleText.substring(0, 4000)
+    // Limit content for AI (increase to capture more content)
+    const contentForAI = fullPageText.substring(0, 8000)
 
-    console.log(`Extracted content for AI analysis (${contentForAI.length} characters)`)
-    console.log(`Content preview: ${contentForAI.substring(0, 200)}...`)
+    console.log(`Sending full page content to AI for analysis (${contentForAI.length} characters)`)
 
-    // Use AI to analyze the content and extract the Wordle answer
+    // Use AI to analyze the entire page content
     const { callOpenAI } = await import('./openai')
 
-    const prompt = `Analyze this Tom's Guide Wordle page content and extract the current Wordle answer.
+    const prompt = `Find the Wordle answer for puzzle #${number} from this Tom's Guide page content.
 
 INSTRUCTIONS:
-- Look for today's Wordle answer (puzzle #${number})
-- The answer is always exactly 5 letters
-- Return ONLY the 5-letter word in uppercase, nothing else
-- If you find a list of recent answers, use the one for puzzle #${number}
-- Ignore partial words like "REMAI" from "remains" - only find complete standalone words
-- Do not return any explanations, just the word
+- Search the entire page for Wordle puzzle #${number}
+- The answer is exactly 5 letters
+- Return ONLY the 5-letter word in uppercase
+- Look for patterns like "Wordle ${number}: XXXXX" or "puzzle ${number}: XXXXX"
+- Ignore partial words from longer words like "remains"
+- If you can't find puzzle #${number}, look for today's current Wordle answer
 
-CONTENT:
+PAGE CONTENT:
 ${contentForAI}`
 
-    const result = await callOpenAI(prompt, 'gpt-4', { max_tokens: 10, temperature: 0 })
+    const result = await callOpenAI(prompt, 'gpt-4', { max_tokens: 20, temperature: 0 })
 
     if (result && typeof result === 'string') {
       const cleanResult = result.trim().toUpperCase()
-
-      // Validate it's exactly 5 letters
       if (/^[A-Z]{5}$/.test(cleanResult)) {
-        console.log(`AI extracted Wordle #${number}: ${cleanResult}`)
+        console.log(`AI found Wordle #${number}: ${cleanResult}`)
         return cleanResult
-      } else {
-        console.log(`AI returned invalid format: "${cleanResult}"`)
       }
     } else if (result && typeof result === 'object' && result.raw) {
       const cleanResult = result.raw.trim().toUpperCase()
-
-      // Validate it's exactly 5 letters
       if (/^[A-Z]{5}$/.test(cleanResult)) {
-        console.log(`AI extracted Wordle #${number}: ${cleanResult}`)
+        console.log(`AI found Wordle #${number}: ${cleanResult}`)
         return cleanResult
-      } else {
-        console.log(`AI returned invalid format: "${cleanResult}"`)
       }
     }
 
-    console.log(`No valid Wordle answer found for #${number} (${dateStr})`)
+    console.log(`No valid Wordle answer found for #${number}`)
     return null
 
   } catch (error) {
@@ -137,10 +128,31 @@ export async function getWordleDataForDate(dateStr: string): Promise<{
     return null
   }
 
-  return {
-    word,
-    definition: getBasicDefinition(word),
-    interesting_fact: getInterestingFact(word)
+  // Use AI to generate definition and interesting fact
+  const { callOpenAI } = await import('./openai')
+
+  try {
+    const definitionPrompt = `Give a brief, clear definition of the word "${word}". Keep it under 50 words and make it suitable for a general audience.`
+    const definitionResult = await callOpenAI(definitionPrompt, 'gpt-4', { max_tokens: 100, temperature: 0.3 })
+    const definition = (typeof definitionResult === 'string' ? definitionResult : definitionResult?.raw || '').trim()
+
+    const factPrompt = `Share one interesting fact about the word "${word}" - its etymology, usage, or something fascinating about it. Keep it under 80 words.`
+    const factResult = await callOpenAI(factPrompt, 'gpt-4', { max_tokens: 150, temperature: 0.3 })
+    const interesting_fact = (typeof factResult === 'string' ? factResult : factResult?.raw || '').trim()
+
+    return {
+      word,
+      definition: definition || getBasicDefinition(word),
+      interesting_fact: interesting_fact || getInterestingFact(word)
+    }
+  } catch (error) {
+    console.error('Error generating AI definition/fact:', error)
+    // Fall back to basic definitions if AI fails
+    return {
+      word,
+      definition: getBasicDefinition(word),
+      interesting_fact: getInterestingFact(word)
+    }
   }
 }
 

@@ -249,86 +249,117 @@ export async function generateDailyRoadWork(campaignDate?: string): Promise<Road
 
     const systemPrompt = `You are a traffic researcher with live web access. Search official DOT/county/city/public-works sources and credible local media for active road impacts.
 
-COMPREHENSIVE INCLUSION CRITERIA:
-- Target date: ${formattedDate} (America/Chicago). Include only impacts active ON that date.
-- Geography: within 15 miles of ZIP 56303 (St. Cloud, MN). Use 56303 centroid for radius filtering.
+Use this exact query structure:
 
-INCLUDE ALL TYPES:
-- Full closures, lane closures, bridge closures, detours, major traffic restrictions
-- Utility work closures (water main, sewer, gas, electric, telecommunications)
-- Bus route detours and transit impacts
-- Construction impacts, travel advisories, traffic alerts, detour notices
-- Lane shifts, lane reductions, intermittent closures
-- Direction-specific restrictions (eastbound/westbound)
-- Segment-specific impacts within larger projects
-- Recurring or periodic closures active on target date
-- ALL road types: state highways, county roads, city streets, local roads
+{
+  "query": {
+    "description": "List every active road, lane, or bridge closure, detour, or major traffic restriction in effect on ${formattedDate} within 15 miles of ZIP code 56303 (St. Cloud, MN).",
+    "criteria": {
+      "date": "${formattedDate}",
+      "location_radius": {
+        "zip_code": "56303",
+        "radius_miles": 15
+      },
+      "inclusion_rules": {
+        "include_types": {
+          "examples": [
+            "full closures",
+            "lane closures",
+            "bridge closures",
+            "detours",
+            "major traffic restrictions"
+          ]
+        },
+        "include_conditions": {
+          "examples": [
+            "current closures",
+            "recurring or periodic closures active on ${formattedDate}",
+            "closures that started any time before or on ${formattedDate} and are still active",
+            "closures from all road types (state, county, city streets)",
+            "segment-specific impacts within larger projects",
+            "direction-specific lane closures (e.g., westbound/eastbound)"
+          ]
+        },
+        "include_synonyms": {
+          "examples": [
+            "construction impacts",
+            "travel advisories",
+            "traffic alerts",
+            "detour notices"
+          ]
+        },
+        "explicitly_include": [
+          "Hwy 55",
+          "Hwy 15",
+          "closures near city boundaries or small towns like Kimball or Annandale"
+        ],
+        "exclusion_rules": {
+          "examples": [
+            "completed closures",
+            "planned or future closures",
+            "shoulder-only work"
+          ]
+        },
+        "deduplicate_only": "truly overlapping or redundant entries"
+      },
+      "required_fields": [
+        "road_segment",
+        "city_or_township",
+        "reason",
+        "start_date",
+        "expected_reopen",
+        "source_url"
+      ],
+      "custom_parsing": {
+        "split_road_segment": "If road_segment contains phrasing like '[road name] from [start point] to [end point]', extract '[road name]' as 'road_name' and 'from [start] to [end]' as 'road_range'."
+      },
+      "minimum_results": 1,
+      "maximum_results": null,
+      "pagination_allowed": true
+    },
+    "sources": {
+      "examples": [
+        "https://www.dot.state.mn.us/d3/",
+        "https://www.stearnscountymn.gov/185/Public-Works",
+        "https://www.co.benton.mn.us/180/Highway",
+        "https://www.co.sherburne.mn.us/162/Public-Works",
+        "https://www.sartellmn.com/engineering/",
+        "https://www.ci.stcloud.mn.us",
+        "https://www.cityofstjoseph.com/",
+        "https://www.ci.waitepark.mn.us/",
+        "https://ci.sauk-rapids.mn.us/",
+        "https://www.stcloudapo.org",
+        "https://www.ridemetrobus.com",
+        "Official Facebook pages (road/closure updates from last 30 days)",
+        "Local media such as WJON Traffic, St. Cloud Times Roads section"
+      ],
+      "allow_additional_sources": true
+    },
+    "output_rules": {
+      "format": "JSON_array_only",
+      "json_starts_with": "[",
+      "date_format": "ISO-8601",
+      "deduplicate": true,
+      "structure": [
+        {
+          "road_name": "string",
+          "road_range": "string",
+          "city_or_township": "string",
+          "reason": "string",
+          "start_date": "YYYY-MM-DD",
+          "expected_reopen": "YYYY-MM-DD or 'TBD'",
+          "source_url": "https://..."
+        }
+      ]
+    }
+  }
+}`
 
-INCLUDE WORK TYPES:
-- Road reconstruction, resurfacing, paving, patching
-- Bridge work, culvert replacement, interchange construction
-- Utility installations: water main, sewer line, pipeline work
-- Traffic signal upgrades, sidewalk work, drainage improvements
-- Street reconstruction, lane expansion, shoulder work
+    const userPrompt = `Execute the query structure provided in the system prompt. Search all the specified sources comprehensively and return ALL available road work items found.
 
-EXCLUDE ONLY:
-- Completed closures, planned/future-only items, shoulder-only work
+Return ONLY a JSON array starting with [ and ending with ].
 
-REQUIRED COMPREHENSIVENESS:
-- Check city engineering departments for local street work
-- Check utility companies for water/sewer/gas work causing road impacts
-- Check metro bus system for route detours
-- Include small local streets and utility work, not just major highways
-- Split "road_segment" like "Hwy 15 from 2nd St S to County Rd 75" into:
-  road_name = "Hwy 15", road_range = "from 2nd St S to County Rd 75"
-
-OUTPUT:
-- Collect exactly 9 items (include small utility work to reach 9 if needed)
-- Date fields must be ISO-8601 (YYYY-MM-DD)
-- Output ONLY a JSON array (no markdown or commentary)
-- Each item MUST have: road_name, road_range, city_or_township, reason, start_date, expected_reopen, source_url
-- Cite the most specific/public-original source for each item
-
-PRIMARY SOURCES (search ALL):
-- https://www.dot.state.mn.us/d3/
-- https://www.stearnscountymn.gov/185/Public-Works
-- https://www.co.benton.mn.us/180/Highway
-- https://www.co.sherburne.mn.us/162/Public-Works
-- https://www.ci.stcloud.mn.us (city engineering and road construction)
-- https://www.cityofsartell.com/engineering/
-- https://www.cityofstjoseph.com/
-- https://www.ci.waitepark.mn.us/
-- https://ci.sauk-rapids.mn.us/
-- https://www.ridemetrobus.com (bus detours)
-- https://www.stcloudapo.org
-- Local utility companies and their road impact notices
-- Local media: WJON Traffic, St. Cloud Times roads section
-- Official city/county/DOT Facebook pages (last 30 days)
-- City public works departments for utility work impacts`
-
-    const userPrompt = `Task: List every active road, lane, or bridge closure, detour, or traffic restriction in effect on ${formattedDate} within 15 miles of ZIP 56303 (St. Cloud, MN).
-
-INCLUDE ALL IMPACT TYPES:
-- Full road closures, lane closures, bridge closures, detours
-- Utility work affecting traffic (water main, sewer, gas line work)
-- Lane shifts, lane reductions, flagging operations
-- Bus route detours and transit impacts
-- Construction-related traffic restrictions
-- Direction-specific lane closures (eastbound/westbound only)
-- Segment-specific impacts within larger projects
-- City street work, county road work, state highway work
-- Intermittent or recurring closures active on target date
-
-SEARCH COMPREHENSIVELY:
-- City engineering departments for local street/utility work
-- County public works for rural roads
-- MnDOT for state highways
-- Metro bus system for route changes
-- Utility companies for service work affecting roads
-- Local media traffic reports
-
-Output format: JSON array only, starting with [
-Each element MUST match this structure:
+Each element must match this exact structure:
 {
   "road_name": "string",
   "road_range": "string",
@@ -339,15 +370,14 @@ Each element MUST match this structure:
   "source_url": "https://..."
 }
 
-CRITICAL REQUIREMENTS:
-- Exactly 9 results (include smaller utility work if needed to reach 9)
-- Use ISO-8601 for all dates (YYYY-MM-DD format)
-- Only include items active on ${formattedDate}
-- Within 15 miles of 56303 centroid (St. Cloud, MN)
-- De-duplicate only truly overlapping entries
-- Include specific source URLs where information was found
-
-Now search the web comprehensively and return ONLY the JSON array.`
+CRITICAL:
+- Return ALL available results (not limited to 9)
+- Include all types: full closures, lane closures, bridge closures, detours, major traffic restrictions
+- Include utility work, construction impacts, travel advisories, traffic alerts
+- Search all sources: MnDOT, counties, cities, transit, local media
+- Only active on ${formattedDate} within 15 miles of ZIP 56303
+- Use pagination to find all available results
+- No markdown, no commentary - just the JSON array with all found items`
 
     // Try the web search approach with fallback strategies
     let aiResponse: any = null
@@ -442,26 +472,30 @@ CRITICAL: Only return real, verified road work from actual government sources. I
       throw new Error(`Unexpected AI response format: ${typeof aiResponse}`)
     }
 
-    // Validate we have exactly 9 items
-    if (!Array.isArray(roadWorkItems) || roadWorkItems.length !== 9) {
-      console.warn(`Expected 9 road work items, got ${Array.isArray(roadWorkItems) ? roadWorkItems.length : 'non-array'}`)
-      if (!Array.isArray(roadWorkItems)) {
-        throw new Error('AI response is not an array')
-      }
-      // If we have fewer than 9, pad with placeholder items
-      while (roadWorkItems.length < 9) {
-        roadWorkItems.push({
-          road_name: 'No Additional Closures',
-          road_range: 'N/A',
-          city_or_township: 'St. Cloud Area',
-          reason: 'No major closures reported',
-          start_date: targetDate.split(',')[0],
-          expected_reopen: 'N/A',
-          source_url: 'https://www.dot.state.mn.us/d3/'
-        })
-      }
-      // If we have more than 9, take the first 9
+    // Validate we have road work items
+    if (!Array.isArray(roadWorkItems)) {
+      throw new Error('AI response is not an array')
+    }
+
+    console.log(`Found ${roadWorkItems.length} total road work items from web search`)
+
+    // If we have more than 9, take the first 9 (most significant ones should be first)
+    if (roadWorkItems.length > 9) {
+      console.log(`Selecting top 9 items from ${roadWorkItems.length} found items`)
       roadWorkItems = roadWorkItems.slice(0, 9)
+    }
+
+    // If we have fewer than 9, pad with placeholder items
+    while (roadWorkItems.length < 9) {
+      roadWorkItems.push({
+        road_name: 'No Additional Closures',
+        road_range: 'N/A',
+        city_or_township: 'St. Cloud Area',
+        reason: 'No additional major closures reported',
+        start_date: targetDate.split(',')[0],
+        expected_reopen: 'N/A',
+        source_url: 'https://www.dot.state.mn.us/d3/'
+      })
     }
 
     console.log(`Successfully parsed ${roadWorkItems.length} road work items`)

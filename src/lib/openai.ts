@@ -216,11 +216,27 @@ List every active road, lane, or bridge closure, detour, or major traffic restri
 SEARCH CRITERIA:
 - Date: ${campaignDate}
 - Location: Within 15 miles of ZIP 56303 (St. Cloud, MN)
-- Include: Full closures, lane closures, bridge closures, detours, major traffic restrictions
-- Include: Current closures from all road types (state, county, city streets)
-- Include: Direction-specific lane closures, construction impacts, travel advisories
-- Explicitly include: Hwy 55, Hwy 15, closures near Kimball, Annandale, Sartell, Waite Park, St. Joseph, Sauk Rapids
-- Exclude: Completed closures, planned/future closures, shoulder-only work
+
+INCLUDE ALL TYPES:
+- Full closures, lane closures, bridge closures, detours, major traffic restrictions
+- Current closures from all road types (state, county, city streets)
+- Direction-specific lane closures (e.g., westbound/eastbound only)
+- Segment-specific impacts within larger projects
+- Construction impacts, travel advisories, traffic alerts, detour notices
+- Bus route detours and public transit impacts
+- Utility construction causing traffic restrictions
+- Intermittent lane closures and periodic restrictions
+- Water main work, pipeline work, road reconstruction
+- Cold patching, resurfacing, maintenance work affecting traffic
+
+EXPLICITLY INCLUDE:
+- Hwy 55, Hwy 15, Hwy 10, Hwy 23, County Roads
+- Closures near Kimball, Annandale, Sartell, Waite Park, St. Joseph, Sauk Rapids
+- Metro Bus route detours and schedule changes
+- Any current closure that started before ${campaignDate} and is still active
+
+EXCLUDE ONLY:
+- Completed closures, planned/future closures, shoulder-only work
 
 REQUIRED SOURCES TO CHECK:
 - https://www.dot.state.mn.us/d3/ (MnDOT District 3)
@@ -232,17 +248,20 @@ REQUIRED SOURCES TO CHECK:
 - https://www.cityofstjoseph.com/
 - https://www.ci.waitepark.mn.us/
 - https://ci.sauk-rapids.mn.us/
+- https://www.ridemetrobus.com (Metro Bus)
 - Local media: WJON Traffic, St. Cloud Times Roads section
 - 511mn.org (Minnesota road conditions)
 
+TARGET: Find 6-9 different road work entries. Include minor lane restrictions and construction impacts, not just major closures.
+
 REQUIRED OUTPUT FORMAT:
-Return ONLY a JSON array with exactly 9 road work entries. If fewer than 9 real closures exist, include the actual ones found and do not make up fictional entries.
+Return ONLY a JSON array. Include as many real closures as found (aim for 6-9 entries).
 
 [
 {"road_name":"[actual road name]","road_range":"from [start] to [end]","city_or_township":"[actual city]","reason":"[actual reason from source]","start_date":"[actual date from source]","expected_reopen":"[actual date or TBD]","source_url":"[actual URL where info was found]"}
 ]
 
-CRITICAL: Only return real, verified road work from actual government sources. Do not create fictional entries.`,
+CRITICAL: Only return real, verified road work from actual government sources. Include minor impacts like lane restrictions, not just major closures.`,
 
   imageAnalyzer: () => `
 Analyze this image and return strict JSON:

@@ -325,29 +325,36 @@ export async function POST(request: NextRequest) {
     console.log('🔄 Processing complete, handling inactive events...')
     console.log('⏰ Deactivation start time:', new Date().toISOString())
 
-    // Get event IDs that are currently used in active campaigns
-    const { data: activeCampaignEvents } = await supabaseAdmin
-      .from('campaign_events')
-      .select('event_id')
-      .eq('is_selected', true)
+    // Only deactivate events that have already ended (are in the past)
+    // This prevents deactivating future events that just aren't in today's API fetch window
+    const now = new Date()
+    const yesterday = new Date(now)
+    yesterday.setDate(yesterday.getDate() - 1)
+    const yesterdayStr = yesterday.toISOString()
 
-    const protectedEventIds = new Set(activeCampaignEvents?.map(ce => ce.event_id) || [])
-    console.log(`🛡️ Protecting ${protectedEventIds.size} events currently used in campaigns`)
+    console.log(`📋 Deactivating only events that ended before ${yesterdayStr}`)
 
-    // Mark events as inactive if they're no longer in the API response
-    // BUT don't deactivate events that are currently selected in campaigns
+    // Get events that have ended and are not in the current API response
     const apiExternalIds = events.map(e => `visitstcloud_${e.id}`)
 
     if (apiExternalIds.length > 0) {
-      console.log(`📋 Deactivating events not in ${apiExternalIds.length} current API results...`)
+      // Get event IDs that are currently used in campaigns (protect these)
+      const { data: activeCampaignEvents } = await supabaseAdmin
+        .from('campaign_events')
+        .select('event_id')
+        .eq('is_selected', true)
 
-      // Get events that should be deactivated (not in API and not protected)
+      const protectedEventIds = new Set(activeCampaignEvents?.map(ce => ce.event_id) || [])
+      console.log(`🛡️ Protecting ${protectedEventIds.size} events currently used in campaigns`)
+
+      // Get past events that should be deactivated
       const { data: eventsToDeactivate } = await supabaseAdmin
         .from('events')
-        .select('id, external_id')
+        .select('id, external_id, end_date, start_date')
         .like('external_id', 'visitstcloud_%')
         .not('external_id', 'in', `(${apiExternalIds.map(id => `'${id}'`).join(',')})`)
         .eq('active', true)
+        .lt('end_date', yesterdayStr) // Only events that ended before yesterday
 
       if (eventsToDeactivate && eventsToDeactivate.length > 0) {
         // Filter out protected events
@@ -356,7 +363,7 @@ export async function POST(request: NextRequest) {
           .map(event => event.id)
 
         if (idsToDeactivate.length > 0) {
-          console.log(`📋 Deactivating ${idsToDeactivate.length} events (${eventsToDeactivate.length - idsToDeactivate.length} protected)`)
+          console.log(`📋 Deactivating ${idsToDeactivate.length} past events (${eventsToDeactivate.length - idsToDeactivate.length} protected)`)
 
           const { error: deactivateError } = await supabaseAdmin
             .from('events')
@@ -367,8 +374,10 @@ export async function POST(request: NextRequest) {
             console.error('Error deactivating old events:', deactivateError)
           }
         } else {
-          console.log('📋 All events in deactivation list are protected by active campaigns')
+          console.log('📋 All past events in deactivation list are protected by active campaigns')
         }
+      } else {
+        console.log('📋 No past events found to deactivate')
       }
     }
 

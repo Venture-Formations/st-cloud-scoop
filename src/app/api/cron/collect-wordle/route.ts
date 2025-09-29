@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
-import { callOpenAI } from '@/lib/openai'
+import { callOpenAIWithWeb } from '@/lib/openai'
 
 // Create Wordle prompt function
 function createWordlePrompt(date: string) {
@@ -12,28 +12,7 @@ function createWordlePrompt(date: string) {
     day: 'numeric'
   })
 
-  return `Search for the Wordle answer for ${formattedDate} based on trusted spoiler sources and high-confidence solver reports. If the answer is not confirmed, return the most likely guess reported by multiple sources.
-
-Required fields: word, definition, interesting_fact
-
-Field constraints:
-- definition: string, max 30 words, from Merriam-Webster/Oxford/Collins
-- interesting_fact: string, max 50 words, game show-worthy trivia about etymology, pop culture use, or historical notes
-
-Trusted sources: Tom's Guide Wordle answers, Reddit r/wordle daily thread, wordlesolver.net, NYT WordleBot
-
-Output format: JSON array only, starts with [
-
-Output structure:
-[{
-  "word": "string",
-  "definition": "string (≤ 30 words)",
-  "interesting_fact": "string (≤ 50 words, game show-worthy, do not show source)"
-}]
-
-If answer not found, return empty array: []
-
-Do not wrap the output in triple backticks or markdown. Return only JSON. No comments or explanations.`
+  return `Search the web for the NYT Wordle answer for ${formattedDate}. Return only JSON: [{"word":"","definition":"","interesting_fact":""}]. If not found, return [].`
 }
 
 async function collectWordleData(date: string, forceRefresh = false) {
@@ -58,9 +37,9 @@ async function collectWordleData(date: string, forceRefresh = false) {
   // Generate the prompt for today's date
   const prompt = createWordlePrompt(date)
 
-  // Call OpenAI with the prompt
-  console.log('🤖 Calling OpenAI for Wordle data...')
-  const aiResponse = await callOpenAI(prompt, 1000, 0.7)
+  // Call OpenAI with web tools for Wordle data
+  console.log('🤖 Calling OpenAI with web search for Wordle data...')
+  const aiResponse = await callOpenAIWithWeb(prompt, 1000, 0)
 
   // Parse the response
   let wordleData

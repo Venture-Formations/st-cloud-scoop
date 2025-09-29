@@ -293,6 +293,76 @@ AGE GROUP ANALYSIS:
 IMPORTANT: Only include OCR fields if readable text is actually present. Only include age_groups if people are visible and ages can be reasonably estimated. Set to null if not detected.`
 }
 
+export async function callOpenAIWithWeb(prompt: string, maxTokens = 1000, temperature = 0) {
+  try {
+    console.log('Calling OpenAI API with web tools...')
+
+    // Add timeout to prevent hanging
+    const controller = new AbortController()
+    const timeoutId = setTimeout(() => controller.abort(), 60000) // 60 second timeout for web searches
+
+    try {
+      console.log('Using GPT-4o model with web tools...')
+      const response = await openai.chat.completions.create({
+        model: 'gpt-4o',
+        messages: [{ role: 'user', content: prompt }],
+        max_tokens: maxTokens,
+        temperature: temperature,
+        tools: [{ type: 'web_search' }],
+      }, {
+        signal: controller.signal
+      })
+
+      clearTimeout(timeoutId)
+
+      const content = response.choices[0]?.message?.content
+      if (!content) {
+        throw new Error('No response from OpenAI')
+      }
+
+      console.log('OpenAI web response received')
+
+      // Try to parse as JSON, fallback to raw content
+      try {
+        // Clean the content - remove any text before/after JSON (support both objects {} and arrays [])
+        const objectMatch = content.match(/\{[\s\S]*\}/)
+        const arrayMatch = content.match(/\[[\s\S]*\]/)
+
+        if (arrayMatch) {
+          // Prefer array match for prompts that expect arrays (like Wordle)
+          return JSON.parse(arrayMatch[0])
+        } else if (objectMatch) {
+          // Use object match for other prompts
+          return JSON.parse(objectMatch[0])
+        } else {
+          // Try parsing the entire content
+          return JSON.parse(content.trim())
+        }
+      } catch (parseError) {
+        console.warn('Failed to parse OpenAI web response as JSON. Content length:', content.length)
+        console.warn('Content preview:', content.substring(0, 200))
+        console.warn('Parse error:', parseError instanceof Error ? parseError.message : parseError)
+        return { raw: content }
+      }
+    } catch (error) {
+      clearTimeout(timeoutId)
+      throw error
+    }
+  } catch (error) {
+    console.error('OpenAI API web error:', error)
+    if (error instanceof Error) {
+      console.error('Error details:', error.message)
+      console.error('Error name:', error.name)
+      console.error('Error stack:', error.stack)
+    }
+    // Log additional error details for debugging
+    if (typeof error === 'object' && error !== null) {
+      console.error('Full error object:', JSON.stringify(error, null, 2))
+    }
+    throw error
+  }
+}
+
 export async function callOpenAI(prompt: string, maxTokens = 1000, temperature = 0.3) {
   try {
     console.log('Calling OpenAI API...')

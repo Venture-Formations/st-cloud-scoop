@@ -211,7 +211,7 @@ CREATIVITY REQUIREMENT: Each generation should produce a unique headline variati
 Respond with ONLY the headline text - no JSON, no quotes, no extra formatting. Just the headline itself.`,
 
   roadWorkGenerator: (campaignDate: string) => `
-Find CURRENT and ACTIVE road, lane, or bridge closures, detours, or traffic restrictions in effect on ${campaignDate} within 15 miles of ZIP code 56303 (St. Cloud, MN).
+Find CURRENT and ACTIVE road, lane, or bridge closures, detours, or traffic restrictions in effect on ${campaignDate} within 10 miles of ZIP code 56303 (St. Cloud, MN metro area).
 
 CRITICAL DATE REQUIREMENT:
 - ONLY include projects that are ACTIVE on ${campaignDate}
@@ -221,7 +221,7 @@ CRITICAL DATE REQUIREMENT:
 
 SEARCH CRITERIA:
 - Date: ${campaignDate}
-- Location: Within 15 miles of ZIP 56303 (St. Cloud, MN)
+- Location: Within 10 miles of ZIP 56303 (St. Cloud, MN metro area)
 
 INCLUDE ALL TYPES:
 - Full closures, lane closures, bridge closures, detours, major traffic restrictions
@@ -236,10 +236,19 @@ INCLUDE ALL TYPES:
 - Cold patching, resurfacing, maintenance work affecting traffic
 
 EXPLICITLY INCLUDE:
-- Hwy 55, Hwy 15, Hwy 10, Hwy 23, County Roads
-- Closures near Kimball, Annandale, Sartell, Waite Park, St. Joseph, Sauk Rapids
+- Hwy 55, Hwy 15, Hwy 10, Hwy 23, County Roads (especially CR47, CR75)
+- Closures near Kimball, Annandale, Sartell, Waite Park, St. Joseph, St. Augusta, Sauk Rapids
 - Metro Bus route detours and schedule changes
+- Roundabout construction projects (especially in St. Joseph)
+- County road projects in St. Augusta and surrounding townships
 - Projects that started before ${campaignDate} but are still ongoing
+
+PRIORITY SEARCH AREAS:
+- St. Joseph main highway/roundabout construction
+- County Road 47 (CR47) in St. Augusta area
+- St. Cloud metro area (within 10 miles of downtown)
+- Stearns County road projects
+- Active city street projects in St. Cloud, Sartell, Waite Park
 
 STRICTLY EXCLUDE:
 - Completed closures (reopen date before ${campaignDate})

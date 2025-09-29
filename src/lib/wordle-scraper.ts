@@ -20,14 +20,22 @@ async function getWordleAnswer(dateStr: string): Promise<string | null> {
 
     const systemPrompt = `You are a puzzle researcher with web access. Find today's Wordle answer from Tom's Guide or other reliable Wordle spoiler sources.`
 
-    const userPrompt = `Find the Wordle answer for puzzle #${number} (${dateStr}).
+    const userPrompt = `Search for the Wordle answer for ${dateStr}, based on trusted spoiler sources and high-confidence solver reports.
 
-Search Tom's Guide "Today's Wordle Answer" section and other reliable Wordle spoiler sites.
+TRUSTED SOURCES TO CHECK:
+- Tom's Guide "Today's Wordle Answer" section
+- Forbes Wordle coverage
+- Rock Paper Shotgun Wordle guides
+- Wordle Bot reports
+- IGN Wordle solutions
+- PC Gamer Wordle answers
+- Other reliable gaming/puzzle spoiler sites
 
 Look specifically for:
 - "Today's Wordle answer is [WORD]"
 - "The answer is [WORD]"
-- The explicit 5-letter solution word
+- "Wordle #${number} answer: [WORD]"
+- The explicit 5-letter solution word for puzzle #${number}
 
 Return ONLY the 5-letter answer word in UPPERCASE. No explanations, no hints, just the word.
 

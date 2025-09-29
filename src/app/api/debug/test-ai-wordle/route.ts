@@ -32,24 +32,38 @@ export async function GET(request: NextRequest) {
     const articleText = $('.article-content, .entry-content, main, article').text() || $('body').text()
     const contentForAI = articleText.substring(0, 4000)
 
-    // Look for "CIVIL" and "REMAI" in the content
-    const civilMatches = contentForAI.match(/CIVIL/g) || []
-    const remaiMatches = contentForAI.match(/REMAI/g) || []
-    const remainsMatches = contentForAI.match(/REMAIN[A-Z]*/gi) || []
+    // Find all headings to understand page structure
+    const headings = []
+    $('h1, h2, h3, h4, h5, h6').each((_, element) => {
+      headings.push($(element).text().trim())
+    })
+
+    // Try to find today's section
+    let todaySection = ''
+    $('h1, h2, h3, h4, h5, h6').each((_, element) => {
+      const headingText = $(element).text()
+      if (headingText.toLowerCase().includes("today's wordle answer")) {
+        let content = ''
+        let nextElement = $(element).next()
+        while (nextElement.length > 0 && !nextElement.is('h1, h2, h3, h4, h5, h6')) {
+          content += nextElement.text() + ' '
+          nextElement = nextElement.next()
+        }
+        todaySection = content.trim()
+        return false
+      }
+    })
 
     return NextResponse.json({
       success: true,
       date: targetDate,
       contentLength: contentForAI.length,
       contentPreview: contentForAI.substring(0, 500),
-      wordAnalysis: {
-        civilCount: civilMatches.length,
-        remaiCount: remaiMatches.length,
-        remainsWords: remainsMatches,
-        allFiveLetterWords: contentForAI.match(/\b[A-Z]{5}\b/g) || []
-      },
+      headings: headings,
+      todaySection: todaySection,
+      todaySectionLength: todaySection.length,
       debug: {
-        message: 'Content analysis to understand what AI is seeing'
+        message: 'Page structure analysis to find correct sections'
       }
     })
 

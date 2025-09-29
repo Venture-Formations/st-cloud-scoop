@@ -155,11 +155,8 @@ export default function ImagesDatabasePage() {
       ai_alt_text: image.ai_alt_text,
       ai_tags: image.ai_tags,
       credit: image.credit,
-      license: image.license,
       city: image.city,
-      source: image.source,
-      original_file_name: image.original_file_name,
-      source_url: image.source_url
+      source: image.source
     })
   }
 
@@ -473,9 +470,6 @@ export default function ImagesDatabasePage() {
                     Source
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Original File Name
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Info
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -661,66 +655,24 @@ export default function ImagesDatabasePage() {
                       )}
                     </td>
 
-                    <td className="px-4 py-4">
-                      {editingImage === image.id ? (
-                        <input
-                          type="text"
-                          value={editData.original_file_name || ''}
-                          onChange={(e) => setEditData({ ...editData, original_file_name: e.target.value })}
-                          placeholder="Original File Name"
-                          className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
-                        />
-                      ) : (
-                        <div className="text-sm text-gray-900">
-                          {image.original_file_name || '-'}
-                        </div>
-                      )}
-                    </td>
 
                     <td className="px-4 py-4">
                       {editingImage === image.id ? (
                         <div className="text-sm space-y-2 max-w-xs">
-                          <div className="text-gray-500">
-                            <div>{image.width}×{image.height}</div>
-                          </div>
-
-                          {/* Additional editable fields when in edit mode */}
-                          <div className="space-y-2 border-t pt-2">
-                            <div>
-                              <label className="block text-xs font-medium text-gray-700 mb-1">Source URL:</label>
-                              <input
-                                type="url"
-                                value={editData.source_url || ''}
-                                onChange={(e) => setEditData({ ...editData, source_url: e.target.value })}
-                                placeholder="https://..."
-                                className="w-full px-2 py-1 border border-gray-300 rounded text-xs"
-                              />
-                            </div>
-                            <div>
-                              <label className="block text-xs font-medium text-gray-700 mb-1">License:</label>
-                              <input
-                                type="text"
-                                value={editData.license || ''}
-                                onChange={(e) => setEditData({ ...editData, license: e.target.value })}
-                                placeholder="e.g., Creative Commons"
-                                className="w-full px-2 py-1 border border-gray-300 rounded text-xs"
-                              />
-                            </div>
-                            <div>
-                              <label className="block text-xs font-medium text-gray-700 mb-1">Credit:</label>
-                              <input
-                                type="text"
-                                value={editData.credit || ''}
-                                onChange={(e) => setEditData({ ...editData, credit: e.target.value })}
-                                placeholder="Photographer/Creator"
-                                className="w-full px-2 py-1 border border-gray-300 rounded text-xs"
-                              />
-                            </div>
+                          {/* Credit field only in edit mode */}
+                          <div>
+                            <label className="block text-xs font-medium text-gray-700 mb-1">Credit:</label>
+                            <input
+                              type="text"
+                              value={editData.credit || ''}
+                              onChange={(e) => setEditData({ ...editData, credit: e.target.value })}
+                              placeholder="Photographer/Creator"
+                              className="w-full px-2 py-1 border border-gray-300 rounded text-xs"
+                            />
                           </div>
                         </div>
                       ) : (
                         <div className="text-sm text-gray-500 space-y-1">
-                          <div>{image.width}×{image.height}</div>
                           <div className="flex flex-wrap gap-1">
                             {image.faces_count > 0 && (
                               <span className="bg-purple-100 text-purple-800 px-1 py-0.5 rounded text-xs">
@@ -748,16 +700,6 @@ export default function ImagesDatabasePage() {
                               </>
                             )}
                           </div>
-                          {image.source_url && (
-                            <div className="text-xs text-blue-600 truncate" title={image.source_url}>
-                              <span className="font-medium">Source:</span> {image.source_url}
-                            </div>
-                          )}
-                          {image.license && (
-                            <div className="text-xs text-gray-600">
-                              <span className="font-medium">License:</span> {image.license}
-                            </div>
-                          )}
                           {image.credit && (
                             <div className="text-xs text-gray-600">
                               <span className="font-medium">Credit:</span> {image.credit}

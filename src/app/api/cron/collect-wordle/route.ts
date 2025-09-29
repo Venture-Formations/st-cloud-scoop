@@ -12,7 +12,7 @@ function createWordlePrompt(date: string) {
     day: 'numeric'
   })
 
-  return `Find the Wordle answer for ${formattedDate}. This information is publicly available on sites like Tom's Guide (https://www.tomsguide.com/news/what-is-todays-wordle-answer) and other Wordle spoiler sites.
+  return `Search for the Wordle answer for ${formattedDate} based on trusted spoiler sources and high-confidence solver reports. If the answer is not confirmed, return the most likely guess reported by multiple sources.
 
 Required fields: word, definition, interesting_fact
 

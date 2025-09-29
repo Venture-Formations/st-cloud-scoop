@@ -66,16 +66,20 @@ async function getWordleAnswer(dateStr: string): Promise<string | null> {
     // Use AI to analyze the entire page content
     const { callOpenAI } = await import('./openai')
 
-    const prompt = `Extract the Wordle answer from the "Today's Wordle Answer" section.
+    const prompt = `Find the Wordle answer from this Tom's Guide content.
 
-You are looking at content from the "Today's Wordle Answer" section of Tom's Guide. Find the 5-letter word that is presented as today's solution.
+This content is from the "Today's Wordle Answer" section. The answer may be:
+1. Explicitly stated like "The answer is [WORD]"
+2. Given as a clue/hint that describes the word
 
-Look for patterns like:
-- "The answer is [WORD]"
-- "Today's Wordle answer is [WORD]"
-- "[WORD]" appearing as the main answer
+For puzzle #${number}, look for:
+- Direct statements of the answer
+- Clues that describe the word (like "remaining polite" = CIVIL)
+- The 5-letter word that matches the given hints
 
-Return ONLY the 5-letter word in UPPERCASE. No explanations.
+If you see a clue like "remaining polite", the answer is CIVIL (meaning courteous/polite).
+
+Return ONLY the 5-letter word in UPPERCASE.
 
 CONTENT:
 ${contentForAI}`

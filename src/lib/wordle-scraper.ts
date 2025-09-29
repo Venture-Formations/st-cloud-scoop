@@ -9,7 +9,7 @@ function getPuzzleNumber(targetDate: string): number {
   return 1 + days
 }
 
-// Fetch and parse Wordle answer from Tom's Guide current day page
+// Fetch and parse Wordle answer from Tom's Guide current day page using AI analysis
 async function getWordleAnswer(dateStr: string): Promise<string | null> {
   try {
     const number = getPuzzleNumber(dateStr)
@@ -34,78 +34,59 @@ async function getWordleAnswer(dateStr: string): Promise<string | null> {
     const html = await response.text()
     console.log(`Fetched Tom's Guide page, content length: ${html.length}`)
 
-    // Load HTML with cheerio for better parsing
+    // Load HTML with cheerio to extract clean text content
     const $ = cheerio.load(html)
 
-    // Look for the current Wordle answer in various possible formats
-    let foundWord: string | null = null
+    // Extract the main article content and remove scripts/styles
+    $('script, style, nav, header, footer, .advertisement, .ad').remove()
+    const articleText = $('.article-content, .entry-content, main, article').text() || $('body').text()
 
-    // Method 1: Look for text patterns that indicate the answer
-    const answerPatterns = [
-      /today.s\s+wordle\s+answer\s+is\s+([A-Z]{5})/i,
-      /wordle\s+answer\s+today\s+is\s+([A-Z]{5})/i,
-      /answer\s+is\s+([A-Z]{5})/i,
-      /wordle\s+#?\d+\s+answer\s*:\s*([A-Z]{5})/i,
-      /solution\s+is\s+([A-Z]{5})/i,
-      /the\s+word\s+is\s+([A-Z]{5})/i
-    ]
+    // Limit content length for AI processing (keep most relevant parts)
+    const contentForAI = articleText.substring(0, 4000)
 
-    for (const pattern of answerPatterns) {
-      const match = html.match(pattern)
-      if (match) {
-        foundWord = match[1].toUpperCase()
-        console.log(`Found answer via pattern "${pattern.source}": ${foundWord}`)
-        break
+    console.log(`Extracted content for AI analysis (${contentForAI.length} characters)`)
+
+    // Use AI to analyze the content and extract the Wordle answer
+    const { callOpenAI } = await import('./openai')
+
+    const prompt = `Analyze this Tom's Guide Wordle page content and extract the current Wordle answer.
+
+INSTRUCTIONS:
+- Look for today's Wordle answer (puzzle #${number})
+- The answer is always exactly 5 letters
+- Return ONLY the 5-letter word in uppercase, nothing else
+- If you find a list of recent answers, use the one for puzzle #${number}
+- Ignore partial words like "REMAI" from "remains" - only find complete standalone words
+- Do not return any explanations, just the word
+
+CONTENT:
+${contentForAI}`
+
+    const result = await callOpenAI(prompt, 'gpt-4', { max_tokens: 10, temperature: 0 })
+
+    if (result && typeof result === 'string') {
+      const cleanResult = result.trim().toUpperCase()
+
+      // Validate it's exactly 5 letters
+      if (/^[A-Z]{5}$/.test(cleanResult)) {
+        console.log(`AI extracted Wordle #${number}: ${cleanResult}`)
+        return cleanResult
+      } else {
+        console.log(`AI returned invalid format: "${cleanResult}"`)
+      }
+    } else if (result && typeof result === 'object' && result.raw) {
+      const cleanResult = result.raw.trim().toUpperCase()
+
+      // Validate it's exactly 5 letters
+      if (/^[A-Z]{5}$/.test(cleanResult)) {
+        console.log(`AI extracted Wordle #${number}: ${cleanResult}`)
+        return cleanResult
+      } else {
+        console.log(`AI returned invalid format: "${cleanResult}"`)
       }
     }
 
-    // Method 2: Look in specific HTML elements that commonly contain the answer
-    if (!foundWord) {
-      const selectors = [
-        'h1, h2, h3, h4, h5, h6',
-        '.article-content',
-        '.entry-content',
-        'p strong',
-        'p b',
-        '.highlight',
-        '.answer'
-      ]
-
-      for (const selector of selectors) {
-        $(selector).each((_, element) => {
-          const text = $(element).text()
-          for (const pattern of answerPatterns) {
-            const match = text.match(pattern)
-            if (match) {
-              foundWord = match[1].toUpperCase()
-              console.log(`Found answer in ${selector}: ${foundWord}`)
-              return false // Break out of loops
-            }
-          }
-        })
-        if (foundWord) break
-      }
-    }
-
-    // Method 3: Look for puzzle number specific to today
-    if (!foundWord) {
-      const puzzlePattern = new RegExp(`wordle\\s+#?${number}[^a-z]*([A-Z]{5})`, "gi")
-      const match = html.match(puzzlePattern)
-      if (match && match[0]) {
-        const wordMatch = match[0].match(/([A-Z]{5})/)
-        if (wordMatch) {
-          foundWord = wordMatch[1].toUpperCase()
-          console.log(`Found answer via puzzle number #${number}: ${foundWord}`)
-        }
-      }
-    }
-
-    if (foundWord) {
-      console.log(`Successfully found Wordle #${number}: ${foundWord}`)
-      return foundWord
-    }
-
-    console.log(`No Wordle answer found for #${number} (${dateStr}) on Tom's Guide current page`)
+    console.log(`No valid Wordle answer found for #${number} (${dateStr})`)
     return null
 
   } catch (error) {

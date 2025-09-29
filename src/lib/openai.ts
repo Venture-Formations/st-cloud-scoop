@@ -293,65 +293,9 @@ AGE GROUP ANALYSIS:
 IMPORTANT: Only include OCR fields if readable text is actually present. Only include age_groups if people are visible and ages can be reasonably estimated. Set to null if not detected.`
 }
 
+// This function is no longer needed since we use web scraping instead of AI
 export async function callOpenAIWithWeb(userPrompt: string, maxTokens = 1000, temperature = 0) {
-  try {
-    console.log('Calling OpenAI Responses API with web tools...')
-
-    // Add timeout to prevent hanging
-    const controller = new AbortController()
-    const timeoutId = setTimeout(() => controller.abort(), 120000) // 2 minute timeout for web searches
-
-    try {
-      console.log('Using GPT-4o model with web tools via Responses API...')
-
-      // Use the new Responses API which handles tool calls internally
-      const response = await openai.responses.create({
-        model: 'gpt-4o',
-        tools: [{ type: 'web' }],
-        input: `Search trusted Wordle spoiler sources (Tom's Guide, r/wordle daily thread, wordlesolver.net, NYT WordleBot) for the New York Times Wordle answer for the specified date.
-
-${userPrompt}
-
-Output ONLY a JSON array in this exact format:
-[{
-  "word": "string",
-  "definition": "string (≤ 30 words, concise dictionary style)",
-  "interesting_fact": "string (≤ 50 words, fun trivia or etymology)"
-}]
-
-If no answer is found with high confidence, output [].
-Do not include explanations, markdown, or extra text—JSON only.`,
-      }, {
-        signal: controller.signal
-      })
-
-      clearTimeout(timeoutId)
-
-      const content = response.content
-      if (!content) {
-        throw new Error('No response from OpenAI Responses API')
-      }
-
-      console.log('Response received from Responses API')
-      return parseJSONResponse(content)
-
-    } catch (error) {
-      clearTimeout(timeoutId)
-      throw error
-    }
-  } catch (error) {
-    console.error('OpenAI Responses API web error:', error)
-    if (error instanceof Error) {
-      console.error('Error details:', error.message)
-      console.error('Error name:', error.name)
-      console.error('Error stack:', error.stack)
-    }
-    // Log additional error details for debugging
-    if (typeof error === 'object' && error !== null) {
-      console.error('Full error object:', JSON.stringify(error, null, 2))
-    }
-    throw error
-  }
+  throw new Error('Web-enabled AI calls have been replaced with direct web scraping. Use wordle-scraper.ts instead.')
 }
 
 function parseJSONResponse(content: string) {

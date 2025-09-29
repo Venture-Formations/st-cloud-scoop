@@ -299,18 +299,15 @@ export async function callOpenAIWithWeb(userPrompt: string, maxTokens = 1000, te
 
     // Add timeout to prevent hanging
     const controller = new AbortController()
-    const timeoutId = setTimeout(() => controller.abort(), 60000) // 60 second timeout for web searches
+    const timeoutId = setTimeout(() => controller.abort(), 120000) // 2 minute timeout for web searches
 
     try {
       console.log('Using GPT-4o model with web tools...')
-      const response = await openai.chat.completions.create({
-        model: 'gpt-4o',
-        tools: [{ type: 'web' }],
-        temperature: temperature,
-        messages: [
-          {
-            role: 'system',
-            content: `You are a research assistant that can search the live web.
+
+      const messages = [
+        {
+          role: 'system',
+          content: `You are a research assistant that can search the live web.
 
 Search trusted Wordle spoiler sources (Tom's Guide, r/wordle daily thread,
 wordlesolver.net, NYT WordleBot) for the New York Times Wordle answer for the
@@ -326,47 +323,86 @@ Rules:
   }]
 - If no answer is found with high confidence, output [].
 - Do not include explanations, markdown, or extra text—JSON only.`
-          },
-          {
-            role: 'user',
-            content: userPrompt
-          }
-        ],
+        },
+        {
+          role: 'user',
+          content: userPrompt
+        }
+      ]
+
+      // Step 1: Make initial request with tools
+      const response = await openai.chat.completions.create({
+        model: 'gpt-4o',
+        tools: [{ type: 'web' }],
+        temperature: temperature,
+        messages: messages,
         max_tokens: maxTokens,
       }, {
         signal: controller.signal
       })
 
-      clearTimeout(timeoutId)
+      console.log('Initial response received')
 
-      const content = response.choices[0]?.message?.content
-      if (!content) {
-        throw new Error('No response from OpenAI')
-      }
+      // Step 2: Check if model is calling a tool
+      const call = response.choices[0]?.message?.tool_calls?.[0]
+      if (call && call.type === 'web') {
+        console.log('Model is making web search call:', call.function?.name)
 
-      console.log('OpenAI web response received')
+        try {
+          // Step 3: Execute the web search
+          const webResults = await openai.web.search(call.function?.arguments || {})
+          console.log('Web search completed, results length:', JSON.stringify(webResults).length)
 
-      // Try to parse as JSON, fallback to raw content
-      try {
-        // Clean the content - remove any text before/after JSON (support both objects {} and arrays [])
-        const objectMatch = content.match(/\{[\s\S]*\}/)
-        const arrayMatch = content.match(/\[[\s\S]*\]/)
+          // Step 4: Send results back to model
+          const followupMessages = [
+            ...messages,
+            response.choices[0].message,
+            {
+              role: 'tool',
+              tool_call_id: call.id,
+              content: JSON.stringify(webResults)
+            }
+          ]
 
-        if (arrayMatch) {
-          // Prefer array match for prompts that expect arrays (like Wordle)
-          return JSON.parse(arrayMatch[0])
-        } else if (objectMatch) {
-          // Use object match for other prompts
-          return JSON.parse(objectMatch[0])
-        } else {
-          // Try parsing the entire content
-          return JSON.parse(content.trim())
+          const followup = await openai.chat.completions.create({
+            model: 'gpt-4o',
+            messages: followupMessages,
+            max_tokens: maxTokens,
+            temperature: temperature,
+          }, {
+            signal: controller.signal
+          })
+
+          clearTimeout(timeoutId)
+
+          const content = followup.choices[0]?.message?.content
+          if (!content) {
+            throw new Error('No response from OpenAI after web search')
+          }
+
+          console.log('Final response received after web search')
+          return parseJSONResponse(content)
+
+        } catch (webError) {
+          console.error('Web search failed:', webError)
+          // Fallback to original response if web search fails
+          const content = response.choices[0]?.message?.content
+          if (content) {
+            return parseJSONResponse(content)
+          }
+          throw new Error('Web search failed and no fallback content available')
         }
-      } catch (parseError) {
-        console.warn('Failed to parse OpenAI web response as JSON. Content length:', content.length)
-        console.warn('Content preview:', content.substring(0, 200))
-        console.warn('Parse error:', parseError instanceof Error ? parseError.message : parseError)
-        return { raw: content }
+      } else {
+        // No tool call made, use direct response
+        console.log('No web search requested by model')
+        clearTimeout(timeoutId)
+
+        const content = response.choices[0]?.message?.content
+        if (!content) {
+          throw new Error('No response from OpenAI')
+        }
+
+        return parseJSONResponse(content)
       }
     } catch (error) {
       clearTimeout(timeoutId)
@@ -384,6 +420,30 @@ Rules:
       console.error('Full error object:', JSON.stringify(error, null, 2))
     }
     throw error
+  }
+}
+
+function parseJSONResponse(content: string) {
+  try {
+    // Clean the content - remove any text before/after JSON (support both objects {} and arrays [])
+    const objectMatch = content.match(/\{[\s\S]*\}/)
+    const arrayMatch = content.match(/\[[\s\S]*\]/)
+
+    if (arrayMatch) {
+      // Prefer array match for prompts that expect arrays (like Wordle)
+      return JSON.parse(arrayMatch[0])
+    } else if (objectMatch) {
+      // Use object match for other prompts
+      return JSON.parse(objectMatch[0])
+    } else {
+      // Try parsing the entire content
+      return JSON.parse(content.trim())
+    }
+  } catch (parseError) {
+    console.warn('Failed to parse OpenAI response as JSON. Content length:', content.length)
+    console.warn('Content preview:', content.substring(0, 200))
+    console.warn('Parse error:', parseError instanceof Error ? parseError.message : parseError)
+    return { raw: content }
   }
 }
 

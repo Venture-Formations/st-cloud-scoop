@@ -46,19 +46,20 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// GET endpoint for manual testing
+// GET endpoint for Vercel cron and manual testing
 export async function GET(request: NextRequest) {
   try {
-    // Check if secret parameter is provided
+    // Check if secret parameter is provided for manual testing
     const { searchParams } = new URL(request.url)
     const secret = searchParams.get('secret')
 
-    console.log('Received secret length:', secret?.length, 'Expected length:', process.env.CRON_SECRET?.length)
-    console.log('Secrets match:', secret === process.env.CRON_SECRET)
-
-    if (secret !== process.env.CRON_SECRET) {
-      return NextResponse.json({ error: 'Unauthorized - secret required' }, { status: 401 })
+    // Allow Vercel cron (no secret) or manual testing (with correct secret)
+    if (secret && secret !== process.env.CRON_SECRET) {
+      console.log('❌ Invalid secret for manual testing')
+      return NextResponse.json({ error: 'Invalid secret' }, { status: 401 })
     }
+
+    console.log('✅ Events sync request authorized')
 
     // Call the POST method with proper authorization header
     const fakeRequest = new Request(request.url, {

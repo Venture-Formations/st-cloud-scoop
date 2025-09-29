@@ -45,6 +45,7 @@ async function getWordleAnswer(dateStr: string): Promise<string | null> {
     const contentForAI = articleText.substring(0, 4000)
 
     console.log(`Extracted content for AI analysis (${contentForAI.length} characters)`)
+    console.log(`Content preview: ${contentForAI.substring(0, 200)}...`)
 
     // Use AI to analyze the content and extract the Wordle answer
     const { callOpenAI } = await import('./openai')

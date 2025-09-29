@@ -1,19 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
-import { callOpenAIWithWeb } from '@/lib/openai'
-
-// Create Wordle prompt function
-function createWordlePrompt(date: string) {
-  // Format date for the prompt
-  const dateObj = new Date(date + 'T00:00:00')
-  const formattedDate = dateObj.toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric'
-  })
-
-  return `Find the Wordle answer for ${formattedDate}.`
-}
+import { getWordleDataForDate } from '@/lib/wordle-scraper'
 
 async function collectWordleData(date: string, forceRefresh = false) {
   console.log(`🧩 Collecting Wordle data for ${date}...`)
@@ -34,86 +21,16 @@ async function collectWordleData(date: string, forceRefresh = false) {
     console.log(`🔄 Force refresh enabled - will update existing data for ${date}`)
   }
 
-  // Generate the prompt for today's date
-  const prompt = createWordlePrompt(date)
+  // Scrape Wordle data from Tom's Guide archive
+  console.log('🌐 Scraping Wordle data from Tom\'s Guide archive...')
+  const wordleData = await getWordleDataForDate(date)
 
-  // Call OpenAI with web tools for Wordle data
-  console.log('🤖 Calling OpenAI with web search for Wordle data...')
-  const aiResponse = await callOpenAIWithWeb(prompt, 1000, 0)
-
-  // Parse the response
-  let wordleData
-  try {
-    console.log('Raw AI Response:', aiResponse)
-    console.log('AI Response Type:', typeof aiResponse)
-
-    // Check if AI refused (common patterns)
-    const aiText = typeof aiResponse === 'object' && aiResponse.raw ? aiResponse.raw : aiResponse
-    const hasRefusal = typeof aiText === 'string' && (
-      (aiText.toLowerCase().includes('sorry') && aiText.toLowerCase().includes('wordle')) ||
-      aiText.toLowerCase().includes("can't provide") ||
-      aiText.toLowerCase().includes("cannot provide") ||
-      aiText.toLowerCase().includes("unable to provide")
-    )
-
-    if (hasRefusal) {
-      console.log('AI refused to provide data, using fallback word...')
-      // Generate a random word from a predefined list for fallback
-      const fallbackWords = [
-        { word: "BEACH", definition: "A sandy or pebbly shore by the ocean", interesting_fact: "The word beach comes from Old English 'bæce' meaning stream" },
-        { word: "SPARK", definition: "A small fiery particle or bright flash", interesting_fact: "Spark dates back to Old English and originally meant a small flame" },
-        { word: "COAST", definition: "The land near the shore or edge of the sea", interesting_fact: "Coast comes from the Latin word 'costa' meaning rib or side" },
-        { word: "CLOUD", definition: "A visible mass of water vapor in the sky", interesting_fact: "Cloud derives from Old English 'clud' meaning rock or hill" },
-        { word: "SCOOP", definition: "To lift or hollow out with a curved motion", interesting_fact: "Scoop comes from Middle Dutch 'schope' meaning ladle or shovel" }
-      ]
-      const randomIndex = Math.floor(Math.random() * fallbackWords.length)
-      wordleData = fallbackWords[randomIndex]
-      console.log('Using fallback word:', wordleData.word)
-    } else {
-      let responseArray
-
-      // Handle different response types
-      if (typeof aiResponse === 'object') {
-        if (Array.isArray(aiResponse)) {
-          responseArray = aiResponse
-        } else if (aiResponse && typeof aiResponse === 'object') {
-          // If it's an object but not an array, wrap it
-          responseArray = [aiResponse]
-        }
-      } else if (typeof aiResponse === 'string') {
-        // Clean the response of any markdown formatting
-        const cleanResponse = aiResponse.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim()
-        responseArray = JSON.parse(cleanResponse)
-      } else {
-        throw new Error('Unexpected response type: ' + typeof aiResponse)
-      }
-
-      if (!Array.isArray(responseArray)) {
-        throw new Error('Invalid response format - expected array')
-      }
-
-      // If empty array, no Wordle answer found - return null to skip database insert
-      if (responseArray.length === 0) {
-        console.log('No Wordle answer found - AI returned empty array')
-        return null
-      }
-
-      // Take the first result
-      wordleData = responseArray[0]
-
-      if (!wordleData || !wordleData.word || !wordleData.definition || !wordleData.interesting_fact) {
-        throw new Error('Missing required fields in Wordle data: ' + JSON.stringify(wordleData))
-      }
-
-      console.log('Successfully parsed AI response:', wordleData)
-    }
-
-  } catch (error) {
-    console.error('Failed to parse AI response:', error)
-    console.error('Raw response:', aiResponse)
-    console.error('Response type:', typeof aiResponse)
-    throw new Error('Failed to parse Wordle data from AI response: ' + (error instanceof Error ? error.message : 'Unknown error'))
+  if (!wordleData) {
+    console.log('No Wordle answer found via web scraping')
+    return null
   }
+
+  console.log('Successfully scraped Wordle data:', wordleData.word)
 
   // Insert or update database (upsert for force refresh)
   const { data: newWordle, error } = await supabaseAdmin

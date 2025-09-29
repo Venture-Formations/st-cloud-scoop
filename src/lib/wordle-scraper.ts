@@ -49,15 +49,18 @@ async function getWordleAnswer(dateStr: string): Promise<string | null> {
     // Use AI to analyze the entire page content
     const { callOpenAI } = await import('./openai')
 
-    const prompt = `Find the Wordle answer for puzzle #${number} from this Tom's Guide page content.
+    const prompt = `Find the EXACT Wordle answer for puzzle #${number} from this Tom's Guide page.
 
-INSTRUCTIONS:
-- Search the entire page for Wordle puzzle #${number}
-- The answer is exactly 5 letters
-- Return ONLY the 5-letter word in uppercase
-- Look for patterns like "Wordle ${number}: XXXXX" or "puzzle ${number}: XXXXX"
-- Ignore partial words from longer words like "remains"
-- If you can't find puzzle #${number}, look for today's current Wordle answer
+CRITICAL INSTRUCTIONS:
+- Find the complete standalone 5-letter Wordle answer word
+- DO NOT extract partial words from longer words (like "REMAI" from "remains")
+- Look for phrases like "Wordle ${number}: XXXXX" or "today's answer is XXXXX"
+- The answer will be presented as a complete word, often in caps or bold
+- Common formats: "The answer is XXXXX" or "Wordle #${number}: XXXXX"
+- IGNORE any 5-letter combinations that are parts of longer words
+- Return ONLY the complete 5-letter answer word in uppercase
+
+If you cannot find puzzle #${number} specifically, look for today's current Wordle answer in similar formats.
 
 PAGE CONTENT:
 ${contentForAI}`

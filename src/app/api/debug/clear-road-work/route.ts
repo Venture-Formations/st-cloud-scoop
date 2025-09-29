@@ -22,7 +22,7 @@ export async function GET(request: Request) {
       success: true,
       message: `Cleared road work items for campaign ${campaignId}`,
       campaign_id: campaignId,
-      deleted_count: data?.length || 0
+      deleted_count: Array.isArray(data) ? data.length : 0
     })
 
   } catch (error) {

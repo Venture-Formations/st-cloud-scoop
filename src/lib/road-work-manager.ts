@@ -535,7 +535,7 @@ CRITICAL:
 CRITICAL: Only return real, verified road work from actual government sources. If fewer than 9 real projects exist, fill remaining with "No additional closures reported" entries.`
 
         const { callOpenAI } = await import('./openai')
-        aiResponse = await callOpenAI(fallbackPrompt, 2000, 0.3)
+        aiResponse = await callOpenAI(fallbackPrompt, undefined, 0.3)
         console.log('✅ Fallback prompt succeeded:', typeof aiResponse, aiResponse?.length || 'N/A')
       } catch (error2) {
         console.log(`❌ Attempt ${attemptNumber} failed:`, error2 instanceof Error ? error2.message : error2)

@@ -15,13 +15,27 @@ export class GoogleVisionService {
   private visionClient: ImageAnnotatorClient
   private auth: GoogleAuth
 
+  /**
+   * Safely parse Google Cloud credentials JSON, handling escaped newlines
+   */
+  private parseCredentialsJson(credentialsString: string) {
+    try {
+      // Replace escaped newlines with actual newlines in the private key
+      const unescapedJson = credentialsString.replace(/\\n/g, '\n')
+      return JSON.parse(unescapedJson)
+    } catch (error) {
+      console.error('Failed to parse Google Cloud credentials JSON:', error)
+      throw new Error(`Invalid Google Cloud credentials format: ${error instanceof Error ? error.message : 'Unknown error'}`)
+    }
+  }
+
   constructor() {
     // Initialize Google Cloud authentication
     this.auth = new GoogleAuth({
       scopes: ['https://www.googleapis.com/auth/cloud-platform'],
       // Use credentials from environment variable
       credentials: process.env.GOOGLE_CLOUD_CREDENTIALS_JSON
-        ? JSON.parse(process.env.GOOGLE_CLOUD_CREDENTIALS_JSON)
+        ? this.parseCredentialsJson(process.env.GOOGLE_CLOUD_CREDENTIALS_JSON)
         : undefined,
       keyFilename: process.env.GOOGLE_APPLICATION_CREDENTIALS,
       projectId: process.env.GOOGLE_CLOUD_PROJECT_ID

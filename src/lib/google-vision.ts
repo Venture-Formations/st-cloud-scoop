@@ -174,13 +174,26 @@ export class GoogleVisionService {
 
       for (const page of webDetection.pagesWithMatchingImages) {
         // Only process pages that have FULL matching images (exact matches)
-        if (page.fullMatchingImages && page.fullMatchingImages.length > 0 && page.url) {
-          const sourceInfo = this.extractSourceInfo(page.url, page.pageTitle || '')
+        if (page.fullMatchingImages && page.fullMatchingImages.length > 0) {
+          // Try to get URL from multiple sources
+          let pageUrl = page.url || ''
+          let sourceInfo = { source: 'Unknown Source', license: '', creator: '' }
+
+          // If we have a page URL, use it
+          if (pageUrl) {
+            sourceInfo = this.extractSourceInfo(pageUrl, page.pageTitle || '')
+          }
+          // If no page URL, try to extract from the image URL
+          else if (page.fullMatchingImages[0]?.url) {
+            const imageUrl = page.fullMatchingImages[0].url
+            sourceInfo = this.extractSourceInfo(imageUrl, page.pageTitle || '')
+            pageUrl = this.constructSourcePageUrl(imageUrl, sourceInfo.source)
+          }
 
           // Skip generic or low-quality sources
-          if (this.isQualitySource(sourceInfo.source, page.url)) {
+          if (this.isQualitySource(sourceInfo.source, pageUrl)) {
             const result = {
-              source_url: page.url,
+              source_url: pageUrl,
               source_name: sourceInfo.source,
               title: page.pageTitle || '',
               creator: sourceInfo.creator,
@@ -189,9 +202,9 @@ export class GoogleVisionService {
               thumbnail_url: page.fullMatchingImages[0].url
             }
             results.push(result)
-            console.log(`Added EXACT match: ${sourceInfo.source} - ${page.url}`)
+            console.log(`Added EXACT match: ${sourceInfo.source} - ${pageUrl}`)
           } else {
-            console.log(`Skipped low-quality source: ${sourceInfo.source} - ${page.url}`)
+            console.log(`Skipped low-quality source: ${sourceInfo.source} - ${pageUrl}`)
           }
         }
       }
@@ -224,6 +237,47 @@ export class GoogleVisionService {
 
     console.log(`Final high-quality results: ${results.length}`)
     return results.sort((a, b) => (b.similarity_score || 0) - (a.similarity_score || 0))
+  }
+
+  /**
+   * Construct a source page URL from an image URL when possible
+   */
+  private constructSourcePageUrl(imageUrl: string, sourceName: string): string {
+    try {
+      const url = new URL(imageUrl)
+      const domain = url.hostname.toLowerCase()
+
+      // For Pexels, extract photo ID and construct page URL
+      if (domain.includes('pexels')) {
+        const photoMatch = imageUrl.match(/pexels-photo-(\d+)/) || imageUrl.match(/photos\/(\d+)/)
+        if (photoMatch && photoMatch[1]) {
+          return `https://www.pexels.com/photo/${photoMatch[1]}/`
+        }
+      }
+
+      // For Unsplash, extract photo ID
+      if (domain.includes('unsplash')) {
+        const photoMatch = imageUrl.match(/photo-([a-zA-Z0-9_-]+)/)
+        if (photoMatch && photoMatch[1]) {
+          return `https://unsplash.com/photos/${photoMatch[1]}`
+        }
+      }
+
+      // For Pixabay, extract photo ID
+      if (domain.includes('pixabay')) {
+        const photoMatch = imageUrl.match(/pixabay\.com\/.*?(\d+)/)
+        if (photoMatch && photoMatch[1]) {
+          return `https://pixabay.com/photos/${photoMatch[1]}/`
+        }
+      }
+
+      // For other sources, return the image URL as fallback
+      return imageUrl
+
+    } catch (error) {
+      console.log('Error constructing source URL:', error)
+      return imageUrl
+    }
   }
 
   /**

@@ -9,87 +9,44 @@ function getPuzzleNumber(targetDate: string): number {
   return 1 + days
 }
 
-// Fetch and parse Wordle answer from Tom's Guide current day page using AI analysis
+// Fetch Wordle answer using web search instead of manual scraping
 async function getWordleAnswer(dateStr: string): Promise<string | null> {
   try {
     const number = getPuzzleNumber(dateStr)
     console.log(`Looking for Wordle #${number} for date ${dateStr}`)
 
-    const response = await fetch("https://www.tomsguide.com/news/what-is-todays-wordle-answer", {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
-        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-        'Accept-Language': 'en-US,en;q=0.5',
-        'Accept-Encoding': 'gzip, deflate, br',
-        'Connection': 'keep-alive',
-        'Upgrade-Insecure-Requests': '1'
-      }
-    })
+    // Use web search to find Wordle answer directly
+    const { callOpenAIWithWebSearch } = await import('./openai')
 
-    if (!response.ok) {
-      console.error(`Failed to fetch Tom's Guide Wordle page: ${response.status} ${response.statusText}`)
-      return null
-    }
+    const systemPrompt = `You are a puzzle researcher with web access. Find today's Wordle answer from Tom's Guide or other reliable Wordle spoiler sources.`
 
-    const html = await response.text()
-    console.log(`Fetched Tom's Guide page, content length: ${html.length}`)
+    const userPrompt = `Find the Wordle answer for puzzle #${number} (${dateStr}).
 
-    // Load HTML with cheerio to extract clean text content
-    const $ = cheerio.load(html)
+Search Tom's Guide "Today's Wordle Answer" section and other reliable Wordle spoiler sites.
 
-    // Remove only scripts and styles, keep all other content for AI analysis
-    $('script, style').remove()
-
-    // Find the "Today's Wordle Answer" section specifically
-    let todaySection = ''
-
-    // Look for the exact "Today's Wordle answer" heading (not the hints version)
-    $('h1, h2, h3, h4, h5, h6').each((_, element) => {
-      const headingText = $(element).text().trim()
-      if (headingText.toLowerCase() === "today's wordle answer") {
-        // Get the content after this exact heading
-        let content = ''
-        let nextElement = $(element).next()
-        while (nextElement.length > 0 && !nextElement.is('h1, h2, h3, h4, h5, h6')) {
-          content += nextElement.text() + ' '
-          nextElement = nextElement.next()
-        }
-        todaySection = content.trim()
-        return false // Break the loop
-      }
-    })
-
-    const contentForAI = todaySection || $('body').text().substring(0, 8000)
-
-    console.log(`Sending ${todaySection ? "Today's Wordle Answer section" : 'full page'} content to AI for analysis (${contentForAI.length} characters)`)
-
-    // Use AI to analyze the entire page content
-    const { callOpenAI } = await import('./openai')
-
-    const prompt = `Find the Wordle answer from this Tom's Guide "Today's Wordle Answer" section.
-
-This section should contain the actual answer, not just hints. Look for:
-- "The answer is [WORD]"
+Look specifically for:
 - "Today's Wordle answer is [WORD]"
-- The explicit 5-letter word that is the solution
+- "The answer is [WORD]"
+- The explicit 5-letter solution word
 
-Return ONLY the 5-letter word in UPPERCASE.
+Return ONLY the 5-letter answer word in UPPERCASE. No explanations, no hints, just the word.
 
-CONTENT:
-${contentForAI}`
+If you cannot find the exact answer, return "UNKNOWN".`
 
-    const result = await callOpenAI(prompt)
+    console.log(`Using web search to find Wordle #${number}`)
+
+    const result = await callOpenAIWithWebSearch(systemPrompt, userPrompt)
 
     if (result && typeof result === 'string') {
       const cleanResult = result.trim().toUpperCase()
       if (/^[A-Z]{5}$/.test(cleanResult)) {
-        console.log(`AI found Wordle #${number}: ${cleanResult}`)
+        console.log(`Web search found Wordle #${number}: ${cleanResult}`)
         return cleanResult
       }
     } else if (result && typeof result === 'object' && result.raw) {
       const cleanResult = result.raw.trim().toUpperCase()
       if (/^[A-Z]{5}$/.test(cleanResult)) {
-        console.log(`AI found Wordle #${number}: ${cleanResult}`)
+        console.log(`Web search found Wordle #${number}: ${cleanResult}`)
         return cleanResult
       }
     }
@@ -98,7 +55,7 @@ ${contentForAI}`
     return null
 
   } catch (error) {
-    console.error('Error scraping Wordle answer:', error)
+    console.error('Error finding Wordle answer with web search:', error)
     return null
   }
 }
@@ -144,16 +101,18 @@ export async function getWordleDataForDate(dateStr: string): Promise<{
     return null
   }
 
-  // Use AI to generate definition and interesting fact
-  const { callOpenAI } = await import('./openai')
+  // Use web search to generate accurate definition and interesting fact
+  const { callOpenAIWithWebSearch } = await import('./openai')
 
   try {
-    const definitionPrompt = `Give a brief, clear definition of the word "${word}". Keep it under 50 words and make it suitable for a general audience.`
-    const definitionResult = await callOpenAI(definitionPrompt)
+    const systemPrompt = `You are a dictionary researcher with web access. Provide accurate definitions and etymology information.`
+
+    const definitionPrompt = `Look up the word "${word}" in reliable dictionaries and provide a brief, clear definition. Keep it under 50 words and make it suitable for a general audience.`
+    const definitionResult = await callOpenAIWithWebSearch(systemPrompt, definitionPrompt)
     const definition = (typeof definitionResult === 'string' ? definitionResult : definitionResult?.raw || '').trim()
 
-    const factPrompt = `Share one interesting fact about the word "${word}" - its etymology, usage, or something fascinating about it. Keep it under 80 words.`
-    const factResult = await callOpenAI(factPrompt)
+    const factPrompt = `Research the word "${word}" and share one interesting fact about its etymology, historical usage, or linguistic background. Keep it under 80 words and make it engaging.`
+    const factResult = await callOpenAIWithWebSearch(systemPrompt, factPrompt)
     const interesting_fact = (typeof factResult === 'string' ? factResult : factResult?.raw || '').trim()
 
     return {
@@ -162,8 +121,8 @@ export async function getWordleDataForDate(dateStr: string): Promise<{
       interesting_fact: interesting_fact || getInterestingFact(word)
     }
   } catch (error) {
-    console.error('Error generating AI definition/fact:', error)
-    // Fall back to basic definitions if AI fails
+    console.error('Error generating web-searched definition/fact:', error)
+    // Fall back to basic definitions if web search fails
     return {
       word,
       definition: getBasicDefinition(word),

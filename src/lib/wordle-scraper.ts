@@ -65,7 +65,7 @@ If you cannot find puzzle #${number} specifically, look for today's current Word
 PAGE CONTENT:
 ${contentForAI}`
 
-    const result = await callOpenAI(prompt, 'gpt-4', { max_tokens: 20, temperature: 0 })
+    const result = await callOpenAI(prompt)
 
     if (result && typeof result === 'string') {
       const cleanResult = result.trim().toUpperCase()
@@ -136,11 +136,11 @@ export async function getWordleDataForDate(dateStr: string): Promise<{
 
   try {
     const definitionPrompt = `Give a brief, clear definition of the word "${word}". Keep it under 50 words and make it suitable for a general audience.`
-    const definitionResult = await callOpenAI(definitionPrompt, 'gpt-4', { max_tokens: 100, temperature: 0.3 })
+    const definitionResult = await callOpenAI(definitionPrompt)
     const definition = (typeof definitionResult === 'string' ? definitionResult : definitionResult?.raw || '').trim()
 
     const factPrompt = `Share one interesting fact about the word "${word}" - its etymology, usage, or something fascinating about it. Keep it under 80 words.`
-    const factResult = await callOpenAI(factPrompt, 'gpt-4', { max_tokens: 150, temperature: 0.3 })
+    const factResult = await callOpenAI(factPrompt)
     const interesting_fact = (typeof factResult === 'string' ? factResult : factResult?.raw || '').trim()
 
     return {

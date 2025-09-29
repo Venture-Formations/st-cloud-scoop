@@ -40,27 +40,44 @@ async function getWordleAnswer(dateStr: string): Promise<string | null> {
     // Remove only scripts and styles, keep all other content for AI analysis
     $('script, style').remove()
 
-    const fullPageText = $('body').text()
-    const contentForAI = fullPageText.substring(0, 8000)
+    // Find the "Today's Wordle Answer" section specifically
+    let todaySection = ''
 
-    console.log(`Sending full page content to AI for analysis (${contentForAI.length} characters)`)
+    // Look for headings containing "Today's Wordle Answer"
+    $('h1, h2, h3, h4, h5, h6').each((_, element) => {
+      const headingText = $(element).text()
+      if (headingText.toLowerCase().includes("today's wordle answer")) {
+        // Get the content after this heading
+        let content = ''
+        let nextElement = $(element).next()
+        while (nextElement.length > 0 && !nextElement.is('h1, h2, h3, h4, h5, h6')) {
+          content += nextElement.text() + ' '
+          nextElement = nextElement.next()
+        }
+        todaySection = content.trim()
+        return false // Break the loop
+      }
+    })
+
+    const contentForAI = todaySection || $('body').text().substring(0, 8000)
+
+    console.log(`Sending ${todaySection ? "Today's Wordle Answer section" : 'full page'} content to AI for analysis (${contentForAI.length} characters)`)
 
     // Use AI to analyze the entire page content
     const { callOpenAI } = await import('./openai')
 
-    const prompt = `You are analyzing a Tom's Guide Wordle page. Find today's Wordle answer.
+    const prompt = `Extract the Wordle answer from the "Today's Wordle Answer" section.
 
-The page discusses Wordle puzzle #${number}. Look for the actual answer word that appears in contexts like:
-- "Today's answer is..."
-- "The word is..."
-- "Solution: ..."
-- In the main answer section
+You are looking at content from the "Today's Wordle Answer" section of Tom's Guide. Find the 5-letter word that is presented as today's solution.
 
-CRITICAL: Do NOT pick random 5-letter words. Only return the word that is explicitly presented as today's Wordle solution.
+Look for patterns like:
+- "The answer is [WORD]"
+- "Today's Wordle answer is [WORD]"
+- "[WORD]" appearing as the main answer
 
-Return only the 5-letter word in UPPERCASE, nothing else.
+Return ONLY the 5-letter word in UPPERCASE. No explanations.
 
-PAGE CONTENT:
+CONTENT:
 ${contentForAI}`
 
     const result = await callOpenAI(prompt)

@@ -399,7 +399,7 @@ Use this exact query structure:
       "custom_parsing": {
         "split_road_segment": "If road_segment contains phrasing like '[road name] from [start point] to [end point]', extract '[road name]' as 'road_name' and 'from [start] to [end]' as 'road_range'."
       },
-      "minimum_results": 1,
+      "minimum_results": null,
       "maximum_results": null,
       "pagination_allowed": true
     },
@@ -451,15 +451,16 @@ Each element must match this exact structure:
   "road_range": "string",
   "city_or_township": "string",
   "reason": "string",
-  "start_date": "YYYY-MM-DD",
-  "expected_reopen": "YYYY-MM-DD or 'TBD'",
+  "start_date": "mmm d",
+  "expected_reopen": "mmm d or 'TBD'",
   "source_url": "https://..."
 }
 
 CRITICAL:
-- Return ALL available results (not limited to 9)
+- Return ALL available results (no limit - include everything you find)
 - Include all types: full closures, lane closures, bridge closures, detours, major traffic restrictions
 - Include utility work, construction impacts, travel advisories, traffic alerts
+- Include smaller utility work closures and bus detours
 - Search all sources: MnDOT, counties, cities, transit, local media
 - Only active on ${formattedDate} within 15 miles of ZIP 56303
 - Use pagination to find all available results

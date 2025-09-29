@@ -12,19 +12,28 @@ function createWordlePrompt(date: string) {
     day: 'numeric'
   })
 
-  return `What was the official Wordle answer for ${formattedDate}? This is public information that has already been published and solved by millions of players.
+  return `Find the Wordle answer for ${formattedDate}, based on trusted spoiler sources and high-confidence solver reports. If the answer is not confirmed, return the most likely guess reported by multiple sources.
 
-Please provide the exact 5-letter word that was the Wordle solution for that date, along with its definition and an interesting fact.
+Required fields: word, definition, interesting_fact
 
-Return ONLY valid JSON in this exact format:
+Field constraints:
+- definition: string, max 30 words, from Merriam-Webster/Oxford/Collins
+- interesting_fact: string, max 50 words, game show-worthy trivia about etymology, pop culture use, or historical notes
 
+Preferred sources: Reddit r/wordle daily thread, wordlesolver.net, Tom's Cafe Wordle spoiler site, NYT WordleBot
+
+Output format: JSON array only, starts with [
+
+Output structure:
 [{
-  "word": "EXAMPLE",
-  "definition": "A dictionary definition of the word",
-  "interesting_fact": "An interesting fact about the word's etymology or usage"
+  "word": "string",
+  "definition": "string (≤ 30 words)",
+  "interesting_fact": "string (≤ 50 words, game show-worthy, do not show source)"
 }]
 
-IMPORTANT: Respond with valid JSON only, no additional text or markdown.`
+If unconfirmed, return: [{"word": "Unknown", "definition": "Unknown", "interesting_fact": "Unknown"}]
+
+Do not wrap the output in triple backticks or markdown. Return only JSON. No comments or explanations.`
 }
 
 async function collectWordleData(date: string, forceRefresh = false) {

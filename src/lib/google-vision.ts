@@ -16,64 +16,58 @@ export class GoogleVisionService {
   private auth: GoogleAuth
 
   /**
-   * Safely parse Google Cloud credentials JSON, handling escaped newlines
+   * Safely parse Google Cloud credentials JSON, handling base64 and escaped formats
    */
   private parseCredentialsJson(credentialsString: string) {
-    // Try multiple parsing strategies
-    const strategies = [
-      // Strategy 1: Direct parsing (works if already properly formatted)
-      () => JSON.parse(credentialsString),
-
-      // Strategy 2: Replace escaped newlines
-      () => JSON.parse(credentialsString.replace(/\\n/g, '\n')),
-
-      // Strategy 3: Replace all control characters with actual newlines in private key section
-      () => {
-        const cleaned = credentialsString.replace(
-          /(\"private_key\":\s*\")([^"]*)(\")/g,
-          (match, prefix, key, suffix) => {
-            const cleanKey = key
-              .replace(/\\n/g, '\n')
-              .replace(/\\\\/g, '\\')
-              .replace(/\\"/g, '"')
-            return prefix + cleanKey + suffix
-          }
-        )
-        return JSON.parse(cleaned)
-      },
-
-      // Strategy 4: Base64 decode if the string appears to be base64
-      () => {
-        if (credentialsString.match(/^[A-Za-z0-9+/]+=*$/)) {
-          const decoded = Buffer.from(credentialsString, 'base64').toString('utf8')
-          return JSON.parse(decoded)
-        }
-        throw new Error('Not base64')
+    try {
+      // Strategy 1: Check if it's base64 encoded (preferred for deployment)
+      if (credentialsString.match(/^[A-Za-z0-9+/]+=*$/)) {
+        console.log('Detected base64 credentials, decoding...')
+        const decoded = Buffer.from(credentialsString, 'base64').toString('utf8')
+        const parsed = JSON.parse(decoded)
+        console.log('Successfully parsed base64-encoded credentials')
+        return parsed
       }
-    ]
 
-    for (let i = 0; i < strategies.length; i++) {
+      // Strategy 2: Direct JSON parse (for properly formatted JSON)
       try {
-        const result = strategies[i]()
-        console.log(`Google Cloud credentials parsed successfully using strategy ${i + 1}`)
-        return result
-      } catch (error) {
-        console.log(`Strategy ${i + 1} failed:`, error instanceof Error ? error.message : 'Unknown error')
+        const parsed = JSON.parse(credentialsString)
+        console.log('Successfully parsed direct JSON credentials')
+        return parsed
+      } catch {
         // Continue to next strategy
       }
-    }
 
-    throw new Error('All credential parsing strategies failed. Please check the GOOGLE_CLOUD_CREDENTIALS_JSON format.')
+      // Strategy 3: Fix escaped newlines and parse
+      const cleaned = credentialsString.replace(/\\n/g, '\n')
+      const parsed = JSON.parse(cleaned)
+      console.log('Successfully parsed credentials after newline fix')
+      return parsed
+
+    } catch (error) {
+      console.error('All credential parsing strategies failed:', error instanceof Error ? error.message : 'Unknown error')
+      throw new Error(`Google Cloud credentials parsing failed. Format the credentials as base64 or properly escaped JSON. Error: ${error instanceof Error ? error.message : 'Unknown'}`)
+    }
   }
 
   constructor() {
-    // Initialize Google Cloud authentication
+    let credentials = undefined
+
+    // Try to parse credentials if available
+    if (process.env.GOOGLE_CLOUD_CREDENTIALS_JSON) {
+      try {
+        credentials = this.parseCredentialsJson(process.env.GOOGLE_CLOUD_CREDENTIALS_JSON)
+        console.log('Successfully loaded Google Cloud credentials')
+      } catch (error) {
+        console.error('Failed to parse Google Cloud credentials:', error instanceof Error ? error.message : 'Unknown error')
+        // Continue without credentials - will fall back to other auth methods
+      }
+    }
+
+    // Initialize Google Cloud authentication with fallback options
     this.auth = new GoogleAuth({
       scopes: ['https://www.googleapis.com/auth/cloud-platform'],
-      // Use credentials from environment variable
-      credentials: process.env.GOOGLE_CLOUD_CREDENTIALS_JSON
-        ? this.parseCredentialsJson(process.env.GOOGLE_CLOUD_CREDENTIALS_JSON)
-        : undefined,
+      credentials: credentials,
       keyFilename: process.env.GOOGLE_APPLICATION_CREDENTIALS,
       projectId: process.env.GOOGLE_CLOUD_PROJECT_ID
     })

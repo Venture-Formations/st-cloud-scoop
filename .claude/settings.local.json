@@ -54,7 +54,8 @@
       "WebFetch(domain:developers.mailerlite.com)",
       "Bash(VERCEL_API_KEY=b2rRlFmL9kPxMPl6ZA7pgGDX npx vercel env add GOOGLE_CLOUD_PROJECT_ID production --token=b2rRlFmL9kPxMPl6ZA7pgGDX)",
       "Bash(VERCEL_API_KEY=b2rRlFmL9kPxMPl6ZA7pgGDX npx vercel projects list --token=b2rRlFmL9kPxMPl6ZA7pgGDX)",
-      "Bash(set VERCEL_API_KEY=b2rRlFmL9kPxMPl6ZA7pgGDX)"
+      "Bash(set VERCEL_API_KEY=b2rRlFmL9kPxMPl6ZA7pgGDX)",
+      "Bash(VERCEL_API_KEY=b2rRlFmL9kPxMPl6ZA7pgGDX npx vercel env list --token=b2rRlFmL9kPxMPl6ZA7pgGDX)"
     ],
     "deny": [],
     "ask": []

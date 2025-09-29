@@ -205,6 +205,53 @@ function generateFallbackRoadWorkData(targetDate: string): RoadWorkItemForHTML[]
 /**
  * Store road work items in the normalized database structure
  */
+// Helper function to parse date strings from AI responses
+function parseRoadWorkDate(dateStr: string | null): string | null {
+  if (!dateStr || dateStr === 'TBD') return null
+
+  try {
+    // Handle common AI response formats
+    const currentYear = new Date().getFullYear()
+
+    // Format: "Apr 15", "Jun 2", "Oct 30"
+    if (/^[A-Za-z]{3}\s+\d{1,2}$/.test(dateStr)) {
+      const parsedDate = new Date(`${dateStr}, ${currentYear}`)
+      if (!isNaN(parsedDate.getTime())) {
+        return parsedDate.toISOString().split('T')[0] // Return YYYY-MM-DD format
+      }
+    }
+
+    // Format: "mid-Oct", "early Nov", "late Dec" - convert to middle of month
+    const monthMatch = dateStr.match(/(early|mid|late)\s*-?\s*([A-Za-z]{3})/i)
+    if (monthMatch) {
+      const [, timing, month] = monthMatch
+      const monthDay = timing.toLowerCase() === 'early' ? 5 : timing.toLowerCase() === 'late' ? 25 : 15
+      const parsedDate = new Date(`${month} ${monthDay}, ${currentYear}`)
+      if (!isNaN(parsedDate.getTime())) {
+        return parsedDate.toISOString().split('T')[0]
+      }
+    }
+
+    // Format: "2025-10-15" (already properly formatted)
+    if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+      return dateStr
+    }
+
+    // Try parsing as-is
+    const parsedDate = new Date(dateStr)
+    if (!isNaN(parsedDate.getTime())) {
+      return parsedDate.toISOString().split('T')[0]
+    }
+
+  } catch (error) {
+    console.warn(`Failed to parse date "${dateStr}":`, error)
+  }
+
+  // If all parsing fails, return null
+  console.warn(`Could not parse road work date: "${dateStr}", storing as null`)
+  return null
+}
+
 export async function storeRoadWorkItems(roadWorkItems: Array<{
   road_name: string
   road_range: string | null
@@ -216,15 +263,15 @@ export async function storeRoadWorkItems(roadWorkItems: Array<{
 }>, campaignId: string): Promise<RoadWorkItem[]> {
   console.log(`Storing ${roadWorkItems.length} road work items in normalized database...`)
 
-  // Prepare items for insertion with display order
+  // Prepare items for insertion with display order and date parsing
   const itemsToInsert = roadWorkItems.map((item, index) => ({
     campaign_id: campaignId,
     road_name: item.road_name,
     road_range: item.road_range,
     city_or_township: item.city_or_township,
     reason: item.reason,
-    start_date: item.start_date,
-    expected_reopen: item.expected_reopen,
+    start_date: parseRoadWorkDate(item.start_date),
+    expected_reopen: parseRoadWorkDate(item.expected_reopen),
     source_url: item.source_url,
     display_order: index + 1,
     is_active: true

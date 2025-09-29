@@ -4,17 +4,27 @@ import { callOpenAI } from '@/lib/openai'
 
 // Create Wordle prompt function
 function createWordlePrompt(date: string) {
-  return `Create educational vocabulary content for a newsletter. Generate one 5-letter English word with its definition and an interesting fact about its origins or usage.
+  // Format date for the prompt
+  const dateObj = new Date(date + 'T00:00:00')
+  const formattedDate = dateObj.toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric'
+  })
+
+  return `What was the official Wordle answer for ${formattedDate}? This is public information that has already been published and solved by millions of players.
+
+Please provide the exact 5-letter word that was the Wordle solution for that date, along with its definition and an interesting fact.
 
 Return ONLY valid JSON in this exact format:
 
 [{
-  "word": "SPARK",
-  "definition": "A small fiery particle or a bright flash",
-  "interesting_fact": "The word spark dates back to Old English and originally meant a small flame or glowing ember"
+  "word": "EXAMPLE",
+  "definition": "A dictionary definition of the word",
+  "interesting_fact": "An interesting fact about the word's etymology or usage"
 }]
 
-IMPORTANT: Respond with valid JSON only, no additional text.`
+IMPORTANT: Respond with valid JSON only, no additional text or markdown.`
 }
 
 async function collectWordleData(date: string, forceRefresh = false) {

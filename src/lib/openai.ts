@@ -211,7 +211,13 @@ CREATIVITY REQUIREMENT: Each generation should produce a unique headline variati
 Respond with ONLY the headline text - no JSON, no quotes, no extra formatting. Just the headline itself.`,
 
   roadWorkGenerator: (campaignDate: string) => `
-List every active road, lane, or bridge closure, detour, or major traffic restriction in effect on ${campaignDate} within 15 miles of ZIP code 56303 (St. Cloud, MN).
+Find CURRENT and ACTIVE road, lane, or bridge closures, detours, or traffic restrictions in effect on ${campaignDate} within 15 miles of ZIP code 56303 (St. Cloud, MN).
+
+CRITICAL DATE REQUIREMENT:
+- ONLY include projects that are ACTIVE on ${campaignDate}
+- Expected reopen date must be AFTER ${campaignDate} (not completed yet)
+- Start date must be ON OR BEFORE ${campaignDate} (already begun)
+- Do NOT include completed projects from summer 2025 or earlier
 
 SEARCH CRITERIA:
 - Date: ${campaignDate}
@@ -233,10 +239,13 @@ EXPLICITLY INCLUDE:
 - Hwy 55, Hwy 15, Hwy 10, Hwy 23, County Roads
 - Closures near Kimball, Annandale, Sartell, Waite Park, St. Joseph, Sauk Rapids
 - Metro Bus route detours and schedule changes
-- Any current closure that started before ${campaignDate} and is still active
+- Projects that started before ${campaignDate} but are still ongoing
 
-EXCLUDE ONLY:
-- Completed closures, planned/future closures, shoulder-only work
+STRICTLY EXCLUDE:
+- Completed closures (reopen date before ${campaignDate})
+- Planned/future closures (start date after ${campaignDate})
+- Summer 2025 projects that ended in August or earlier
+- Shoulder-only work with no traffic impact
 
 REQUIRED SOURCES TO CHECK:
 - https://www.dot.state.mn.us/d3/ (MnDOT District 3)

@@ -43,11 +43,11 @@ async function getWordleAnswer(dateStr: string): Promise<string | null> {
     // Find the "Today's Wordle Answer" section specifically
     let todaySection = ''
 
-    // Look for headings containing "Today's Wordle Answer"
+    // Look for the exact "Today's Wordle answer" heading (not the hints version)
     $('h1, h2, h3, h4, h5, h6').each((_, element) => {
-      const headingText = $(element).text()
-      if (headingText.toLowerCase().includes("today's wordle answer")) {
-        // Get the content after this heading
+      const headingText = $(element).text().trim()
+      if (headingText.toLowerCase() === "today's wordle answer") {
+        // Get the content after this exact heading
         let content = ''
         let nextElement = $(element).next()
         while (nextElement.length > 0 && !nextElement.is('h1, h2, h3, h4, h5, h6')) {
@@ -66,18 +66,12 @@ async function getWordleAnswer(dateStr: string): Promise<string | null> {
     // Use AI to analyze the entire page content
     const { callOpenAI } = await import('./openai')
 
-    const prompt = `Find the Wordle answer from this Tom's Guide content.
+    const prompt = `Find the Wordle answer from this Tom's Guide "Today's Wordle Answer" section.
 
-This content is from the "Today's Wordle Answer" section. The answer may be:
-1. Explicitly stated like "The answer is [WORD]"
-2. Given as a clue/hint that describes the word
-
-For puzzle #${number}, look for:
-- Direct statements of the answer
-- Clues that describe the word (like "remaining polite" = CIVIL)
-- The 5-letter word that matches the given hints
-
-If you see a clue like "remaining polite", the answer is CIVIL (meaning courteous/polite).
+This section should contain the actual answer, not just hints. Look for:
+- "The answer is [WORD]"
+- "Today's Wordle answer is [WORD]"
+- The explicit 5-letter word that is the solution
 
 Return ONLY the 5-letter word in UPPERCASE.
 

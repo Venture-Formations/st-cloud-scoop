@@ -38,19 +38,23 @@ export async function GET(request: NextRequest) {
       headings.push($(element).text().trim())
     })
 
-    // Try to find today's section
-    let todaySection = ''
+    // Try to find both today's sections
+    let hintsSection = ''
+    let answerSection = ''
+
     $('h1, h2, h3, h4, h5, h6').each((_, element) => {
-      const headingText = $(element).text()
-      if (headingText.toLowerCase().includes("today's wordle answer")) {
-        let content = ''
-        let nextElement = $(element).next()
-        while (nextElement.length > 0 && !nextElement.is('h1, h2, h3, h4, h5, h6')) {
-          content += nextElement.text() + ' '
-          nextElement = nextElement.next()
-        }
-        todaySection = content.trim()
-        return false
+      const headingText = $(element).text().trim()
+      let content = ''
+      let nextElement = $(element).next()
+      while (nextElement.length > 0 && !nextElement.is('h1, h2, h3, h4, h5, h6')) {
+        content += nextElement.text() + ' '
+        nextElement = nextElement.next()
+      }
+
+      if (headingText.toLowerCase().includes("today's wordle answer — hints")) {
+        hintsSection = content.trim()
+      } else if (headingText.toLowerCase() === "today's wordle answer") {
+        answerSection = content.trim()
       }
     })
 
@@ -60,10 +64,12 @@ export async function GET(request: NextRequest) {
       contentLength: contentForAI.length,
       contentPreview: contentForAI.substring(0, 500),
       headings: headings,
-      todaySection: todaySection,
-      todaySectionLength: todaySection.length,
+      hintsSection: hintsSection,
+      hintsLength: hintsSection.length,
+      answerSection: answerSection,
+      answerLength: answerSection.length,
       debug: {
-        message: 'Page structure analysis to find correct sections'
+        message: 'Page structure analysis showing both hints and answer sections'
       }
     })
 

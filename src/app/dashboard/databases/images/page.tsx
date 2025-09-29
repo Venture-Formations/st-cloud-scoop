@@ -467,9 +467,6 @@ export default function ImagesDatabasePage() {
                     City
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Source
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Info
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -639,27 +636,23 @@ export default function ImagesDatabasePage() {
                       )}
                     </td>
 
-                    <td className="px-4 py-4">
-                      {editingImage === image.id ? (
-                        <input
-                          type="text"
-                          value={editData.source || ''}
-                          onChange={(e) => setEditData({ ...editData, source: e.target.value })}
-                          placeholder="Source"
-                          className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
-                        />
-                      ) : (
-                        <div className="text-sm text-gray-900">
-                          {image.source || '-'}
-                        </div>
-                      )}
-                    </td>
 
 
                     <td className="px-4 py-4">
                       {editingImage === image.id ? (
                         <div className="text-sm space-y-2 max-w-xs">
-                          {/* Credit field only in edit mode */}
+                          {/* Source field in edit mode */}
+                          <div>
+                            <label className="block text-xs font-medium text-gray-700 mb-1">Source:</label>
+                            <input
+                              type="text"
+                              value={editData.source || ''}
+                              onChange={(e) => setEditData({ ...editData, source: e.target.value })}
+                              placeholder="Source"
+                              className="w-full px-2 py-1 border border-gray-300 rounded text-xs"
+                            />
+                          </div>
+                          {/* Credit field in edit mode */}
                           <div>
                             <label className="block text-xs font-medium text-gray-700 mb-1">Credit:</label>
                             <input
@@ -674,6 +667,11 @@ export default function ImagesDatabasePage() {
                       ) : (
                         <div className="text-sm text-gray-500 space-y-1">
                           <div className="flex flex-wrap gap-1">
+                            {image.source && (
+                              <span className="bg-blue-100 text-blue-800 px-2 py-0.5 rounded text-xs font-medium">
+                                {image.source}
+                              </span>
+                            )}
                             {image.faces_count > 0 && (
                               <span className="bg-purple-100 text-purple-800 px-1 py-0.5 rounded text-xs">
                                 {image.faces_count} face{image.faces_count !== 1 ? 's' : ''}

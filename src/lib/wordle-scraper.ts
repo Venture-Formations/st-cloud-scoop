@@ -40,33 +40,25 @@ async function getWordleAnswer(dateStr: string): Promise<string | null> {
     // Remove only scripts and styles, keep all other content for AI analysis
     $('script, style').remove()
 
-    // Try to extract the "Today's answer" section specifically
-    let answerSection = ''
-    const answerSectionElement = $('[id*="answer"], [class*="answer"], h2:contains("answer"), h3:contains("answer")').first()
-    if (answerSectionElement.length > 0) {
-      answerSection = answerSectionElement.parent().text() || answerSectionElement.text()
-    }
-
     const fullPageText = $('body').text()
+    const contentForAI = fullPageText.substring(0, 8000)
 
-    // Use answer section if found, otherwise use full page
-    const contentForAI = answerSection || fullPageText.substring(0, 8000)
-
-    console.log(`Sending ${answerSection ? 'answer section' : 'full page'} content to AI for analysis (${contentForAI.length} characters)`)
+    console.log(`Sending full page content to AI for analysis (${contentForAI.length} characters)`)
 
     // Use AI to analyze the entire page content
     const { callOpenAI } = await import('./openai')
 
-    const prompt = `Find the Wordle answer from this Tom's Guide page content.
+    const prompt = `You are analyzing a Tom's Guide Wordle page. Find today's Wordle answer.
 
-INSTRUCTIONS:
-- Look for today's Wordle answer (puzzle #${number} if mentioned)
-- The answer is exactly 5 uppercase letters
-- Common locations: in headings, after "answer is", in answer sections, bold text
-- DO NOT extract partial words from longer words (like "REMAI" from "remains")
-- Look for context clues like "today's answer", "solution", "the word is"
-- Return ONLY the 5-letter answer word in uppercase
-- No explanations, just the word
+The page discusses Wordle puzzle #${number}. Look for the actual answer word that appears in contexts like:
+- "Today's answer is..."
+- "The word is..."
+- "Solution: ..."
+- In the main answer section
+
+CRITICAL: Do NOT pick random 5-letter words. Only return the word that is explicitly presented as today's Wordle solution.
+
+Return only the 5-letter word in UPPERCASE, nothing else.
 
 PAGE CONTENT:
 ${contentForAI}`

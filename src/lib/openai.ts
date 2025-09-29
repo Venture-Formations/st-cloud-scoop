@@ -295,121 +295,52 @@ IMPORTANT: Only include OCR fields if readable text is actually present. Only in
 
 export async function callOpenAIWithWeb(userPrompt: string, maxTokens = 1000, temperature = 0) {
   try {
-    console.log('Calling OpenAI API with web tools...')
+    console.log('Calling OpenAI Responses API with web tools...')
 
     // Add timeout to prevent hanging
     const controller = new AbortController()
     const timeoutId = setTimeout(() => controller.abort(), 120000) // 2 minute timeout for web searches
 
     try {
-      console.log('Using GPT-4o model with web tools...')
+      console.log('Using GPT-4o model with web tools via Responses API...')
 
-      const messages = [
-        {
-          role: 'system',
-          content: `You are a research assistant that can search the live web.
-
-Search trusted Wordle spoiler sources (Tom's Guide, r/wordle daily thread,
-wordlesolver.net, NYT WordleBot) for the New York Times Wordle answer for the
-specified date.
-
-Rules:
-- Search the web if needed to find the answer.
-- Output ONLY a JSON array in this exact format:
-  [{
-    "word": "string",
-    "definition": "string (≤ 30 words, concise dictionary style)",
-    "interesting_fact": "string (≤ 50 words, fun trivia or etymology)"
-  }]
-- If no answer is found with high confidence, output [].
-- Do not include explanations, markdown, or extra text—JSON only.`
-        },
-        {
-          role: 'user',
-          content: userPrompt
-        }
-      ]
-
-      // Step 1: Make initial request with tools
-      const response = await openai.chat.completions.create({
+      // Use the new Responses API which handles tool calls internally
+      const response = await openai.responses.create({
         model: 'gpt-4o',
         tools: [{ type: 'web' }],
-        temperature: temperature,
-        messages: messages,
-        max_tokens: maxTokens,
+        input: `Search trusted Wordle spoiler sources (Tom's Guide, r/wordle daily thread, wordlesolver.net, NYT WordleBot) for the New York Times Wordle answer for the specified date.
+
+${userPrompt}
+
+Output ONLY a JSON array in this exact format:
+[{
+  "word": "string",
+  "definition": "string (≤ 30 words, concise dictionary style)",
+  "interesting_fact": "string (≤ 50 words, fun trivia or etymology)"
+}]
+
+If no answer is found with high confidence, output [].
+Do not include explanations, markdown, or extra text—JSON only.`,
       }, {
         signal: controller.signal
       })
 
-      console.log('Initial response received')
+      clearTimeout(timeoutId)
 
-      // Step 2: Check if model is calling a tool
-      const call = response.choices[0]?.message?.tool_calls?.[0]
-      if (call && call.type === 'web') {
-        console.log('Model is making web search call:', call.function?.name)
-
-        try {
-          // Step 3: Execute the web search
-          const webResults = await openai.web.search(call.function?.arguments || {})
-          console.log('Web search completed, results length:', JSON.stringify(webResults).length)
-
-          // Step 4: Send results back to model
-          const followupMessages = [
-            ...messages,
-            response.choices[0].message,
-            {
-              role: 'tool',
-              tool_call_id: call.id,
-              content: JSON.stringify(webResults)
-            }
-          ]
-
-          const followup = await openai.chat.completions.create({
-            model: 'gpt-4o',
-            messages: followupMessages,
-            max_tokens: maxTokens,
-            temperature: temperature,
-          }, {
-            signal: controller.signal
-          })
-
-          clearTimeout(timeoutId)
-
-          const content = followup.choices[0]?.message?.content
-          if (!content) {
-            throw new Error('No response from OpenAI after web search')
-          }
-
-          console.log('Final response received after web search')
-          return parseJSONResponse(content)
-
-        } catch (webError) {
-          console.error('Web search failed:', webError)
-          // Fallback to original response if web search fails
-          const content = response.choices[0]?.message?.content
-          if (content) {
-            return parseJSONResponse(content)
-          }
-          throw new Error('Web search failed and no fallback content available')
-        }
-      } else {
-        // No tool call made, use direct response
-        console.log('No web search requested by model')
-        clearTimeout(timeoutId)
-
-        const content = response.choices[0]?.message?.content
-        if (!content) {
-          throw new Error('No response from OpenAI')
-        }
-
-        return parseJSONResponse(content)
+      const content = response.content
+      if (!content) {
+        throw new Error('No response from OpenAI Responses API')
       }
+
+      console.log('Response received from Responses API')
+      return parseJSONResponse(content)
+
     } catch (error) {
       clearTimeout(timeoutId)
       throw error
     }
   } catch (error) {
-    console.error('OpenAI API web error:', error)
+    console.error('OpenAI Responses API web error:', error)
     if (error instanceof Error) {
       console.error('Error details:', error.message)
       console.error('Error name:', error.name)

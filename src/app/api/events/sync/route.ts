@@ -325,21 +325,50 @@ export async function POST(request: NextRequest) {
     console.log('🔄 Processing complete, handling inactive events...')
     console.log('⏰ Deactivation start time:', new Date().toISOString())
 
+    // Get event IDs that are currently used in active campaigns
+    const { data: activeCampaignEvents } = await supabaseAdmin
+      .from('campaign_events')
+      .select('event_id')
+      .eq('is_selected', true)
+
+    const protectedEventIds = new Set(activeCampaignEvents?.map(ce => ce.event_id) || [])
+    console.log(`🛡️ Protecting ${protectedEventIds.size} events currently used in campaigns`)
+
     // Mark events as inactive if they're no longer in the API response
+    // BUT don't deactivate events that are currently selected in campaigns
     const apiExternalIds = events.map(e => `visitstcloud_${e.id}`)
 
     if (apiExternalIds.length > 0) {
       console.log(`📋 Deactivating events not in ${apiExternalIds.length} current API results...`)
 
-      const { error: deactivateError } = await supabaseAdmin
+      // Get events that should be deactivated (not in API and not protected)
+      const { data: eventsToDeactivate } = await supabaseAdmin
         .from('events')
-        .update({ active: false, updated_at: new Date().toISOString() })
+        .select('id, external_id')
         .like('external_id', 'visitstcloud_%')
         .not('external_id', 'in', `(${apiExternalIds.map(id => `'${id}'`).join(',')})`)
         .eq('active', true)
 
-      if (deactivateError) {
-        console.error('Error deactivating old events:', deactivateError)
+      if (eventsToDeactivate && eventsToDeactivate.length > 0) {
+        // Filter out protected events
+        const idsToDeactivate = eventsToDeactivate
+          .filter(event => !protectedEventIds.has(event.id))
+          .map(event => event.id)
+
+        if (idsToDeactivate.length > 0) {
+          console.log(`📋 Deactivating ${idsToDeactivate.length} events (${eventsToDeactivate.length - idsToDeactivate.length} protected)`)
+
+          const { error: deactivateError } = await supabaseAdmin
+            .from('events')
+            .update({ active: false, updated_at: new Date().toISOString() })
+            .in('id', idsToDeactivate)
+
+          if (deactivateError) {
+            console.error('Error deactivating old events:', deactivateError)
+          }
+        } else {
+          console.log('📋 All events in deactivation list are protected by active campaigns')
+        }
       }
     }
 

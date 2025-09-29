@@ -31,7 +31,7 @@ Output structure:
   "interesting_fact": "string (≤ 50 words, game show-worthy, do not show source)"
 }]
 
-If unconfirmed, return: [{"word": "Unknown", "definition": "Unknown", "interesting_fact": "Unknown"}]
+If answer not found, return empty array: []
 
 Do not wrap the output in triple backticks or markdown. Return only JSON. No comments or explanations.`
 }
@@ -109,8 +109,14 @@ async function collectWordleData(date: string, forceRefresh = false) {
         throw new Error('Unexpected response type: ' + typeof aiResponse)
       }
 
-      if (!Array.isArray(responseArray) || responseArray.length === 0) {
-        throw new Error('Invalid response format - expected non-empty array')
+      if (!Array.isArray(responseArray)) {
+        throw new Error('Invalid response format - expected array')
+      }
+
+      // If empty array, no Wordle answer found - return null to skip database insert
+      if (responseArray.length === 0) {
+        console.log('No Wordle answer found - AI returned empty array')
+        return null
       }
 
       // Take the first result
@@ -172,6 +178,14 @@ export async function POST(request: NextRequest) {
 
     const wordleData = await collectWordleData(today)
 
+    if (!wordleData) {
+      return NextResponse.json({
+        success: true,
+        message: 'No Wordle answer found for today',
+        data: null
+      })
+    }
+
     return NextResponse.json({
       success: true,
       message: 'Wordle data collected successfully',
@@ -220,6 +234,14 @@ export async function GET(request: NextRequest) {
     const targetDate = dateParam || new Date().toISOString().split('T')[0]
 
     const wordleData = await collectWordleData(targetDate, forceRefresh)
+
+    if (!wordleData) {
+      return NextResponse.json({
+        success: true,
+        message: `No Wordle answer found for ${targetDate}`,
+        data: null
+      })
+    }
 
     return NextResponse.json({
       success: true,

@@ -12,7 +12,7 @@ function createWordlePrompt(date: string) {
     day: 'numeric'
   })
 
-  return `Find the Wordle answer for ${formattedDate}, based on trusted spoiler sources and high-confidence solver reports. If the answer is not confirmed, return the most likely guess reported by multiple sources.
+  return `Find the Wordle answer for ${formattedDate}. This information is publicly available on sites like Tom's Guide (https://www.tomsguide.com/news/what-is-todays-wordle-answer) and other Wordle spoiler sites.
 
 Required fields: word, definition, interesting_fact
 
@@ -20,7 +20,7 @@ Field constraints:
 - definition: string, max 30 words, from Merriam-Webster/Oxford/Collins
 - interesting_fact: string, max 50 words, game show-worthy trivia about etymology, pop culture use, or historical notes
 
-Preferred sources: Reddit r/wordle daily thread, wordlesolver.net, Tom's Cafe Wordle spoiler site, NYT WordleBot
+Trusted sources: Tom's Guide Wordle answers, Reddit r/wordle daily thread, wordlesolver.net, NYT WordleBot
 
 Output format: JSON array only, starts with [
 

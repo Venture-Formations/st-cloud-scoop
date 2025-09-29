@@ -9,9 +9,9 @@ export async function GET(request: Request) {
     console.log('Clearing road work items for campaign:', campaignId)
 
     // Delete existing road work items for this campaign
-    const { data, error } = await supabaseAdmin
+    const { error, count } = await supabaseAdmin
       .from('road_work_items')
-      .delete()
+      .delete({ count: 'exact' })
       .eq('campaign_id', campaignId)
 
     if (error) {
@@ -22,7 +22,7 @@ export async function GET(request: Request) {
       success: true,
       message: `Cleared road work items for campaign ${campaignId}`,
       campaign_id: campaignId,
-      deleted_count: Array.isArray(data) ? data.length : 0
+      deleted_count: count || 0
     })
 
   } catch (error) {

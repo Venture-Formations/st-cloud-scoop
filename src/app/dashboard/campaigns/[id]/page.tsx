@@ -179,7 +179,7 @@ function RoadWorkSection({ campaign }: { campaign: any }) {
   useEffect(() => {
     const fetchRoadWorkData = async () => {
       try {
-        const response = await fetch(`/api/test/road-work?campaign_date=${campaign.date}`)
+        const response = await fetch(`/api/campaigns/${campaign.id}/road-work`)
         if (response.ok) {
           const data = await response.json()
           if (data.success) {
@@ -201,7 +201,7 @@ function RoadWorkSection({ campaign }: { campaign: any }) {
     }
 
     fetchRoadWorkData()
-  }, [campaign.date])
+  }, [campaign.id])
 
   if (loading) {
     return (

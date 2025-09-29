@@ -19,14 +19,51 @@ export class GoogleVisionService {
    * Safely parse Google Cloud credentials JSON, handling escaped newlines
    */
   private parseCredentialsJson(credentialsString: string) {
-    try {
-      // Replace escaped newlines with actual newlines in the private key
-      const unescapedJson = credentialsString.replace(/\\n/g, '\n')
-      return JSON.parse(unescapedJson)
-    } catch (error) {
-      console.error('Failed to parse Google Cloud credentials JSON:', error)
-      throw new Error(`Invalid Google Cloud credentials format: ${error instanceof Error ? error.message : 'Unknown error'}`)
+    // Try multiple parsing strategies
+    const strategies = [
+      // Strategy 1: Direct parsing (works if already properly formatted)
+      () => JSON.parse(credentialsString),
+
+      // Strategy 2: Replace escaped newlines
+      () => JSON.parse(credentialsString.replace(/\\n/g, '\n')),
+
+      // Strategy 3: Replace all control characters with actual newlines in private key section
+      () => {
+        const cleaned = credentialsString.replace(
+          /(\"private_key\":\s*\")([^"]*)(\")/g,
+          (match, prefix, key, suffix) => {
+            const cleanKey = key
+              .replace(/\\n/g, '\n')
+              .replace(/\\\\/g, '\\')
+              .replace(/\\"/g, '"')
+            return prefix + cleanKey + suffix
+          }
+        )
+        return JSON.parse(cleaned)
+      },
+
+      // Strategy 4: Base64 decode if the string appears to be base64
+      () => {
+        if (credentialsString.match(/^[A-Za-z0-9+/]+=*$/)) {
+          const decoded = Buffer.from(credentialsString, 'base64').toString('utf8')
+          return JSON.parse(decoded)
+        }
+        throw new Error('Not base64')
+      }
+    ]
+
+    for (let i = 0; i < strategies.length; i++) {
+      try {
+        const result = strategies[i]()
+        console.log(`Google Cloud credentials parsed successfully using strategy ${i + 1}`)
+        return result
+      } catch (error) {
+        console.log(`Strategy ${i + 1} failed:`, error instanceof Error ? error.message : 'Unknown error')
+        // Continue to next strategy
+      }
     }
+
+    throw new Error('All credential parsing strategies failed. Please check the GOOGLE_CLOUD_CREDENTIALS_JSON format.')
   }
 
   constructor() {

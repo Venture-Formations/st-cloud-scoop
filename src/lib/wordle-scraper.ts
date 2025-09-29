@@ -15,7 +15,16 @@ async function getWordleAnswer(dateStr: string): Promise<string | null> {
     const number = getPuzzleNumber(dateStr)
     console.log(`Looking for Wordle #${number} for date ${dateStr}`)
 
-    const response = await fetch("https://www.tomsguide.com/news/what-is-todays-wordle-answer")
+    const response = await fetch("https://www.tomsguide.com/news/what-is-todays-wordle-answer", {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+        'Accept-Language': 'en-US,en;q=0.5',
+        'Accept-Encoding': 'gzip, deflate, br',
+        'Connection': 'keep-alive',
+        'Upgrade-Insecure-Requests': '1'
+      }
+    })
 
     if (!response.ok) {
       console.error(`Failed to fetch Tom's Guide Wordle page: ${response.status} ${response.statusText}`)

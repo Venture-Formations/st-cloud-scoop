@@ -54,13 +54,11 @@ async function getWordleAnswer(dateStr: string): Promise<string | null> {
 INSTRUCTIONS:
 - Look for today's Wordle answer (puzzle #${number} if mentioned)
 - The answer is exactly 5 uppercase letters
-- Common locations: in headings, after "answer is", in answer sections
+- Common locations: in headings, after "answer is", in answer sections, bold text
 - DO NOT extract partial words from longer words (like "REMAI" from "remains")
+- Look for context clues like "today's answer", "solution", "the word is"
 - Return ONLY the 5-letter answer word in uppercase
 - No explanations, just the word
-
-The page contains these 5-letter words: CIVIL, ORATE, CRANE, LANCE
-Choose the one that is presented as today's Wordle answer.
 
 PAGE CONTENT:
 ${contentForAI}`

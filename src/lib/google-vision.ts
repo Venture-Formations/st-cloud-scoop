@@ -53,13 +53,31 @@ export class GoogleVisionService {
   constructor() {
     let credentials = undefined
 
-    // Try to parse credentials if available
-    if (process.env.GOOGLE_CLOUD_CREDENTIALS_JSON) {
+    // Method 1: Try individual environment variables (preferred)
+    if (process.env.GOOGLE_CLOUD_TYPE && process.env.GOOGLE_CLOUD_PRIVATE_KEY) {
+      console.log('Using individual Google Cloud environment variables')
+      credentials = {
+        type: process.env.GOOGLE_CLOUD_TYPE,
+        project_id: process.env.GOOGLE_CLOUD_PROJECT_ID,
+        private_key_id: process.env.GOOGLE_CLOUD_PRIVATE_KEY_ID,
+        private_key: process.env.GOOGLE_CLOUD_PRIVATE_KEY,
+        client_email: process.env.GOOGLE_CLOUD_CLIENT_EMAIL,
+        client_id: process.env.GOOGLE_CLOUD_CLIENT_ID,
+        auth_uri: process.env.GOOGLE_CLOUD_AUTH_URI,
+        token_uri: process.env.GOOGLE_CLOUD_TOKEN_URI,
+        auth_provider_x509_cert_url: process.env.GOOGLE_CLOUD_AUTH_PROVIDER_X509_CERT_URL,
+        client_x509_cert_url: process.env.GOOGLE_CLOUD_CLIENT_X509_CERT_URL,
+        universe_domain: process.env.GOOGLE_CLOUD_UNIVERSE_DOMAIN
+      }
+      console.log('Successfully loaded Google Cloud credentials from individual env vars')
+    }
+    // Method 2: Fallback to JSON credentials
+    else if (process.env.GOOGLE_CLOUD_CREDENTIALS_JSON) {
       try {
         credentials = this.parseCredentialsJson(process.env.GOOGLE_CLOUD_CREDENTIALS_JSON)
-        console.log('Successfully loaded Google Cloud credentials')
+        console.log('Successfully loaded Google Cloud credentials from JSON')
       } catch (error) {
-        console.error('Failed to parse Google Cloud credentials:', error instanceof Error ? error.message : 'Unknown error')
+        console.error('Failed to parse Google Cloud JSON credentials:', error instanceof Error ? error.message : 'Unknown error')
         // Continue without credentials - will fall back to other auth methods
       }
     }

@@ -249,38 +249,83 @@ export async function generateDailyRoadWork(campaignDate?: string): Promise<Road
 
     const systemPrompt = `You are a traffic researcher with live web access. Search official DOT/county/city/public-works sources and credible local media for active road impacts.
 
-Rules:
+COMPREHENSIVE INCLUSION CRITERIA:
 - Target date: ${formattedDate} (America/Chicago). Include only impacts active ON that date.
 - Geography: within 15 miles of ZIP 56303 (St. Cloud, MN). Use 56303 centroid for radius filtering.
-- Include: full/lane/bridge closures, detours, major traffic restrictions; direction- or segment-specific impacts.
-- Exclude: completed work, future/planned-only items, shoulder-only work.
-- De-duplicate near-duplicates; keep segment-level entries.
-- Split "road_segment" like "Hwy 15 from 2nd St S to County Rd 75" into:
-  road_name = "Hwy 15"
-  road_range = "from 2nd St S to County Rd 75"
-- Collect exactly 9 items (pad with other eligible items in area if one source lists fewer).
-- Each item MUST have: road_name, road_range, city_or_township, reason, start_date, expected_reopen, source_url.
-- Date fields must be ISO-8601 (YYYY-MM-DD).
-- Output ONLY a JSON array (no markdown or commentary).
-- If fewer than 9 can be verified from credible sources, still output what you found (≥1); do not invent data.
-- Cite the most specific/public-original source for each item (permalink if available).
 
-Primary sources to check (not exhaustive):
+INCLUDE ALL TYPES:
+- Full closures, lane closures, bridge closures, detours, major traffic restrictions
+- Utility work closures (water main, sewer, gas, electric, telecommunications)
+- Bus route detours and transit impacts
+- Construction impacts, travel advisories, traffic alerts, detour notices
+- Lane shifts, lane reductions, intermittent closures
+- Direction-specific restrictions (eastbound/westbound)
+- Segment-specific impacts within larger projects
+- Recurring or periodic closures active on target date
+- ALL road types: state highways, county roads, city streets, local roads
+
+INCLUDE WORK TYPES:
+- Road reconstruction, resurfacing, paving, patching
+- Bridge work, culvert replacement, interchange construction
+- Utility installations: water main, sewer line, pipeline work
+- Traffic signal upgrades, sidewalk work, drainage improvements
+- Street reconstruction, lane expansion, shoulder work
+
+EXCLUDE ONLY:
+- Completed closures, planned/future-only items, shoulder-only work
+
+REQUIRED COMPREHENSIVENESS:
+- Check city engineering departments for local street work
+- Check utility companies for water/sewer/gas work causing road impacts
+- Check metro bus system for route detours
+- Include small local streets and utility work, not just major highways
+- Split "road_segment" like "Hwy 15 from 2nd St S to County Rd 75" into:
+  road_name = "Hwy 15", road_range = "from 2nd St S to County Rd 75"
+
+OUTPUT:
+- Collect exactly 9 items (include small utility work to reach 9 if needed)
+- Date fields must be ISO-8601 (YYYY-MM-DD)
+- Output ONLY a JSON array (no markdown or commentary)
+- Each item MUST have: road_name, road_range, city_or_township, reason, start_date, expected_reopen, source_url
+- Cite the most specific/public-original source for each item
+
+PRIMARY SOURCES (search ALL):
 - https://www.dot.state.mn.us/d3/
 - https://www.stearnscountymn.gov/185/Public-Works
 - https://www.co.benton.mn.us/180/Highway
 - https://www.co.sherburne.mn.us/162/Public-Works
-- https://www.sartellmn.com/engineering/
-- https://www.ci.stcloud.mn.us
+- https://www.ci.stcloud.mn.us (city engineering and road construction)
+- https://www.cityofsartell.com/engineering/
 - https://www.cityofstjoseph.com/
 - https://www.ci.waitepark.mn.us/
 - https://ci.sauk-rapids.mn.us/
+- https://www.ridemetrobus.com (bus detours)
 - https://www.stcloudapo.org
-- https://www.ridemetrobus.com
-- Credible local media (e.g., WJON traffic, St. Cloud Times roads)
-- Official city/county/DOT Facebook pages (only if posts are within 30 days of ${formattedDate} and clearly state dates/locations; link the specific post).`
+- Local utility companies and their road impact notices
+- Local media: WJON Traffic, St. Cloud Times roads section
+- Official city/county/DOT Facebook pages (last 30 days)
+- City public works departments for utility work impacts`
 
-    const userPrompt = `Task: List every active road, lane, or bridge closure, detour, or major traffic restriction in effect on ${formattedDate} within 15 miles of ZIP 56303 (St. Cloud, MN).
+    const userPrompt = `Task: List every active road, lane, or bridge closure, detour, or traffic restriction in effect on ${formattedDate} within 15 miles of ZIP 56303 (St. Cloud, MN).
+
+INCLUDE ALL IMPACT TYPES:
+- Full road closures, lane closures, bridge closures, detours
+- Utility work affecting traffic (water main, sewer, gas line work)
+- Lane shifts, lane reductions, flagging operations
+- Bus route detours and transit impacts
+- Construction-related traffic restrictions
+- Direction-specific lane closures (eastbound/westbound only)
+- Segment-specific impacts within larger projects
+- City street work, county road work, state highway work
+- Intermittent or recurring closures active on target date
+
+SEARCH COMPREHENSIVELY:
+- City engineering departments for local street/utility work
+- County public works for rural roads
+- MnDOT for state highways
+- Metro bus system for route changes
+- Utility companies for service work affecting roads
+- Local media traffic reports
 
 Output format: JSON array only, starting with [
 Each element MUST match this structure:
@@ -294,13 +339,15 @@ Each element MUST match this structure:
   "source_url": "https://..."
 }
 
-Constraints:
-- Exactly 9 results if available; otherwise return all verified (≥1).
-- Use ISO-8601 for all dates.
-- Do not include planned/future-only items; they must be active on ${formattedDate}.
-- Keep only items within 15 miles of 56303 centroid.
+CRITICAL REQUIREMENTS:
+- Exactly 9 results (include smaller utility work if needed to reach 9)
+- Use ISO-8601 for all dates (YYYY-MM-DD format)
+- Only include items active on ${formattedDate}
+- Within 15 miles of 56303 centroid (St. Cloud, MN)
+- De-duplicate only truly overlapping entries
+- Include specific source URLs where information was found
 
-Now search the web and return ONLY the JSON array.`
+Now search the web comprehensively and return ONLY the JSON array.`
 
     // Try the web search approach with fallback strategies
     let aiResponse: any = null

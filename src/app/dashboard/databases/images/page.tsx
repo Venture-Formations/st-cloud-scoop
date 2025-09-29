@@ -36,6 +36,7 @@ export default function ImagesDatabasePage() {
   const [tagSuggestions, setTagSuggestions] = useState<{[key: string]: any[]}>({})
   const [loadingSuggestions, setLoadingSuggestions] = useState<{[key: string]: boolean}>({})
   const [newTagInput, setNewTagInput] = useState<{[key: string]: string}>({})
+  const [loadingStockPhoto, setLoadingStockPhoto] = useState<{[key: string]: boolean}>({})
 
   useEffect(() => {
     fetchImages()
@@ -154,7 +155,10 @@ export default function ImagesDatabasePage() {
       ai_alt_text: image.ai_alt_text,
       ai_tags: image.ai_tags,
       credit: image.credit,
-      location: image.location,
+      license: image.license,
+      city: image.city,
+      source: image.source,
+      original_file_name: image.original_file_name,
       source_url: image.source_url
     })
   }
@@ -284,6 +288,52 @@ export default function ImagesDatabasePage() {
       setEditData({ ...editData, ai_tags: [...currentTags, newTag] })
       setNewTagInput(prev => ({ ...prev, [imageId]: '' }))
       setTagSuggestions(prev => ({ ...prev, [imageId]: [] }))
+    }
+  }
+
+  const handleStockPhotoLookup = async (imageId: string) => {
+    setLoadingStockPhoto(prev => ({ ...prev, [imageId]: true }))
+    try {
+      const response = await fetch('/api/images/reverse-lookup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ image_id: imageId })
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        if (data.results && data.results.length > 0) {
+          const bestResult = data.results[0]
+
+          // Auto-populate the source fields in editData
+          const updates: any = {}
+          if (bestResult.source_url) {
+            updates.source_url = bestResult.source_url
+          }
+          if (bestResult.source_name) {
+            updates.source = bestResult.source_name
+          }
+          if (bestResult.license_info) {
+            updates.license = bestResult.license_info
+          }
+          if (bestResult.creator) {
+            updates.credit = bestResult.creator
+          }
+
+          setEditData(prev => ({ ...prev, ...updates }))
+          alert(`Found ${data.results.length} potential source(s). Best match auto-populated.`)
+        } else {
+          alert('No stock photo sources found for this image.')
+        }
+      } else {
+        const errorData = await response.json()
+        alert(`Lookup failed: ${errorData.error || 'Unknown error'}`)
+      }
+    } catch (error) {
+      console.error('Stock photo lookup error:', error)
+      alert('Failed to perform reverse image lookup. Please try again.')
+    } finally {
+      setLoadingStockPhoto(prev => ({ ...prev, [imageId]: false }))
     }
   }
 
@@ -417,7 +467,13 @@ export default function ImagesDatabasePage() {
                     Tags
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Location
+                    City
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Source
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Original File Name
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Info
@@ -494,7 +550,7 @@ export default function ImagesDatabasePage() {
                             <div className="flex space-x-1">
                               <input
                                 type="text"
-                                placeholder="Type tag name..."
+                                placeholder="Describe what you see in the image..."
                                 value={newTagInput[image.id] || ''}
                                 onChange={(e) => {
                                   const value = e.target.value
@@ -517,9 +573,9 @@ export default function ImagesDatabasePage() {
                                     fetchTagSuggestions(newTag, image.id)
                                   }
                                 }}
-                                className="bg-green-600 text-white px-2 py-1 rounded text-xs hover:bg-green-700"
+                                className="bg-blue-600 text-white px-3 py-1 rounded text-xs hover:bg-blue-700"
                               >
-                                +
+                                Suggest
                               </button>
                             </div>
 
@@ -577,91 +633,190 @@ export default function ImagesDatabasePage() {
                       {editingImage === image.id ? (
                         <input
                           type="text"
-                          value={editData.location || ''}
-                          onChange={(e) => setEditData({ ...editData, location: e.target.value })}
-                          placeholder="Location"
+                          value={editData.city || ''}
+                          onChange={(e) => setEditData({ ...editData, city: e.target.value })}
+                          placeholder="City"
                           className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
                         />
                       ) : (
                         <div className="text-sm text-gray-900">
-                          {image.location || '-'}
+                          {image.city || '-'}
                         </div>
                       )}
                     </td>
 
                     <td className="px-4 py-4">
-                      <div className="text-sm text-gray-500 space-y-1">
-                        <div>{image.width}×{image.height}</div>
-                        <div className="flex flex-wrap gap-1">
-                          {image.faces_count > 0 && (
-                            <span className="bg-purple-100 text-purple-800 px-1 py-0.5 rounded text-xs">
-                              {image.faces_count} face{image.faces_count !== 1 ? 's' : ''}
-                            </span>
-                          )}
-                          {image.age_groups && image.age_groups.length > 0 && (
-                            <>
-                              {image.age_groups.map((ageGroup, idx) => (
-                                <span
-                                  key={idx}
-                                  className={`px-1 py-0.5 rounded text-xs ${
-                                    ageGroup.age_group === 'preschool' ? 'bg-pink-100 text-pink-800' :
-                                    ageGroup.age_group === 'elementary' ? 'bg-green-100 text-green-800' :
-                                    ageGroup.age_group === 'high_school' ? 'bg-blue-100 text-blue-800' :
-                                    ageGroup.age_group === 'adult' ? 'bg-indigo-100 text-indigo-800' :
-                                    ageGroup.age_group === 'older_adult' ? 'bg-gray-100 text-gray-800' :
-                                    'bg-gray-100 text-gray-800'
-                                  }`}
-                                  title={`${Math.round(ageGroup.conf * 100)}% confidence`}
-                                >
-                                  {ageGroup.count} {ageGroup.age_group}
-                                </span>
-                              ))}
-                            </>
-                          )}
+                      {editingImage === image.id ? (
+                        <input
+                          type="text"
+                          value={editData.source || ''}
+                          onChange={(e) => setEditData({ ...editData, source: e.target.value })}
+                          placeholder="Source"
+                          className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
+                        />
+                      ) : (
+                        <div className="text-sm text-gray-900">
+                          {image.source || '-'}
                         </div>
-                        {image.ocr_text && (
-                          <div className="mt-1 p-1 bg-gray-50 rounded text-xs max-w-xs">
-                            <span className="font-medium">OCR:</span> {image.ocr_text.substring(0, 100)}{image.ocr_text.length > 100 ? '...' : ''}
-                          </div>
-                        )}
-                        {image.ocr_entities && image.ocr_entities.length > 0 && (
-                          <div className="flex flex-wrap gap-1 mt-1">
-                            {image.ocr_entities.map((entity, idx) => (
-                              <span
-                                key={idx}
-                                className={`px-1 py-0.5 rounded text-xs ${
-                                  entity.type === 'ORG' ? 'bg-red-100 text-red-800' :
-                                  entity.type === 'PERSON' ? 'bg-yellow-100 text-yellow-800' :
-                                  entity.type === 'LOC' ? 'bg-green-100 text-green-800' :
-                                  entity.type === 'DATE' ? 'bg-blue-100 text-blue-800' :
-                                  entity.type === 'TIME' ? 'bg-purple-100 text-purple-800' :
-                                  'bg-gray-100 text-gray-800'
-                                }`}
-                                title={`${entity.type}: ${Math.round(entity.conf * 100)}% confidence`}
-                              >
-                                {entity.name}
-                              </span>
-                            ))}
-                          </div>
-                        )}
-                      </div>
+                      )}
                     </td>
 
                     <td className="px-4 py-4">
                       {editingImage === image.id ? (
-                        <div className="flex gap-2">
+                        <input
+                          type="text"
+                          value={editData.original_file_name || ''}
+                          onChange={(e) => setEditData({ ...editData, original_file_name: e.target.value })}
+                          placeholder="Original File Name"
+                          className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
+                        />
+                      ) : (
+                        <div className="text-sm text-gray-900">
+                          {image.original_file_name || '-'}
+                        </div>
+                      )}
+                    </td>
+
+                    <td className="px-4 py-4">
+                      {editingImage === image.id ? (
+                        <div className="text-sm space-y-2 max-w-xs">
+                          <div className="text-gray-500">
+                            <div>{image.width}×{image.height}</div>
+                          </div>
+
+                          {/* Additional editable fields when in edit mode */}
+                          <div className="space-y-2 border-t pt-2">
+                            <div>
+                              <label className="block text-xs font-medium text-gray-700 mb-1">Source URL:</label>
+                              <input
+                                type="url"
+                                value={editData.source_url || ''}
+                                onChange={(e) => setEditData({ ...editData, source_url: e.target.value })}
+                                placeholder="https://..."
+                                className="w-full px-2 py-1 border border-gray-300 rounded text-xs"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-xs font-medium text-gray-700 mb-1">License:</label>
+                              <input
+                                type="text"
+                                value={editData.license || ''}
+                                onChange={(e) => setEditData({ ...editData, license: e.target.value })}
+                                placeholder="e.g., Creative Commons"
+                                className="w-full px-2 py-1 border border-gray-300 rounded text-xs"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-xs font-medium text-gray-700 mb-1">Credit:</label>
+                              <input
+                                type="text"
+                                value={editData.credit || ''}
+                                onChange={(e) => setEditData({ ...editData, credit: e.target.value })}
+                                placeholder="Photographer/Creator"
+                                className="w-full px-2 py-1 border border-gray-300 rounded text-xs"
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="text-sm text-gray-500 space-y-1">
+                          <div>{image.width}×{image.height}</div>
+                          <div className="flex flex-wrap gap-1">
+                            {image.faces_count > 0 && (
+                              <span className="bg-purple-100 text-purple-800 px-1 py-0.5 rounded text-xs">
+                                {image.faces_count} face{image.faces_count !== 1 ? 's' : ''}
+                              </span>
+                            )}
+                            {image.age_groups && image.age_groups.length > 0 && (
+                              <>
+                                {image.age_groups.map((ageGroup, idx) => (
+                                  <span
+                                    key={idx}
+                                    className={`px-1 py-0.5 rounded text-xs ${
+                                      ageGroup.age_group === 'preschool' ? 'bg-pink-100 text-pink-800' :
+                                      ageGroup.age_group === 'elementary' ? 'bg-green-100 text-green-800' :
+                                      ageGroup.age_group === 'high_school' ? 'bg-blue-100 text-blue-800' :
+                                      ageGroup.age_group === 'adult' ? 'bg-indigo-100 text-indigo-800' :
+                                      ageGroup.age_group === 'older_adult' ? 'bg-gray-100 text-gray-800' :
+                                      'bg-gray-100 text-gray-800'
+                                    }`}
+                                    title={`${Math.round(ageGroup.conf * 100)}% confidence`}
+                                  >
+                                    {ageGroup.count} {ageGroup.age_group}
+                                  </span>
+                                ))}
+                              </>
+                            )}
+                          </div>
+                          {image.source_url && (
+                            <div className="text-xs text-blue-600 truncate" title={image.source_url}>
+                              <span className="font-medium">Source:</span> {image.source_url}
+                            </div>
+                          )}
+                          {image.license && (
+                            <div className="text-xs text-gray-600">
+                              <span className="font-medium">License:</span> {image.license}
+                            </div>
+                          )}
+                          {image.credit && (
+                            <div className="text-xs text-gray-600">
+                              <span className="font-medium">Credit:</span> {image.credit}
+                            </div>
+                          )}
+                          {image.ocr_text && (
+                            <div className="mt-1 p-1 bg-gray-50 rounded text-xs max-w-xs">
+                              <span className="font-medium">OCR:</span> {image.ocr_text.substring(0, 100)}{image.ocr_text.length > 100 ? '...' : ''}
+                            </div>
+                          )}
+                          {image.ocr_entities && image.ocr_entities.length > 0 && (
+                            <div className="flex flex-wrap gap-1 mt-1">
+                              {image.ocr_entities.map((entity, idx) => (
+                                <span
+                                  key={idx}
+                                  className={`px-1 py-0.5 rounded text-xs ${
+                                    entity.type === 'ORG' ? 'bg-red-100 text-red-800' :
+                                    entity.type === 'PERSON' ? 'bg-yellow-100 text-yellow-800' :
+                                    entity.type === 'LOC' ? 'bg-green-100 text-green-800' :
+                                    entity.type === 'DATE' ? 'bg-blue-100 text-blue-800' :
+                                    entity.type === 'TIME' ? 'bg-purple-100 text-purple-800' :
+                                    'bg-gray-100 text-gray-800'
+                                  }`}
+                                  title={`${entity.type}: ${Math.round(entity.conf * 100)}% confidence`}
+                                >
+                                  {entity.name}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </td>
+
+                    <td className="px-4 py-4">
+                      {editingImage === image.id ? (
+                        <div className="flex flex-col gap-2">
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => handleSaveEdit(image.id)}
+                              disabled={updating}
+                              className="bg-green-600 text-white px-3 py-1 rounded text-sm hover:bg-green-700 disabled:opacity-50"
+                            >
+                              {updating ? 'Saving...' : 'Save'}
+                            </button>
+                            <button
+                              onClick={handleCancelEdit}
+                              className="bg-gray-500 text-white px-3 py-1 rounded text-sm hover:bg-gray-600"
+                            >
+                              Cancel
+                            </button>
+                          </div>
                           <button
-                            onClick={() => handleSaveEdit(image.id)}
-                            disabled={updating}
-                            className="bg-green-600 text-white px-3 py-1 rounded text-sm hover:bg-green-700 disabled:opacity-50"
+                            onClick={() => handleStockPhotoLookup(image.id)}
+                            disabled={loadingStockPhoto[image.id]}
+                            className="bg-purple-600 text-white px-3 py-1 rounded text-sm hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                            title="Find original stock photo source"
                           >
-                            {updating ? 'Saving...' : 'Save'}
-                          </button>
-                          <button
-                            onClick={handleCancelEdit}
-                            className="bg-gray-500 text-white px-3 py-1 rounded text-sm hover:bg-gray-600"
-                          >
-                            Cancel
+                            {loadingStockPhoto[image.id] ? 'Looking up...' : 'Stock Photo'}
                           </button>
                         </div>
                       ) : (
@@ -730,8 +885,8 @@ export default function ImagesDatabasePage() {
             <div className="absolute bottom-0 left-0 right-0 bg-black bg-opacity-75 text-white p-4 rounded-b">
               <div className="text-sm">
                 <p className="font-semibold">{previewImage.ai_caption || 'No caption'}</p>
-                {previewImage.location && (
-                  <p className="text-gray-300">📍 {previewImage.location}</p>
+                {previewImage.city && (
+                  <p className="text-gray-300">📍 {previewImage.city}</p>
                 )}
                 <div className="flex items-center gap-4 mt-2 text-xs text-gray-400">
                   <span>{previewImage.width} × {previewImage.height}px</span>

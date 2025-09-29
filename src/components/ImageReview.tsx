@@ -37,10 +37,14 @@ export default function ImageReview({ uploadResults, onComplete, onClose, onUpda
   const [newTag, setNewTag] = useState('')
   const [location, setLocation] = useState('')
   const [ocrText, setOcrText] = useState('')
+  const [sourceUrl, setSourceUrl] = useState('')
+  const [license, setLicense] = useState('')
+  const [credit, setCredit] = useState('')
   const [isProcessing, setIsProcessing] = useState(false)
   const [tagSuggestions, setTagSuggestions] = useState<any[]>([])
   const [loadingSuggestions, setLoadingSuggestions] = useState(false)
   const [canAdjustVertical, setCanAdjustVertical] = useState(true)
+  const [loadingStockPhoto, setLoadingStockPhoto] = useState(false)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const imageRef = useRef<HTMLImageElement>(null)
 
@@ -60,11 +64,18 @@ export default function ImageReview({ uploadResults, onComplete, onClose, onUpda
         setTags(existingProcessed.tags)
         setLocation(existingProcessed.location)
         setOcrText(existingProcessed.ocrText)
+        // Initialize the new fields as empty since they're not in ProcessedImage yet
+        setSourceUrl('')
+        setLicense('')
+        setCredit('')
       } else {
         setCropOffset(0.5) // Default to center
         setTags(currentUpload.analysisResult.top_tags || [])
         setLocation('') // Default to empty
         setOcrText(currentUpload.analysisResult.ocr_text || '') // Initialize with OCR text from analysis
+        setSourceUrl('')
+        setLicense('')
+        setCredit('')
       }
     }
   }, [currentIndex, currentUpload, processedImages])
@@ -261,6 +272,68 @@ export default function ImageReview({ uploadResults, onComplete, onClose, onUpda
     setNewTag('')
   }
 
+  const handleStockPhotoLookup = async () => {
+    if (!currentUpload?.imageId) return
+
+    setLoadingStockPhoto(true)
+    try {
+      const response = await fetch('/api/images/reverse-lookup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          image_id: currentUpload.imageId
+        })
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        if (data.results && data.results.length > 0) {
+          const bestResult = data.results[0] // Use the first/best result
+
+          // Auto-populate the source fields
+          if (bestResult.source_url) {
+            setSourceUrl(bestResult.source_url)
+          }
+          if (bestResult.source_name) {
+            // Determine source based on the URL or source name
+            const sourceName = bestResult.source_name.toLowerCase()
+            if (sourceName.includes('shutterstock')) {
+              setSource('Shutterstock')
+            } else if (sourceName.includes('getty')) {
+              setSource('Getty Images')
+            } else if (sourceName.includes('unsplash')) {
+              setSource('Unsplash')
+            } else if (sourceName.includes('pexels')) {
+              setSource('Pexels')
+            } else if (sourceName.includes('pixabay')) {
+              setSource('Pixabay')
+            } else {
+              setSource(bestResult.source_name)
+            }
+          }
+          if (bestResult.license_info) {
+            setLicense(bestResult.license_info)
+          }
+          if (bestResult.creator) {
+            setCredit(bestResult.creator)
+          }
+
+          alert(`Found ${data.results.length} potential source(s). Best match auto-populated.`)
+        } else {
+          alert('No stock photo sources found for this image.')
+        }
+      } else {
+        const errorData = await response.json()
+        alert(`Lookup failed: ${errorData.error || 'Unknown error'}`)
+      }
+    } catch (error) {
+      console.error('Stock photo lookup error:', error)
+      alert('Failed to perform reverse image lookup. Please try again.')
+    } finally {
+      setLoadingStockPhoto(false)
+    }
+  }
+
   const handleFinish = async () => {
     saveCurrentImage() // Save current image before finishing
     setIsProcessing(true)
@@ -288,10 +361,12 @@ export default function ImageReview({ uploadResults, onComplete, onClose, onUpda
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             image_id: processed.imageId,
-            tags: processed.tags,
+            ai_tags: processed.tags,
             crop_v_offset: processed.cropOffset,
-            location: processed.location,
-            ocr_text: processed.ocrText
+            city: processed.location,
+            source_url: sourceUrl,
+            license: license,
+            credit: credit
           })
         })
       }
@@ -429,6 +504,103 @@ export default function ImageReview({ uploadResults, onComplete, onClose, onUpda
               </div>
             )}
 
+            {/* AI Determined Data Section */}
+            {currentUpload.analysisResult && (
+              <div className="mb-3 p-3 bg-gray-50 rounded">
+                <div className="flex justify-between items-center mb-2">
+                  <p className="font-medium text-gray-900 text-sm">AI Determined Data (Editable):</p>
+                  <button
+                    onClick={handleStockPhotoLookup}
+                    disabled={loadingStockPhoto}
+                    className="bg-purple-600 text-white px-3 py-1 rounded text-xs hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                    title="Find original stock photo source"
+                  >
+                    {loadingStockPhoto ? (
+                      <span className="flex items-center gap-1">
+                        <svg className="animate-spin h-3 w-3" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                        </svg>
+                        Looking up...
+                      </span>
+                    ) : (
+                      'Stock Photo'
+                    )}
+                  </button>
+                </div>
+                <div className="space-y-2 text-xs">
+                  {/* Faces Count */}
+                  {currentUpload.analysisResult.faces_count > 0 && (
+                    <div>
+                      <span className="font-medium text-gray-700">Faces:</span>
+                      <span className="text-gray-600 ml-1">{currentUpload.analysisResult.faces_count} detected</span>
+                    </div>
+                  )}
+
+                  {/* Age Groups */}
+                  {currentUpload.analysisResult.age_groups && currentUpload.analysisResult.age_groups.length > 0 && (
+                    <div>
+                      <span className="font-medium text-gray-700">Age Groups:</span>
+                      <div className="flex flex-wrap gap-1 mt-1">
+                        {currentUpload.analysisResult.age_groups.map((ageGroup, idx) => (
+                          <span
+                            key={idx}
+                            className={`px-2 py-1 rounded text-xs ${
+                              ageGroup.age_group === 'preschool' ? 'bg-pink-100 text-pink-800' :
+                              ageGroup.age_group === 'elementary' ? 'bg-green-100 text-green-800' :
+                              ageGroup.age_group === 'high_school' ? 'bg-blue-100 text-blue-800' :
+                              ageGroup.age_group === 'adult' ? 'bg-indigo-100 text-indigo-800' :
+                              ageGroup.age_group === 'older_adult' ? 'bg-gray-100 text-gray-800' :
+                              'bg-gray-100 text-gray-800'
+                            }`}
+                            title={`${Math.round(ageGroup.conf * 100)}% confidence`}
+                          >
+                            {ageGroup.count} {ageGroup.age_group}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Source URL */}
+                  <div>
+                    <label className="block font-medium text-gray-700 mb-1">Source URL:</label>
+                    <input
+                      type="url"
+                      value={sourceUrl}
+                      onChange={(e) => setSourceUrl(e.target.value)}
+                      placeholder="Enter source URL"
+                      className="w-full px-2 py-1 border border-gray-300 rounded"
+                    />
+                  </div>
+
+                  {/* License */}
+                  <div>
+                    <label className="block font-medium text-gray-700 mb-1">License:</label>
+                    <input
+                      type="text"
+                      value={license}
+                      onChange={(e) => setLicense(e.target.value)}
+                      placeholder="e.g., Creative Commons, Public Domain"
+                      className="w-full px-2 py-1 border border-gray-300 rounded"
+                    />
+                  </div>
+
+                  {/* Credit */}
+                  <div>
+                    <label className="block font-medium text-gray-700 mb-1">Credit:</label>
+                    <input
+                      type="text"
+                      value={credit}
+                      onChange={(e) => setCredit(e.target.value)}
+                      placeholder="e.g., Photographer name or organization"
+                      className="w-full px-2 py-1 border border-gray-300 rounded"
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Tag Management */}
             <div className="mb-3">
               <p className="text-sm font-medium text-gray-700 mb-2">Tags:</p>
@@ -454,14 +626,14 @@ export default function ImageReview({ uploadResults, onComplete, onClose, onUpda
                     value={newTag}
                     onChange={(e) => setNewTag(e.target.value)}
                     onKeyPress={(e) => e.key === 'Enter' && handleAddTag()}
-                    placeholder="Type tag name..."
+                    placeholder="Describe what you see in the image..."
                     className="flex-1 border border-gray-300 rounded px-2 py-1 text-sm"
                   />
                   <button
                     onClick={handleAddTag}
-                    className="bg-green-600 text-white px-3 py-1 rounded text-sm hover:bg-green-700"
+                    className="bg-blue-600 text-white px-3 py-1 rounded text-sm hover:bg-blue-700"
                   >
-                    +
+                    Suggest
                   </button>
                 </div>
 
@@ -509,14 +681,14 @@ export default function ImageReview({ uploadResults, onComplete, onClose, onUpda
               </div>
             </div>
 
-            {/* Location Field */}
+            {/* City Field */}
             <div className="mb-3">
-              <p className="text-sm font-medium text-gray-700 mb-2">Location:</p>
+              <p className="text-sm font-medium text-gray-700 mb-2">City:</p>
               <input
                 type="text"
                 value={location}
                 onChange={(e) => setLocation(e.target.value)}
-                placeholder="e.g., St. Cloud Police Department"
+                placeholder="e.g., St. Cloud"
                 className="w-full border border-gray-300 rounded px-2 py-1 text-sm"
               />
             </div>

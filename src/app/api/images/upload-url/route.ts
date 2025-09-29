@@ -37,6 +37,7 @@ export async function POST(request: NextRequest) {
       .insert({
         id: imageId,
         object_key: objectKey,
+        original_file_name: filename,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       })

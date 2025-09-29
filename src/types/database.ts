@@ -449,7 +449,9 @@ export interface Image {
   source_url: string | null
   license: string | null
   credit: string | null
-  location: string | null
+  city: string | null                   // Changed from location to city
+  source: string | null                 // New field for source
+  original_file_name: string | null     // New field for original file name
   faces_count: number
   has_text: boolean
   dominant_colors: string[] | null
@@ -538,7 +540,9 @@ export interface ImageReviewRequest {
   ai_tags_scored?: ImageTag[]
   license?: string
   credit?: string
-  location?: string
+  city?: string
+  source?: string
+  original_file_name?: string
   crop_v_offset?: number
   source_url?: string
 }

@@ -17,8 +17,11 @@ export async function POST(request: NextRequest) {
       ai_tags_scored,
       license,
       credit,
-      location,
+      city,
+      location, // Keep for backwards compatibility
+      source,
       source_url,
+      original_file_name,
       ocr_text
     } = body
 
@@ -51,8 +54,11 @@ export async function POST(request: NextRequest) {
     if (ai_tags_scored !== undefined) updateData.ai_tags_scored = ai_tags_scored
     if (license !== undefined) updateData.license = license
     if (credit !== undefined) updateData.credit = credit
-    if (location !== undefined) updateData.location = location
+    if (city !== undefined) updateData.city = city
+    if (location !== undefined) updateData.city = location // Backwards compatibility
+    if (source !== undefined) updateData.source = source
     if (source_url !== undefined) updateData.source_url = source_url
+    if (original_file_name !== undefined) updateData.original_file_name = original_file_name
     if (crop_v_offset !== undefined) updateData.crop_v_offset = crop_v_offset
     if (ocr_text !== undefined) updateData.ocr_text = ocr_text
 

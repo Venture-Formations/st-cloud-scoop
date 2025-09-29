@@ -9,51 +9,94 @@ function getPuzzleNumber(targetDate: string): number {
   return 1 + days
 }
 
-// Fetch and parse Wordle answer from Tom's Guide archive
+// Fetch and parse Wordle answer from Tom's Guide current day page
 async function getWordleAnswer(dateStr: string): Promise<string | null> {
   try {
     const number = getPuzzleNumber(dateStr)
     console.log(`Looking for Wordle #${number} for date ${dateStr}`)
 
-    const response = await fetch("https://www.tomsguide.com/news/wordle-answers-all-past")
+    const response = await fetch("https://www.tomsguide.com/news/what-is-todays-wordle-answer")
 
     if (!response.ok) {
-      console.error(`Failed to fetch Tom's Guide archive: ${response.status} ${response.statusText}`)
+      console.error(`Failed to fetch Tom's Guide Wordle page: ${response.status} ${response.statusText}`)
       return null
     }
 
     const html = await response.text()
+    console.log(`Fetched Tom's Guide page, content length: ${html.length}`)
 
-    // Look for the puzzle number in the text using regex
-    const regex = new RegExp(`Wordle\\s+#${number}\\D+([A-Z]{5})`, "i")
-    const match = html.match(regex)
-
-    if (match) {
-      const word = match[1].toUpperCase()
-      console.log(`Found Wordle #${number}: ${word}`)
-      return word
-    }
-
-    // Alternative parsing using cheerio if regex fails
+    // Load HTML with cheerio for better parsing
     const $ = cheerio.load(html)
 
-    // Look through all text content for the puzzle number
+    // Look for the current Wordle answer in various possible formats
     let foundWord: string | null = null
-    $('*').each((_, element) => {
-      const text = $(element).text()
-      const match = text.match(new RegExp(`Wordle\\s+#${number}[^A-Z]*([A-Z]{5})`, "i"))
+
+    // Method 1: Look for text patterns that indicate the answer
+    const answerPatterns = [
+      /today.s\s+wordle\s+answer\s+is\s+([A-Z]{5})/i,
+      /wordle\s+answer\s+today\s+is\s+([A-Z]{5})/i,
+      /answer\s+is\s+([A-Z]{5})/i,
+      /wordle\s+#?\d+\s+answer\s*:\s*([A-Z]{5})/i,
+      /solution\s+is\s+([A-Z]{5})/i,
+      /the\s+word\s+is\s+([A-Z]{5})/i
+    ]
+
+    for (const pattern of answerPatterns) {
+      const match = html.match(pattern)
       if (match) {
         foundWord = match[1].toUpperCase()
-        return false // Break out of loop
+        console.log(`Found answer via pattern "${pattern.source}": ${foundWord}`)
+        break
       }
-    })
+    }
+
+    // Method 2: Look in specific HTML elements that commonly contain the answer
+    if (!foundWord) {
+      const selectors = [
+        'h1, h2, h3, h4, h5, h6',
+        '.article-content',
+        '.entry-content',
+        'p strong',
+        'p b',
+        '.highlight',
+        '.answer'
+      ]
+
+      for (const selector of selectors) {
+        $(selector).each((_, element) => {
+          const text = $(element).text()
+          for (const pattern of answerPatterns) {
+            const match = text.match(pattern)
+            if (match) {
+              foundWord = match[1].toUpperCase()
+              console.log(`Found answer in ${selector}: ${foundWord}`)
+              return false // Break out of loops
+            }
+          }
+        })
+        if (foundWord) break
+      }
+    }
+
+    // Method 3: Look for puzzle number specific to today
+    if (!foundWord) {
+      const puzzlePattern = new RegExp(`wordle\\s+#?${number}[^a-z]*([A-Z]{5})`, "gi")
+      const match = html.match(puzzlePattern)
+      if (match && match[0]) {
+        const wordMatch = match[0].match(/([A-Z]{5})/)
+        if (wordMatch) {
+          foundWord = wordMatch[1].toUpperCase()
+          console.log(`Found answer via puzzle number #${number}: ${foundWord}`)
+        }
+      }
+    }
 
     if (foundWord) {
-      console.log(`Found Wordle #${number} via cheerio: ${foundWord}`)
+      console.log(`Successfully found Wordle #${number}: ${foundWord}`)
       return foundWord
     }
 
-    console.log(`No Wordle answer found for #${number} (${dateStr})`)
+    console.log(`No Wordle answer found for #${number} (${dateStr}) on Tom's Guide current page`)
     return null
 
   } catch (error) {

@@ -330,6 +330,11 @@ export class MailerLiteService {
           if (diningHtml) {
             sectionsHtml += diningHtml
           }
+        } else if (section.name === 'Road Work') {
+          const roadWorkHtml = await this.generateRoadWorkSection(campaign)
+          if (roadWorkHtml) {
+            sectionsHtml += roadWorkHtml
+          }
         }
       }
     } else {
@@ -1158,6 +1163,45 @@ ${sectionsHtml}
 
     } catch (error) {
       console.error('MailerLite - Error generating Dining Deals section:', error)
+      return ''
+    }
+  }
+
+  async generateRoadWorkSection(campaign: any): Promise<string> {
+    try {
+      console.log('MailerLite - Generating Road Work section for campaign:', campaign?.id)
+
+      // Import road work functions
+      const { getRoadWorkItemsForCampaign, generateRoadWorkHTML } = await import('@/lib/road-work-manager')
+
+      // Get existing road work items for this campaign
+      const existingRoadWorkItems = await getRoadWorkItemsForCampaign(campaign.id)
+
+      if (!existingRoadWorkItems || existingRoadWorkItems.length === 0) {
+        console.log('MailerLite - No road work items found for campaign')
+        return ''
+      }
+
+      console.log(`MailerLite - Using ${existingRoadWorkItems.length} road work items for campaign`)
+
+      // Convert normalized items to the format expected by generateRoadWorkHTML
+      const itemsForHtml = existingRoadWorkItems.map(item => ({
+        road_name: item.road_name,
+        road_range: item.road_range || '',
+        city_or_township: item.city_or_township || '',
+        reason: item.reason || '',
+        start_date: item.start_date || '',
+        expected_reopen: item.expected_reopen || '',
+        source_url: item.source_url || ''
+      }))
+
+      const roadWorkHtml = generateRoadWorkHTML(itemsForHtml)
+      console.log('MailerLite - Generated Road Work HTML, length:', roadWorkHtml.length)
+
+      return roadWorkHtml
+
+    } catch (error) {
+      console.error('MailerLite - Error generating Road Work section:', error)
       return ''
     }
   }

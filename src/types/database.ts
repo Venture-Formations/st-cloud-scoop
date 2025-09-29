@@ -275,21 +275,37 @@ export interface WeatherForecast {
   updated_at: string
 }
 
+// Normalized road work item (now stored in separate table rows)
 export interface RoadWorkItem {
+  id: string
+  campaign_id: string
   road_name: string
-  road_range: string
-  city_or_township: string
-  reason: string
-  start_date: string
-  expected_reopen: string
-  source_url: string
+  road_range: string | null
+  city_or_township: string | null
+  reason: string | null
+  start_date: string | null
+  expected_reopen: string | null
+  source_url: string | null
+  display_order: number | null
+  is_active: boolean
+  created_at: string
+  updated_at: string
 }
 
+// Legacy interface for backward compatibility (deprecated)
 export interface RoadWorkData {
   id: string
   campaign_id: string
   generated_at: string
-  road_work_data: RoadWorkItem[]
+  road_work_data: Array<{
+    road_name: string
+    road_range: string | null
+    city_or_township: string | null
+    reason: string | null
+    start_date: string | null
+    expected_reopen: string | null
+    source_url: string | null
+  }>
   html_content: string
   is_active: boolean
   created_at: string

@@ -5,7 +5,7 @@ import { supabaseAdmin } from '@/lib/supabase'
 import { getWeatherForCampaign } from '@/lib/weather-manager'
 import { selectPropertiesForCampaign, getSelectedPropertiesForCampaign } from '@/lib/vrbo-selector'
 import { selectDiningDealsForCampaign, getDiningDealsForCampaign } from '@/lib/dining-selector'
-import { generateDailyRoadWork } from '@/lib/road-work-manager'
+import { generateDailyRoadWork, getRoadWorkItemsForCampaign, storeRoadWorkItems, generateRoadWorkHTML } from '@/lib/road-work-manager'
 
 export async function GET(
   request: NextRequest,
@@ -658,8 +658,26 @@ async function generateRoadWorkSection(campaign: any): Promise<string> {
   try {
     console.log('Generating Road Work section for campaign:', campaign?.id)
 
-    // First, try to find existing road work data for this campaign
-    const { data: existingRoadWork } = await supabaseAdmin
+    // First, try to find existing road work items for this campaign (normalized approach)
+    const existingRoadWorkItems = await getRoadWorkItemsForCampaign(campaign.id)
+
+    if (existingRoadWorkItems && existingRoadWorkItems.length > 0) {
+      console.log(`Using existing ${existingRoadWorkItems.length} road work items for campaign`)
+      // Convert normalized items to the format expected by generateRoadWorkHTML
+      const itemsForHtml = existingRoadWorkItems.map(item => ({
+        road_name: item.road_name,
+        road_range: item.road_range || '',
+        city_or_township: item.city_or_township || '',
+        reason: item.reason || '',
+        start_date: item.start_date || '',
+        expected_reopen: item.expected_reopen || '',
+        source_url: item.source_url || ''
+      }))
+      return generateRoadWorkHTML(itemsForHtml)
+    }
+
+    // If no existing normalized data, check legacy road_work_data table
+    const { data: legacyRoadWork } = await supabaseAdmin
       .from('road_work_data')
       .select('*')
       .eq('is_active', true)
@@ -667,9 +685,9 @@ async function generateRoadWorkSection(campaign: any): Promise<string> {
       .limit(1)
       .single()
 
-    if (existingRoadWork && existingRoadWork.html_content) {
-      console.log(`Using existing road work data (ID: ${existingRoadWork.id})`)
-      return existingRoadWork.html_content
+    if (legacyRoadWork && legacyRoadWork.html_content) {
+      console.log(`Using existing legacy road work data (ID: ${legacyRoadWork.id})`)
+      return legacyRoadWork.html_content
     }
 
     // If no existing data, generate new road work data
@@ -689,6 +707,12 @@ async function generateRoadWorkSection(campaign: any): Promise<string> {
 
     // Generate road work data using AI
     const roadWorkData = await generateDailyRoadWork(formattedDate)
+
+    // Store the items in the normalized database structure
+    if (roadWorkData.road_work_data && roadWorkData.road_work_data.length > 0) {
+      console.log(`Storing ${roadWorkData.road_work_data.length} road work items in normalized structure`)
+      await storeRoadWorkItems(roadWorkData.road_work_data, campaign.id)
+    }
 
     console.log(`Generated road work section with ${roadWorkData.road_work_data.length} items`)
     return roadWorkData.html_content

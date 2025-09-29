@@ -39,11 +39,36 @@ async function searchRealRoadWorkData(targetDate: string): Promise<string> {
   return realSearchResults
 }
 
+// Type for HTML generation (minimal road work item data)
+type RoadWorkItemForHTML = {
+  road_name: string
+  road_range: string | null
+  city_or_township: string | null
+  reason: string | null
+  start_date: string | null
+  expected_reopen: string | null
+  source_url: string | null
+}
+
 /**
  * Generate HTML content for Road Work section
  */
-export function generateRoadWorkHTML(roadWorkItems: RoadWorkItem[]): string {
-  // Create 3x3 grid layout matching the example format
+export function generateRoadWorkHTML(roadWorkItems: RoadWorkItemForHTML[]): string {
+  // Handle empty or no road work data
+  if (!roadWorkItems || roadWorkItems.length === 0) {
+    return `
+<table width="100%" cellpadding="0" cellspacing="0" style="border: 1px solid #f7f7f7; border-radius: 10px; margin-top: 10px; max-width: 990px; margin: 0 auto; background-color: #f7f7f7; font-family: Arial, sans-serif;">
+  <tr>
+    <td style="padding: 15px; text-align: center;">
+      <h2 style="font-size: 1.625em; line-height: 1.16em; font-family: Arial, sans-serif; color: #1877F2; margin: 0 0 10px 0;">Road Work</h2>
+      <p style="margin: 0; font-size: 16px; color: #666;">No major road closures or construction impacts reported for the St. Cloud area today.</p>
+    </td>
+  </tr>
+</table>
+<br>`
+  }
+
+  // Create responsive grid layout that adapts to the number of items
   const rows = []
 
   for (let i = 0; i < roadWorkItems.length; i += 3) {
@@ -59,12 +84,12 @@ export function generateRoadWorkHTML(roadWorkItems: RoadWorkItem[]): string {
           </tr>
           <tr>
             <td style='padding: 16px; font-size: 16px; line-height: 26px; text-align: center;'>
-              <div style='text-align: center;'>${item.road_range}</div>
+              <div style='text-align: center;'>${item.road_range || 'N/A'}</div>
               <div style='font-size: 15px; line-height: 20px; text-align: center;'>
-                ${item.reason} (<a href='${item.source_url}' style='color:#000; text-decoration: underline;'>link</a>)
+                ${item.reason || 'Road work'} (<a href='${item.source_url || '#'}' style='color:#000; text-decoration: underline;'>link</a>)
               </div>
               <div style='margin-top: 8px; font-size: 14px; text-align: center;'>
-                ${item.start_date} → ${item.expected_reopen}   📍 ${item.city_or_township}
+                ${item.start_date || 'TBD'} → ${item.expected_reopen || 'TBD'}   📍 ${item.city_or_township || 'Area'}
               </div>
             </td>
           </tr>
@@ -89,7 +114,7 @@ export function generateRoadWorkHTML(roadWorkItems: RoadWorkItem[]): string {
 /**
  * Generate fallback road work data when AI fails
  */
-function generateFallbackRoadWorkData(targetDate: string): RoadWorkItem[] {
+function generateFallbackRoadWorkData(targetDate: string): RoadWorkItemForHTML[] {
   const startDateShort = targetDate.split(',')[0] || 'Sep 25'
 
   return [
@@ -178,7 +203,68 @@ function generateFallbackRoadWorkData(targetDate: string): RoadWorkItem[] {
 }
 
 /**
- * Store road work data in the database
+ * Store road work items in the normalized database structure
+ */
+export async function storeRoadWorkItems(roadWorkItems: Array<{
+  road_name: string
+  road_range: string | null
+  city_or_township: string | null
+  reason: string | null
+  start_date: string | null
+  expected_reopen: string | null
+  source_url: string | null
+}>, campaignId: string): Promise<RoadWorkItem[]> {
+  console.log(`Storing ${roadWorkItems.length} road work items in normalized database...`)
+
+  // Prepare items for insertion with display order
+  const itemsToInsert = roadWorkItems.map((item, index) => ({
+    campaign_id: campaignId,
+    road_name: item.road_name,
+    road_range: item.road_range,
+    city_or_township: item.city_or_township,
+    reason: item.reason,
+    start_date: item.start_date,
+    expected_reopen: item.expected_reopen,
+    source_url: item.source_url,
+    display_order: index + 1,
+    is_active: true
+  }))
+
+  const { data, error } = await supabaseAdmin
+    .from('road_work_items')
+    .insert(itemsToInsert)
+    .select()
+
+  if (error) {
+    console.error('Failed to store road work items:', error)
+    throw new Error(`Failed to store road work items: ${error.message}`)
+  }
+
+  console.log('✅ Road work items stored successfully:', data?.length || 0, 'items')
+  return data || []
+}
+
+/**
+ * Get road work items for a campaign
+ */
+export async function getRoadWorkItemsForCampaign(campaignId: string): Promise<RoadWorkItem[]> {
+  const { data, error } = await supabaseAdmin
+    .from('road_work_items')
+    .select('*')
+    .eq('campaign_id', campaignId)
+    .eq('is_active', true)
+    .order('display_order', { ascending: true })
+
+  if (error) {
+    console.error('Failed to get road work items:', error)
+    return []
+  }
+
+  return data || []
+}
+
+/**
+ * Store road work data in the database (LEGACY - for backward compatibility)
  */
 export async function storeRoadWorkData(roadWorkData: Omit<RoadWorkData, 'id' | 'created_at' | 'updated_at'>, campaignId?: string): Promise<RoadWorkData> {
   console.log('Storing road work data in database...')
@@ -479,24 +565,22 @@ CRITICAL: Only return real, verified road work from actual government sources. I
 
     console.log(`Found ${roadWorkItems.length} total road work items from web search`)
 
-    // If we have more than 9, take the first 9 (most significant ones should be first)
+    // Filter out placeholder entries to avoid repetitive content
+    roadWorkItems = roadWorkItems.filter(item =>
+      item.road_name !== 'No Additional Closures' &&
+      item.road_name !== 'No Additional Major Closures' &&
+      item.reason !== 'No additional major closures reported' &&
+      item.reason !== 'No major closures reported'
+    )
+
+    // If we have more than 9 real items, take the first 9 (most significant ones should be first)
     if (roadWorkItems.length > 9) {
-      console.log(`Selecting top 9 items from ${roadWorkItems.length} found items`)
+      console.log(`Selecting top 9 real items from ${roadWorkItems.length} found items`)
       roadWorkItems = roadWorkItems.slice(0, 9)
     }
 
-    // If we have fewer than 9, pad with placeholder items
-    while (roadWorkItems.length < 9) {
-      roadWorkItems.push({
-        road_name: 'No Additional Closures',
-        road_range: 'N/A',
-        city_or_township: 'St. Cloud Area',
-        reason: 'No additional major closures reported',
-        start_date: targetDate.split(',')[0],
-        expected_reopen: 'N/A',
-        source_url: 'https://www.dot.state.mn.us/d3/'
-      })
-    }
+    // Use real items only - no padding with placeholders
+    console.log(`Using ${roadWorkItems.length} real road work items (no filler content)`)
 
     console.log(`Successfully parsed ${roadWorkItems.length} road work items`)
 

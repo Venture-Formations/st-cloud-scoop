@@ -1,28 +1,60 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getWordleDataForDate } from '@/lib/wordle-scraper'
+import * as cheerio from 'cheerio'
 
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
     const targetDate = searchParams.get('date') || '2025-09-29'
 
-    console.log('🧩 Testing AI-powered Wordle scraping for:', targetDate)
+    console.log('🧩 Testing AI-powered Wordle content extraction for:', targetDate)
 
-    // Test the AI-powered scraping
-    const wordleData = await getWordleDataForDate(targetDate)
-    console.log('AI scraping result:', wordleData)
+    // Fetch the page content to see what AI is analyzing
+    const response = await fetch("https://www.tomsguide.com/news/what-is-todays-wordle-answer", {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+        'Accept-Language': 'en-US,en;q=0.5',
+        'Accept-Encoding': 'gzip, deflate, br',
+        'Connection': 'keep-alive',
+        'Upgrade-Insecure-Requests': '1'
+      }
+    })
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch: ${response.status}`)
+    }
+
+    const html = await response.text()
+    const $ = cheerio.load(html)
+
+    // Extract the same content that the AI would analyze
+    $('script, style, nav, header, footer, .advertisement, .ad').remove()
+    const articleText = $('.article-content, .entry-content, main, article').text() || $('body').text()
+    const contentForAI = articleText.substring(0, 4000)
+
+    // Look for "CIVIL" and "REMAI" in the content
+    const civilMatches = contentForAI.match(/CIVIL/g) || []
+    const remaiMatches = contentForAI.match(/REMAI/g) || []
+    const remainsMatches = contentForAI.match(/REMAIN[A-Z]*/gi) || []
 
     return NextResponse.json({
       success: true,
       date: targetDate,
-      wordleData: wordleData,
+      contentLength: contentForAI.length,
+      contentPreview: contentForAI.substring(0, 500),
+      wordAnalysis: {
+        civilCount: civilMatches.length,
+        remaiCount: remaiMatches.length,
+        remainsWords: remainsMatches,
+        allFiveLetterWords: contentForAI.match(/\b[A-Z]{5}\b/g) || []
+      },
       debug: {
-        message: 'Check Vercel function logs for detailed AI analysis output'
+        message: 'Content analysis to understand what AI is seeing'
       }
     })
 
   } catch (error) {
-    console.error('❌ AI Wordle scraping test failed:', error)
+    console.error('❌ Content analysis test failed:', error)
 
     return NextResponse.json({
       success: false,

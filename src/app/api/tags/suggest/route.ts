@@ -9,7 +9,7 @@ interface TagSuggestion {
 
 export async function POST(request: NextRequest) {
   try {
-    const { input } = await request.json()
+    const { input, existing_tags = [] } = await request.json()
 
     if (!input || typeof input !== 'string') {
       return NextResponse.json(
@@ -18,7 +18,11 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const prompt = `Given the user input "${input}", suggest 5-8 relevant image tags in the proper format.
+    const excludeText = existing_tags.length > 0
+      ? `\n\nDO NOT suggest any of these existing tags: ${existing_tags.join(', ')}`
+      : ''
+
+    const prompt = `Given the user input "${input}", suggest 5-8 relevant image tags in the proper format.${excludeText}
 
 Return ONLY a JSON array of tag suggestions with this exact structure:
 [
@@ -76,14 +80,15 @@ Return valid JSON array only, no other text.`
         throw new Error('Response is not an array')
       }
 
-      // Validate each suggestion
+      // Validate each suggestion and filter out existing tags
       const validSuggestions = suggestions.filter(suggestion =>
         suggestion.formatted_tag &&
         suggestion.display_name &&
-        typeof suggestion.confidence === 'number'
+        typeof suggestion.confidence === 'number' &&
+        !existing_tags.includes(suggestion.formatted_tag) // Filter out existing tags
       )
 
-      // Add the typed word itself as a suggestion in proper format
+      // Add the typed word itself as a suggestion in proper format (if not already tagged)
       const inputFormatted = input.toLowerCase().replace(/\s+/g, '_')
       const directSuggestion = {
         formatted_tag: `object_${inputFormatted}`,
@@ -91,10 +96,14 @@ Return valid JSON array only, no other text.`
         confidence: 0.95
       }
 
-      // Add direct suggestion at the beginning if it's not already included
-      const finalSuggestions = [directSuggestion, ...validSuggestions.filter(s =>
-        s.formatted_tag !== directSuggestion.formatted_tag
-      )]
+      // Add direct suggestion at the beginning if it's not already included and not in existing tags
+      const shouldIncludeDirectSuggestion =
+        !existing_tags.includes(directSuggestion.formatted_tag) &&
+        !validSuggestions.some(s => s.formatted_tag === directSuggestion.formatted_tag)
+
+      const finalSuggestions = shouldIncludeDirectSuggestion
+        ? [directSuggestion, ...validSuggestions]
+        : validSuggestions
 
       return NextResponse.json({ suggestions: finalSuggestions })
 
@@ -104,7 +113,7 @@ Return valid JSON array only, no other text.`
 
       // Fallback: create multiple suggestions from input
       const inputFormatted = input.toLowerCase().replace(/\s+/g, '_')
-      const fallbackSuggestions = [
+      const allFallbackSuggestions = [
         {
           formatted_tag: `object_${inputFormatted}`,
           display_name: `Object: ${input}`,
@@ -121,6 +130,11 @@ Return valid JSON array only, no other text.`
           confidence: 0.7
         }
       ]
+
+      // Filter out existing tags from fallback suggestions
+      const fallbackSuggestions = allFallbackSuggestions.filter(
+        suggestion => !existing_tags.includes(suggestion.formatted_tag)
+      )
 
       return NextResponse.json({
         suggestions: fallbackSuggestions,

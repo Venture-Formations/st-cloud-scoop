@@ -252,7 +252,10 @@ export default function ImageReview({ uploadResults, onComplete, onClose, onUpda
       const response = await fetch('/api/tags/suggest', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ input })
+        body: JSON.stringify({
+          input,
+          existing_tags: tags // Pass existing tags to exclude duplicates
+        })
       })
 
       if (response.ok) {
@@ -512,7 +515,6 @@ export default function ImageReview({ uploadResults, onComplete, onClose, onUpda
             {currentUpload.analysisResult && (
               <div className="mb-3 p-3 bg-gray-50 rounded">
                 <div className="flex justify-between items-center mb-2">
-                  <p className="font-medium text-gray-900 text-sm">AI Determined Data (Editable):</p>
                   <button
                     onClick={handleStockPhotoLookup}
                     disabled={loadingStockPhoto}

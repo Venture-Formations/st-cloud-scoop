@@ -160,77 +160,82 @@ export class GoogleVisionService {
   }
 
   /**
-   * Process Vision API results into our standard format
+   * Process Vision API results into our standard format - simplified to return more results
    */
   private processVisionResults(webDetection: any, imageAnalysis: any): VisionSearchResult[] {
     const results: VisionSearchResult[] = []
 
-    // Process web entities (potential sources)
-    if (webDetection?.webEntities) {
-      for (const entity of webDetection.webEntities) {
-        if (entity.score && entity.score > 0.5) {
-          // Try to find corresponding pages
-          const relatedPages = webDetection.pagesWithMatchingImages || []
-          const matchingPage = relatedPages.find((page: any) =>
-            page.pageTitle?.toLowerCase().includes(entity.description?.toLowerCase() || '')
-          )
+    console.log('Processing Vision results:')
+    console.log('- Web entities:', webDetection?.webEntities?.length || 0)
+    console.log('- Pages with matching images:', webDetection?.pagesWithMatchingImages?.length || 0)
+    console.log('- Visually similar images:', webDetection?.visuallySimilarImages?.length || 0)
 
-          if (matchingPage) {
-            const sourceInfo = this.extractSourceInfo(matchingPage.url, matchingPage.pageTitle)
-            results.push({
-              source_url: matchingPage.url,
-              source_name: sourceInfo.source,
-              title: matchingPage.pageTitle,
-              creator: sourceInfo.creator,
-              license_info: sourceInfo.license,
-              similarity_score: entity.score,
-              thumbnail_url: matchingPage.fullMatchingImages?.[0]?.url
-            })
+    // Process ALL pages with matching images (this is the most important for reverse search)
+    if (webDetection?.pagesWithMatchingImages) {
+      console.log('Processing pages with matching images...')
+      for (const page of webDetection.pagesWithMatchingImages) {
+        if (page.url) {
+          const sourceInfo = this.extractSourceInfo(page.url, page.pageTitle || '')
+          const result = {
+            source_url: page.url,
+            source_name: sourceInfo.source,
+            title: page.pageTitle || '',
+            creator: sourceInfo.creator,
+            license_info: sourceInfo.license,
+            similarity_score: 0.8, // Default high score for page matches
+            thumbnail_url: page.fullMatchingImages?.[0]?.url
           }
+          results.push(result)
+          console.log(`Added page: ${sourceInfo.source} - ${page.url}`)
         }
       }
     }
 
-    // Process pages with matching images
-    if (webDetection?.pagesWithMatchingImages) {
-      for (const page of webDetection.pagesWithMatchingImages.slice(0, 10)) {
-        if (!results.find(r => r.source_url === page.url)) {
-          const sourceInfo = this.extractSourceInfo(page.url, page.pageTitle)
-          results.push({
-            source_url: page.url,
-            source_name: sourceInfo.source,
-            title: page.pageTitle,
-            creator: sourceInfo.creator,
-            license_info: sourceInfo.license,
-            similarity_score: 0.7, // Default score for page matches
-            thumbnail_url: page.fullMatchingImages?.[0]?.url
-          })
+    // Process web entities (lower score but still valuable)
+    if (webDetection?.webEntities) {
+      console.log('Processing web entities...')
+      for (const entity of webDetection.webEntities) {
+        if (entity.description && entity.score && entity.score > 0.3) {
+          // Create a generic result for the entity
+          const result = {
+            source_url: `https://www.google.com/search?q=${encodeURIComponent(entity.description)}`,
+            source_name: entity.description,
+            title: `Web Entity: ${entity.description}`,
+            similarity_score: entity.score,
+            license_info: 'Unknown License'
+          }
+          results.push(result)
+          console.log(`Added entity: ${entity.description} (score: ${entity.score})`)
         }
       }
     }
 
     // Process visually similar images
     if (webDetection?.visuallySimilarImages) {
-      for (const similar of webDetection.visuallySimilarImages.slice(0, 5)) {
-        // Try to extract source from image URL
-        const sourceInfo = this.extractSourceInfo(similar.url, '')
-        if (sourceInfo.source !== 'Unknown Source') {
-          results.push({
+      console.log('Processing visually similar images...')
+      for (const similar of webDetection.visuallySimilarImages.slice(0, 10)) {
+        if (similar.url) {
+          const sourceInfo = this.extractSourceInfo(similar.url, '')
+          const result = {
             source_url: similar.url,
             source_name: sourceInfo.source,
             license_info: sourceInfo.license,
             similarity_score: 0.6,
-            thumbnail_url: similar.url
-          })
+            thumbnail_url: similar.url,
+            title: 'Visually Similar Image'
+          }
+          results.push(result)
+          console.log(`Added similar: ${sourceInfo.source} - ${similar.url}`)
         }
       }
     }
 
-    // Sort by similarity score and remove duplicates
+    // Remove duplicates by URL and sort by similarity score
     const uniqueResults = results.filter((result, index, self) =>
       index === self.findIndex(r => r.source_url === result.source_url)
     )
 
+    console.log(`Final results: ${uniqueResults.length} unique items`)
     return uniqueResults.sort((a, b) => (b.similarity_score || 0) - (a.similarity_score || 0))
   }
 

@@ -38,6 +38,7 @@ export default function ImageReview({ uploadResults, onComplete, onClose, onUpda
   const [location, setLocation] = useState('')
   const [ocrText, setOcrText] = useState('')
   const [sourceUrl, setSourceUrl] = useState('')
+  const [source, setSource] = useState('')
   const [license, setLicense] = useState('')
   const [credit, setCredit] = useState('')
   const [isProcessing, setIsProcessing] = useState(false)
@@ -66,6 +67,7 @@ export default function ImageReview({ uploadResults, onComplete, onClose, onUpda
         setOcrText(existingProcessed.ocrText)
         // Initialize the new fields as empty since they're not in ProcessedImage yet
         setSourceUrl('')
+        setSource('')
         setLicense('')
         setCredit('')
       } else {
@@ -74,6 +76,7 @@ export default function ImageReview({ uploadResults, onComplete, onClose, onUpda
         setLocation('') // Default to empty
         setOcrText(currentUpload.analysisResult.ocr_text || '') // Initialize with OCR text from analysis
         setSourceUrl('')
+        setSource('')
         setLicense('')
         setCredit('')
       }
@@ -365,6 +368,7 @@ export default function ImageReview({ uploadResults, onComplete, onClose, onUpda
             crop_v_offset: processed.cropOffset,
             city: processed.location,
             source_url: sourceUrl,
+            source: source,
             license: license,
             credit: credit
           })
@@ -570,6 +574,18 @@ export default function ImageReview({ uploadResults, onComplete, onClose, onUpda
                       value={sourceUrl}
                       onChange={(e) => setSourceUrl(e.target.value)}
                       placeholder="Enter source URL"
+                      className="w-full px-2 py-1 border border-gray-300 rounded"
+                    />
+                  </div>
+
+                  {/* Source */}
+                  <div>
+                    <label className="block font-medium text-gray-700 mb-1">Source:</label>
+                    <input
+                      type="text"
+                      value={source}
+                      onChange={(e) => setSource(e.target.value)}
+                      placeholder="Enter source name (e.g., Shutterstock, Getty Images)"
                       className="w-full px-2 py-1 border border-gray-300 rounded"
                     />
                   </div>

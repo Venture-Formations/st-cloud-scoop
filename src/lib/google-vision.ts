@@ -160,83 +160,101 @@ export class GoogleVisionService {
   }
 
   /**
-   * Process Vision API results into our standard format - simplified to return more results
+   * Process Vision API results focusing on EXACT matches and high-quality sources
    */
   private processVisionResults(webDetection: any, imageAnalysis: any): VisionSearchResult[] {
     const results: VisionSearchResult[] = []
 
-    console.log('Processing Vision results:')
-    console.log('- Web entities:', webDetection?.webEntities?.length || 0)
-    console.log('- Pages with matching images:', webDetection?.pagesWithMatchingImages?.length || 0)
-    console.log('- Visually similar images:', webDetection?.visuallySimilarImages?.length || 0)
+    console.log('Processing Vision results for EXACT matches:')
+    console.log('Raw webDetection:', JSON.stringify(webDetection, null, 2))
 
-    // Process ALL pages with matching images (this is the most important for reverse search)
+    // Focus on EXACT matches - fullMatchingImages are the most reliable
     if (webDetection?.pagesWithMatchingImages) {
-      console.log('Processing pages with matching images...')
+      console.log(`Found ${webDetection.pagesWithMatchingImages.length} pages with matching images`)
+
       for (const page of webDetection.pagesWithMatchingImages) {
-        if (page.url) {
+        // Only process pages that have FULL matching images (exact matches)
+        if (page.fullMatchingImages && page.fullMatchingImages.length > 0 && page.url) {
           const sourceInfo = this.extractSourceInfo(page.url, page.pageTitle || '')
-          const result = {
-            source_url: page.url,
-            source_name: sourceInfo.source,
-            title: page.pageTitle || '',
-            creator: sourceInfo.creator,
-            license_info: sourceInfo.license,
-            similarity_score: 0.8, // Default high score for page matches
-            thumbnail_url: page.fullMatchingImages?.[0]?.url
+
+          // Skip generic or low-quality sources
+          if (this.isQualitySource(sourceInfo.source, page.url)) {
+            const result = {
+              source_url: page.url,
+              source_name: sourceInfo.source,
+              title: page.pageTitle || '',
+              creator: sourceInfo.creator,
+              license_info: sourceInfo.license,
+              similarity_score: 1.0, // Exact match
+              thumbnail_url: page.fullMatchingImages[0].url
+            }
+            results.push(result)
+            console.log(`Added EXACT match: ${sourceInfo.source} - ${page.url}`)
+          } else {
+            console.log(`Skipped low-quality source: ${sourceInfo.source} - ${page.url}`)
           }
-          results.push(result)
-          console.log(`Added page: ${sourceInfo.source} - ${page.url}`)
         }
       }
     }
 
-    // Process web entities (lower score but still valuable)
-    if (webDetection?.webEntities) {
-      console.log('Processing web entities...')
-      for (const entity of webDetection.webEntities) {
-        if (entity.description && entity.score && entity.score > 0.3) {
-          // Create a generic result for the entity
-          const result = {
-            source_url: `https://www.google.com/search?q=${encodeURIComponent(entity.description)}`,
-            source_name: entity.description,
-            title: `Web Entity: ${entity.description}`,
-            similarity_score: entity.score,
-            license_info: 'Unknown License'
+    // Process partialMatchingImages only if no full matches found
+    if (results.length === 0 && webDetection?.pagesWithMatchingImages) {
+      console.log('No full matches found, checking partial matches...')
+
+      for (const page of webDetection.pagesWithMatchingImages.slice(0, 5)) {
+        if (page.partialMatchingImages && page.partialMatchingImages.length > 0 && page.url) {
+          const sourceInfo = this.extractSourceInfo(page.url, page.pageTitle || '')
+
+          if (this.isQualitySource(sourceInfo.source, page.url)) {
+            const result = {
+              source_url: page.url,
+              source_name: sourceInfo.source,
+              title: page.pageTitle || '',
+              creator: sourceInfo.creator,
+              license_info: sourceInfo.license,
+              similarity_score: 0.8, // Partial match
+              thumbnail_url: page.partialMatchingImages[0].url
+            }
+            results.push(result)
+            console.log(`Added PARTIAL match: ${sourceInfo.source} - ${page.url}`)
           }
-          results.push(result)
-          console.log(`Added entity: ${entity.description} (score: ${entity.score})`)
         }
       }
     }
 
-    // Process visually similar images
-    if (webDetection?.visuallySimilarImages) {
-      console.log('Processing visually similar images...')
-      for (const similar of webDetection.visuallySimilarImages.slice(0, 10)) {
-        if (similar.url) {
-          const sourceInfo = this.extractSourceInfo(similar.url, '')
-          const result = {
-            source_url: similar.url,
-            source_name: sourceInfo.source,
-            license_info: sourceInfo.license,
-            similarity_score: 0.6,
-            thumbnail_url: similar.url,
-            title: 'Visually Similar Image'
-          }
-          results.push(result)
-          console.log(`Added similar: ${sourceInfo.source} - ${similar.url}`)
-        }
-      }
+    console.log(`Final high-quality results: ${results.length}`)
+    return results.sort((a, b) => (b.similarity_score || 0) - (a.similarity_score || 0))
+  }
+
+  /**
+   * Check if this is a quality source worth returning
+   */
+  private isQualitySource(sourceName: string, url: string): boolean {
+    // Known quality stock photo sources
+    const qualitySources = [
+      'Shutterstock', 'Getty Images', 'Adobe Stock', 'iStock',
+      'Unsplash', 'Pexels', 'Pixabay',
+      'Flickr', 'Wikimedia', 'Wikipedia'
+    ]
+
+    // Check if it's a known quality source
+    if (qualitySources.some(source => sourceName.includes(source))) {
+      return true
     }
 
-    // Remove duplicates by URL and sort by similarity score
-    const uniqueResults = results.filter((result, index, self) =>
-      index === self.findIndex(r => r.source_url === result.source_url)
-    )
+    // Skip generic/low-quality domains
+    const lowQualityPatterns = [
+      'pinterest', 'facebook', 'twitter', 'instagram',
+      'reddit', 'tumblr', 'blogspot', 'wordpress.com'
+    ]
 
-    console.log(`Final results: ${uniqueResults.length} unique items`)
-    return uniqueResults.sort((a, b) => (b.similarity_score || 0) - (a.similarity_score || 0))
+    const urlLower = url.toLowerCase()
+    if (lowQualityPatterns.some(pattern => urlLower.includes(pattern))) {
+      return false
+    }
+
+    // Accept other domains that might be original sources
+    return true
   }
 
   /**

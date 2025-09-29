@@ -39,12 +39,20 @@ async function getWordleAnswer(dateStr: string): Promise<string | null> {
 
     // Remove only scripts and styles, keep all other content for AI analysis
     $('script, style').remove()
+
+    // Try to extract the "Today's answer" section specifically
+    let answerSection = ''
+    const answerSectionElement = $('[id*="answer"], [class*="answer"], h2:contains("answer"), h3:contains("answer")').first()
+    if (answerSectionElement.length > 0) {
+      answerSection = answerSectionElement.parent().text() || answerSectionElement.text()
+    }
+
     const fullPageText = $('body').text()
 
-    // Limit content for AI (increase to capture more content)
-    const contentForAI = fullPageText.substring(0, 8000)
+    // Use answer section if found, otherwise use full page
+    const contentForAI = answerSection || fullPageText.substring(0, 8000)
 
-    console.log(`Sending full page content to AI for analysis (${contentForAI.length} characters)`)
+    console.log(`Sending ${answerSection ? 'answer section' : 'full page'} content to AI for analysis (${contentForAI.length} characters)`)
 
     // Use AI to analyze the entire page content
     const { callOpenAI } = await import('./openai')

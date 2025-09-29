@@ -33,7 +33,7 @@ export async function GET(request: NextRequest) {
     const contentForAI = articleText.substring(0, 4000)
 
     // Find all headings to understand page structure
-    const headings = []
+    const headings: string[] = []
     $('h1, h2, h3, h4, h5, h6').each((_, element) => {
       headings.push($(element).text().trim())
     })

@@ -12,18 +12,24 @@ export async function GET(request: NextRequest) {
     const targetDate = campaignDate || new Date().toISOString().split('T')[0]
 
     // Look up campaign ID - required, no fallback
+    console.log(`Looking up campaign for date: ${targetDate}`)
     const { data: campaign, error } = await supabase
       .from('campaigns')
       .select('id')
       .eq('date', targetDate)
       .single()
 
+    if (error) {
+      console.error(`Database error looking up campaign:`, error)
+    }
+
     if (!campaign || error) {
       console.error(`No campaign found for date ${targetDate}`)
       return NextResponse.json({
         success: false,
         error: `No campaign found for date ${targetDate}`,
-        message: 'Cannot generate road work data without valid campaign'
+        message: 'Cannot generate road work data without valid campaign',
+        debug: { targetDate, error: error?.message }
       }, { status: 404 })
     }
 

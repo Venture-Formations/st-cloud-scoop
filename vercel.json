@@ -43,10 +43,6 @@
     {
       "path": "/api/cron/collect-wordle",
       "schedule": "0 18 * * *"
-    },
-    {
-      "path": "/api/cron/generate-road-work",
-      "schedule": "0 19 * * *"
     }
   ],
   "functions": {
@@ -82,9 +78,6 @@
     },
     "app/api/cron/collect-wordle/route.ts": {
       "maxDuration": 120
-    },
-    "app/api/cron/generate-road-work/route.ts": {
-      "maxDuration": 180
     },
     "app/api/events/sync/route.ts": {
       "maxDuration": 300

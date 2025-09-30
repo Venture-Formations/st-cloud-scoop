@@ -120,19 +120,34 @@ export async function getRoadWorkWithPerplexity(targetDate: string): Promise<any
     day: 'numeric'
   })
 
-  const prompt = `Today is ${formattedDate} (${targetDate}).
+  const prompt = `List every active road, lane, or bridge closure, detour, or major traffic restriction in effect on ${formattedDate} within 15 miles of ZIP code 56303 (St. Cloud, MN).
 
-Search for ALL active road construction, closures, and traffic restrictions in the St. Cloud, Minnesota area (within 15 miles) that are currently happening today.
+INCLUDE:
+- Full closures, lane closures, bridge closures, detours, major traffic restrictions
+- Current closures that started before ${targetDate} and are still active
+- Closures from all road types (state highways, county roads, city streets)
+- Lane-specific closures (e.g., westbound/eastbound)
+- Closures near city boundaries or small towns like Kimball, Annandale, Sartell, Sauk Rapids, Waite Park, St. Joseph
 
-Check these official sources:
-- St. Cloud city website: www.ci.stcloud.mn.us
-- Stearns County: www.stearnscountymn.gov
-- MnDOT District 3: www.dot.state.mn.us/d3/
-- Benton County: www.co.benton.mn.us
-- Local news: WJON, St. Cloud Times
+EXCLUDE:
+- Completed closures
+- Future/planned closures not yet active
+- Shoulder-only work
 
-Return ONLY a JSON array with 6-9 current road work items. Use this exact format:
+SOURCES TO CHECK:
+- https://www.dot.state.mn.us/d3/
+- https://www.stearnscountymn.gov/185/Public-Works
+- https://www.co.benton.mn.us/180/Highway
+- https://www.co.sherburne.mn.us/162/Public-Works
+- https://www.sartellmn.com/engineering/
+- https://www.ci.stcloud.mn.us
+- https://www.cityofstjoseph.com/
+- https://www.ci.waitepark.mn.us/
+- https://ci.sauk-rapids.mn.us/
+- https://www.ridemetrobus.com
+- Local media: WJON Traffic, St. Cloud Times Roads section
 
+Return EXACTLY 9 items as a JSON array with this structure:
 [
   {
     "road_name": "Highway 15",
@@ -145,11 +160,12 @@ Return ONLY a JSON array with 6-9 current road work items. Use this exact format
   }
 ]
 
-Requirements:
-- Only include projects active TODAY (${targetDate})
-- Find real, specific projects from the sources above
-- Use short date format like "Oct 15"
-- Return ONLY the JSON array, no markdown or explanations`
+CRITICAL:
+- Return EXACTLY 9 items
+- Only closures active on ${targetDate}
+- Use date format "mmm d" (e.g., "Sep 15")
+- Return ONLY the JSON array starting with [ and ending with ]
+- No markdown, no explanations, no code blocks`
 
   try {
     const response = await callPerplexity(prompt, {

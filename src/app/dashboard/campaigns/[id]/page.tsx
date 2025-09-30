@@ -274,46 +274,46 @@ function RoadWorkSection({ campaign }: { campaign: any }) {
             No road work items found for this date
           </div>
         ) : (
-          <div className="space-y-3 max-h-96 overflow-y-auto">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 max-h-96 overflow-y-auto">
             {roadWorkItems.map(item => {
               const isSelected = selectedItems.some(s => s.road_work_item_id === item.id)
 
               return (
                 <div
                   key={item.id}
-                  className={`p-3 rounded-lg border-2 transition-all ${
+                  className={`p-4 rounded-lg border-2 transition-all ${
                     isSelected
                       ? 'border-green-300 bg-green-50'
                       : 'border-gray-200 hover:border-gray-300'
                   }`}
                 >
-                  <div className="flex items-start space-x-3">
+                  <div className="flex items-start space-x-2 mb-2">
                     <input
                       type="checkbox"
                       checked={isSelected}
                       onChange={(e) => handleItemToggle(item.id, e.target.checked)}
                       disabled={updating}
-                      className="mt-1 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                      className="mt-1 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded flex-shrink-0"
                     />
-                    <div className="flex-1">
-                      <h4 className="font-semibold text-gray-900">{item.road_name}</h4>
-                      <p className="text-gray-600 text-sm mt-1">{item.road_range}</p>
-                      <p className="text-gray-500 text-xs mt-1">{item.reason}</p>
-                      <div className="flex justify-between items-center text-xs mt-2">
-                        <span className="text-orange-600">📍 {item.city_or_township}</span>
-                        <span className="text-gray-500">{item.start_date} → {item.expected_reopen}</span>
-                      </div>
-                      {item.source_url && (
-                        <a
-                          href={item.source_url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-xs text-blue-600 hover:text-blue-800 underline mt-1 inline-block"
-                        >
-                          View Source
-                        </a>
-                      )}
+                    <h4 className="font-semibold text-gray-900 text-sm">{item.road_name}</h4>
+                  </div>
+                  <div className="ml-6">
+                    <p className="text-gray-600 text-xs mb-1">{item.road_range}</p>
+                    <p className="text-gray-500 text-xs mb-2">{item.reason}</p>
+                    <div className="flex flex-col gap-1 text-xs">
+                      <span className="text-orange-600">📍 {item.city_or_township}</span>
+                      <span className="text-gray-500">{item.start_date} → {item.expected_reopen}</span>
                     </div>
+                    {item.source_url && (
+                      <a
+                        href={item.source_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-xs text-blue-600 hover:text-blue-800 underline mt-1 inline-block"
+                      >
+                        View Source
+                      </a>
+                    )}
                   </div>
                 </div>
               )

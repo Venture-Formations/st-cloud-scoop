@@ -112,95 +112,10 @@ export function generateRoadWorkHTML(roadWorkItems: RoadWorkItemForHTML[]): stri
 }
 
 /**
- * Generate fallback road work data when AI fails
+ * REMOVED: generateFallbackRoadWorkData
+ * We never want inaccurate filler data in the newsletter.
+ * If AI methods fail, the system will return fewer items or no road work section.
  */
-function generateFallbackRoadWorkData(targetDate: string): RoadWorkItemForHTML[] {
-  const startDateShort = targetDate.split(',')[0] || 'Sep 25'
-
-  return [
-    {
-      road_name: 'Highway 15',
-      road_range: 'from 2nd Street S to Benton Drive',
-      city_or_township: 'St. Cloud',
-      reason: 'Bridge maintenance and repairs',
-      start_date: startDateShort,
-      expected_reopen: 'Oct 15',
-      source_url: 'https://www.dot.state.mn.us/d3/'
-    },
-    {
-      road_name: 'County Road 75',
-      road_range: 'from 33rd Street to Park Avenue',
-      city_or_township: 'Waite Park',
-      reason: 'Road resurfacing project',
-      start_date: startDateShort,
-      expected_reopen: 'Nov 1',
-      source_url: 'https://www.stearnscountymn.gov/185/Public-Works'
-    },
-    {
-      road_name: 'Highway 23',
-      road_range: 'from 14th Avenue to 22nd Avenue',
-      city_or_township: 'St. Cloud',
-      reason: 'Utility work and lane restrictions',
-      start_date: startDateShort,
-      expected_reopen: 'Oct 30',
-      source_url: 'https://www.dot.state.mn.us/d3/'
-    },
-    {
-      road_name: '1st Street South',
-      road_range: 'from 7th Avenue to 10th Avenue',
-      city_or_township: 'Sartell',
-      reason: 'Paving project',
-      start_date: startDateShort,
-      expected_reopen: 'Oct 5',
-      source_url: 'https://www.cityofsartell.com'
-    },
-    {
-      road_name: 'County Road 4',
-      road_range: 'from Highway 24 to County Road 2',
-      city_or_township: 'Clearwater',
-      reason: 'Drainage improvements',
-      start_date: startDateShort,
-      expected_reopen: 'Oct 12',
-      source_url: 'https://www.co.sherburne.mn.us/162/Public-Works'
-    },
-    {
-      road_name: 'Highway 10',
-      road_range: 'from Highway 15 to County Road 3',
-      city_or_township: 'Sauk Rapids',
-      reason: 'Interchange construction',
-      start_date: startDateShort,
-      expected_reopen: 'Dec 1',
-      source_url: 'https://www.dot.state.mn.us/d3/'
-    },
-    {
-      road_name: 'Highway 24',
-      road_range: 'from Clearwater Bridge to 200th Street',
-      city_or_township: 'Clear Lake',
-      reason: 'Bridge maintenance',
-      start_date: startDateShort,
-      expected_reopen: 'Oct 20',
-      source_url: 'https://www.dot.state.mn.us/d3/'
-    },
-    {
-      road_name: 'County Road 8',
-      road_range: 'from 9th Avenue to County Road 43',
-      city_or_township: 'St. Joseph',
-      reason: 'Resurfacing project',
-      start_date: startDateShort,
-      expected_reopen: 'Oct 8',
-      source_url: 'https://www.co.benton.mn.us/180/Highway'
-    },
-    {
-      road_name: 'Highway 55',
-      road_range: 'from Kimball to Annandale',
-      city_or_township: 'Kimball',
-      reason: 'Road widening project',
-      start_date: startDateShort,
-      expected_reopen: 'Oct 25',
-      source_url: 'https://www.dot.state.mn.us/d3/'
-    }
-  ]
-}
 
 /**
  * Store road work items in the normalized database structure
@@ -482,13 +397,9 @@ CRITICAL: Only return real, verified road work from actual government sources. I
           console.log('✅ Fallback prompt succeeded:', typeof aiResponse, aiResponse?.length || 'N/A')
         } catch (error4) {
           console.log(`❌ Attempt ${attemptNumber} failed:`, error4 instanceof Error ? error4.message : error4)
-          attemptNumber++
-
-          console.warn('⚠️ All AI attempts failed, using fallback road work data...')
-          // Use fallback data as last resort
-          const fallbackItems = generateFallbackRoadWorkData(targetDate)
-          aiResponse = fallbackItems
-          console.log('Using fallback road work data with', fallbackItems.length, 'items')
+          console.error('⚠️ All AI attempts failed - no fallback data will be used')
+          // Return empty array - we never want inaccurate filler data
+          aiResponse = []
         }
       }
       }

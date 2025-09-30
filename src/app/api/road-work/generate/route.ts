@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { generateDailyRoadWork, storeRoadWorkItems } from '@/lib/road-work-manager'
-import { createClient } from '@/lib/supabase/server'
+import { supabase } from '@/lib/supabase'
 
 export async function GET(request: NextRequest) {
   console.log('🚧 Starting road work data generation...')
@@ -12,7 +12,6 @@ export async function GET(request: NextRequest) {
     const targetDate = campaignDate || new Date().toISOString().split('T')[0]
 
     // Look up campaign ID - required, no fallback
-    const supabase = await createClient()
     const { data: campaign, error } = await supabase
       .from('campaigns')
       .select('id')

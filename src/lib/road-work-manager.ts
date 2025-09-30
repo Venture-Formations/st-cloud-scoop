@@ -204,10 +204,40 @@ export async function storeRoadWorkItems(roadWorkItems: Array<{
 
   console.log('✅ Road work items stored successfully:', data?.length || 0, 'items')
 
-  // Auto-select first 9 items for the campaign
+  // Auto-select 9 most complete and relevant items for the campaign
   if (data && data.length > 0) {
-    const itemsToSelect = data.slice(0, 9)
-    const selectionData = itemsToSelect.map((item, index) => ({
+    // Score items based on completeness and relevance
+    const scoredItems = data.map(item => {
+      let score = 0
+
+      // Prioritize items with complete information (each field = +1 point)
+      if (item.road_name) score += 1
+      if (item.road_range && item.road_range !== 'N/A' && item.road_range !== 'unspecified segment') score += 1
+      if (item.city_or_township && item.city_or_township !== 'Area') score += 1
+      if (item.reason && item.reason !== 'Road work') score += 1
+      if (item.start_date && item.start_date !== 'TBD') score += 1
+      if (item.expected_reopen && item.expected_reopen !== 'TBD') score += 1
+      if (item.source_url && item.source_url !== '#') score += 1
+
+      // Prioritize ongoing construction over events (events often have misleading dates)
+      const reason = (item.reason || '').toLowerCase()
+      if (reason.includes('event') || reason.includes('parade') || reason.includes('festival')) {
+        score -= 3 // Deprioritize events
+      }
+      if (reason.includes('construction') || reason.includes('reconstruction') || reason.includes('resurfacing')) {
+        score += 2 // Prioritize construction
+      }
+
+      return { item, score }
+    })
+
+    // Sort by score (highest first) and take top 9
+    const topItems = scoredItems
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 9)
+      .map(({ item }) => item)
+
+    const selectionData = topItems.map((item, index) => ({
       campaign_id: campaignId,
       road_work_item_id: item.id,
       selection_order: index + 1
@@ -220,7 +250,7 @@ export async function storeRoadWorkItems(roadWorkItems: Array<{
     if (selectionError) {
       console.warn('⚠️ Failed to auto-select road work items (table may not exist yet):', selectionError.message)
     } else {
-      console.log(`✅ Auto-selected ${itemsToSelect.length} road work items for campaign`)
+      console.log(`✅ Auto-selected ${topItems.length} most complete/relevant road work items for campaign`)
     }
   }
 

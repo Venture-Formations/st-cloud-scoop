@@ -121,7 +121,13 @@ export async function getRoadWorkWithPerplexity(targetDate: string): Promise<any
   })
 
   // Request more results than needed so post-processing can filter to 9 valid local items
-  const prompt = `Search for road closures, construction, and traffic restrictions in St. Cloud, Minnesota and surrounding cities (Waite Park, Sartell, Sauk Rapids, St. Joseph, St. Augusta, Clearwater, Rice) that are active on ${formattedDate}.
+  const prompt = `Search for CURRENT road closures, construction, and traffic restrictions in St. Cloud, Minnesota and surrounding cities (Waite Park, Sartell, Sauk Rapids, St. Joseph, St. Augusta, Clearwater, Rice) that are CURRENTLY ACTIVE on ${formattedDate}.
+
+CRITICAL: Only include items that are ACTIVE on ${formattedDate}. DO NOT include:
+- Past events or parades that already happened
+- Completed projects
+- Future projects that haven't started yet
+- Events from previous months
 
 Check these sources:
 - https://www.dot.state.mn.us/d3/
@@ -133,7 +139,7 @@ Check these sources:
 - https://www.co.benton.mn.us/180/Highway
 - Local news: WJON Traffic, St. Cloud Times
 
-Find as many active road work items as possible in the St. Cloud area (within 15 miles of ZIP 56303). Return 15-20 items if available.
+Find as many CURRENTLY ACTIVE road work items as possible in the St. Cloud area (within 15 miles of ZIP 56303). Return 15-20 items if available.
 
 Include:
 - Full road closures
@@ -142,6 +148,11 @@ Include:
 - Detours
 - Construction on highways, county roads, and city streets
 - Both major and minor projects
+
+EXCLUDE:
+- Completed events or parades from previous months
+- Seasonal events that are not currently active
+- Projects that have already finished
 
 Return ONLY a JSON array with this exact structure:
 [

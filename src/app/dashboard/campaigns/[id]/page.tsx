@@ -173,28 +173,33 @@ function MinnesotaGetawaysSection({ campaign }: { campaign: any }) {
 }
 
 function RoadWorkSection({ campaign }: { campaign: any }) {
-  const [roadWorkData, setRoadWorkData] = useState<any>(null)
+  const [roadWorkItems, setRoadWorkItems] = useState<any[]>([])
+  const [selectedItems, setSelectedItems] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
+  const [updating, setUpdating] = useState(false)
 
   useEffect(() => {
     const fetchRoadWorkData = async () => {
       try {
-        const response = await fetch(`/api/campaigns/${campaign.id}/road-work`)
-        if (response.ok) {
-          const data = await response.json()
-          if (data.success) {
-            setRoadWorkData(data)
-          } else {
-            console.error('Road work generation failed:', data.error)
-            setRoadWorkData({ success: false, error: data.error })
+        // Fetch all road work items
+        const itemsResponse = await fetch(`/api/campaigns/${campaign.id}/road-work`)
+        // Fetch selected items
+        const selectionsResponse = await fetch(`/api/campaigns/${campaign.id}/road-work-selections`)
+
+        if (itemsResponse.ok && selectionsResponse.ok) {
+          const itemsData = await itemsResponse.json()
+          const selectionsData = await selectionsResponse.json()
+
+          if (itemsData.success) {
+            setRoadWorkItems(itemsData.roadWorkItems || [])
           }
-        } else {
-          console.error('Road work API request failed:', response.status)
-          setRoadWorkData({ success: false, error: 'API request failed' })
+
+          if (selectionsData.success) {
+            setSelectedItems(selectionsData.selections || [])
+          }
         }
       } catch (error) {
         console.error('Failed to fetch road work data:', error)
-        setRoadWorkData({ success: false, error: 'Network error' })
       } finally {
         setLoading(false)
       }
@@ -202,6 +207,46 @@ function RoadWorkSection({ campaign }: { campaign: any }) {
 
     fetchRoadWorkData()
   }, [campaign.id])
+
+  const handleItemToggle = async (itemId: string, isSelected: boolean) => {
+    let newSelected: string[]
+
+    if (isSelected) {
+      // Add item if under limit (9 items max)
+      if (selectedItems.length < 9) {
+        newSelected = [...selectedItems.map(s => s.road_work_item_id), itemId]
+      } else {
+        alert('Maximum 9 road work items can be selected')
+        return
+      }
+    } else {
+      // Remove item
+      newSelected = selectedItems.map(s => s.road_work_item_id).filter(id => id !== itemId)
+    }
+
+    setUpdating(true)
+    try {
+      const response = await fetch(`/api/campaigns/${campaign.id}/road-work-selections`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ item_ids: newSelected })
+      })
+
+      if (response.ok) {
+        const result = await response.json()
+        // Refetch selections to get updated data
+        const selectionsResponse = await fetch(`/api/campaigns/${campaign.id}/road-work-selections`)
+        if (selectionsResponse.ok) {
+          const selectionsData = await selectionsResponse.json()
+          setSelectedItems(selectionsData.selections || [])
+        }
+      }
+    } catch (error) {
+      console.error('Failed to update road work selection:', error)
+    } finally {
+      setUpdating(false)
+    }
+  }
 
   if (loading) {
     return (
@@ -212,60 +257,70 @@ function RoadWorkSection({ campaign }: { campaign: any }) {
     )
   }
 
-  if (!roadWorkData || roadWorkData.success === false) {
-    return (
-      <div className="text-center py-8">
-        <div className="text-gray-500 mb-2">
-          <span className="block text-lg">🚧</span>
-          Unable to load road work data
-        </div>
-        <div className="text-sm text-gray-400">
-          {roadWorkData?.error || 'Unknown error occurred'}
-        </div>
-      </div>
-    )
-  }
-
   return (
     <div className="p-6">
-      <div className="mb-4">
-        <div className="text-sm text-gray-600 mb-2">
-          Found {roadWorkData.total_items || 0} road work items for {campaign.date}
-        </div>
-        <div className="text-xs text-gray-500">
-          Generated at: {roadWorkData.generated_at ? new Date(roadWorkData.generated_at).toLocaleString() : 'Unknown'}
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 max-h-96 overflow-y-auto">
-        {roadWorkData.roadWorkItems && roadWorkData.roadWorkItems.map((item: any, index: number) => (
-          <div key={index} className="border border-gray-200 rounded-lg p-4 bg-white shadow-sm">
-            <div className="font-medium text-gray-900 mb-2">{item.road_name}</div>
-            <div className="text-sm text-gray-600 mb-1">{item.road_range}</div>
-            <div className="text-xs text-gray-500 mb-2">{item.reason}</div>
-            <div className="flex justify-between items-center text-xs">
-              <span className="text-orange-600">📍 {item.city_or_township}</span>
-              <span className="text-gray-500">{item.start_date} → {item.expected_reopen}</span>
-            </div>
-            {item.source_url && (
-              <a
-                href={item.source_url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-xs text-blue-600 hover:text-blue-800 underline mt-1 block"
-              >
-                View Source
-              </a>
-            )}
+      <div className="bg-gray-50 rounded-lg p-4">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-medium text-gray-900">
+            Road Work for {campaign.date}
+          </h3>
+          <div className="text-sm text-gray-500">
+            {selectedItems.length}/9 items selected
           </div>
-        ))}
-      </div>
-
-      {(!roadWorkData.roadWorkItems || roadWorkData.roadWorkItems.length === 0) && (
-        <div className="text-center py-8 text-gray-500">
-          No road work items found for this date
         </div>
-      )}
+
+        {roadWorkItems.length === 0 ? (
+          <div className="text-center py-8 text-gray-500">
+            No road work items found for this date
+          </div>
+        ) : (
+          <div className="space-y-3 max-h-96 overflow-y-auto">
+            {roadWorkItems.map(item => {
+              const isSelected = selectedItems.some(s => s.road_work_item_id === item.id)
+
+              return (
+                <div
+                  key={item.id}
+                  className={`p-3 rounded-lg border-2 transition-all ${
+                    isSelected
+                      ? 'border-green-300 bg-green-50'
+                      : 'border-gray-200 hover:border-gray-300'
+                  }`}
+                >
+                  <div className="flex items-start space-x-3">
+                    <input
+                      type="checkbox"
+                      checked={isSelected}
+                      onChange={(e) => handleItemToggle(item.id, e.target.checked)}
+                      disabled={updating}
+                      className="mt-1 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                    />
+                    <div className="flex-1">
+                      <h4 className="font-semibold text-gray-900">{item.road_name}</h4>
+                      <p className="text-gray-600 text-sm mt-1">{item.road_range}</p>
+                      <p className="text-gray-500 text-xs mt-1">{item.reason}</p>
+                      <div className="flex justify-between items-center text-xs mt-2">
+                        <span className="text-orange-600">📍 {item.city_or_township}</span>
+                        <span className="text-gray-500">{item.start_date} → {item.expected_reopen}</span>
+                      </div>
+                      {item.source_url && (
+                        <a
+                          href={item.source_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-xs text-blue-600 hover:text-blue-800 underline mt-1 inline-block"
+                        >
+                          View Source
+                        </a>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        )}
+      </div>
     </div>
   )
 }

@@ -9,61 +9,61 @@ function getPuzzleNumber(targetDate: string): number {
   return 1 + days
 }
 
-// Fetch Wordle answer using web search instead of manual scraping
+// Fetch Wordle answer using Perplexity web search
 async function getWordleAnswer(dateStr: string): Promise<string | null> {
   try {
     const number = getPuzzleNumber(dateStr)
     console.log(`Looking for Wordle #${number} for date ${dateStr}`)
 
-    // Use web search to find Wordle answer directly
-    const { callOpenAIWithWebSearch } = await import('./openai')
+    // Use Perplexity for web search
+    const { callPerplexity } = await import('./perplexity')
 
-    const systemPrompt = `You are a puzzle researcher with web access. Find today's Wordle answer from Tom's Guide or other reliable Wordle spoiler sources.`
+    // Format date for better search
+    const dateObj = new Date(dateStr)
+    const monthName = dateObj.toLocaleDateString('en-US', { month: 'long' })
+    const day = dateObj.getDate()
+    const year = dateObj.getFullYear()
 
-    const userPrompt = `Search for the Wordle answer for ${dateStr}, based on trusted spoiler sources and high-confidence solver reports.
+    const prompt = `Find the Wordle answer for ${monthName} ${day}, ${year} (puzzle #${number}).
 
-TRUSTED SOURCES TO CHECK:
-- Tom's Guide "Today's Wordle Answer" section
+Search these sources:
+- Tom's Guide Wordle answers
+- PC Gamer Wordle solutions
 - Forbes Wordle coverage
-- Rock Paper Shotgun Wordle guides
-- Wordle Bot reports
-- IGN Wordle solutions
-- PC Gamer Wordle answers
-- Other reliable gaming/puzzle spoiler sites
+- The Gamer Wordle answers
+- Insider Gaming Wordle hints
 
-Look specifically for:
-- "Today's Wordle answer is [WORD]"
-- "The answer is [WORD]"
-- "Wordle #${number} answer: [WORD]"
-- The explicit 5-letter solution word for puzzle #${number}
+Look for phrases like:
+- "Wordle #${number} answer is [WORD]"
+- "Today's Wordle answer: [WORD]"
+- "The answer to Wordle ${number} is [WORD]"
 
-Return ONLY the 5-letter answer word in UPPERCASE. No explanations, no hints, just the word.
+Return ONLY the 5-letter answer word in UPPERCASE with no additional text, explanations, or formatting.
 
-If you cannot find the exact answer, return "UNKNOWN".`
+If you cannot find a definitive answer, return exactly: UNKNOWN`
 
-    console.log(`Using web search to find Wordle #${number}`)
+    console.log(`Using Perplexity to find Wordle #${number}`)
 
-    const result = await callOpenAIWithWebSearch(systemPrompt, userPrompt)
+    const result = await callPerplexity(prompt, {
+      model: 'sonar-pro',
+      temperature: 0.1,
+      searchContextSize: 'medium'
+    })
 
-    if (result && typeof result === 'string') {
-      const cleanResult = result.trim().toUpperCase()
-      if (/^[A-Z]{5}$/.test(cleanResult)) {
-        console.log(`Web search found Wordle #${number}: ${cleanResult}`)
-        return cleanResult
-      }
-    } else if (result && typeof result === 'object' && result.raw) {
-      const cleanResult = result.raw.trim().toUpperCase()
-      if (/^[A-Z]{5}$/.test(cleanResult)) {
-        console.log(`Web search found Wordle #${number}: ${cleanResult}`)
-        return cleanResult
-      }
+    const cleanResult = result.trim().toUpperCase()
+
+    // Extract just the word if there's extra text
+    const wordMatch = cleanResult.match(/\b([A-Z]{5})\b/)
+    if (wordMatch) {
+      console.log(`Perplexity found Wordle #${number}: ${wordMatch[1]}`)
+      return wordMatch[1]
     }
 
     console.log(`No valid Wordle answer found for #${number}`)
     return null
 
   } catch (error) {
-    console.error('Error finding Wordle answer with web search:', error)
+    console.error('Error finding Wordle answer with Perplexity:', error)
     return null
   }
 }
@@ -109,19 +109,25 @@ export async function getWordleDataForDate(dateStr: string): Promise<{
     return null
   }
 
-  // Use web search to generate accurate definition and interesting fact
-  const { callOpenAIWithWebSearch } = await import('./openai')
+  // Use Perplexity to generate accurate definition and interesting fact
+  const { callPerplexity } = await import('./perplexity')
 
   try {
-    const systemPrompt = `You are a dictionary researcher with web access. Provide accurate definitions and etymology information.`
+    const definitionPrompt = `Look up the word "${word}" in reliable dictionaries and provide a brief, clear definition. Keep it under 50 words and make it suitable for a general audience. Return only the definition with no extra formatting.`
+    const definitionResult = await callPerplexity(definitionPrompt, {
+      model: 'sonar-pro',
+      temperature: 0.2,
+      searchContextSize: 'low'
+    })
+    const definition = definitionResult.trim()
 
-    const definitionPrompt = `Look up the word "${word}" in reliable dictionaries and provide a brief, clear definition. Keep it under 50 words and make it suitable for a general audience.`
-    const definitionResult = await callOpenAIWithWebSearch(systemPrompt, definitionPrompt)
-    const definition = (typeof definitionResult === 'string' ? definitionResult : definitionResult?.raw || '').trim()
-
-    const factPrompt = `Research the word "${word}" and share one interesting fact about its etymology, historical usage, or linguistic background. Keep it under 80 words and make it engaging.`
-    const factResult = await callOpenAIWithWebSearch(systemPrompt, factPrompt)
-    const interesting_fact = (typeof factResult === 'string' ? factResult : factResult?.raw || '').trim()
+    const factPrompt = `Research the word "${word}" and share one interesting fact about its etymology, historical usage, or linguistic background. Keep it under 80 words and make it engaging. Return only the fact with no extra formatting.`
+    const factResult = await callPerplexity(factPrompt, {
+      model: 'sonar-pro',
+      temperature: 0.3,
+      searchContextSize: 'low'
+    })
+    const interesting_fact = factResult.trim()
 
     return {
       word,
@@ -129,8 +135,8 @@ export async function getWordleDataForDate(dateStr: string): Promise<{
       interesting_fact: interesting_fact || getInterestingFact(word)
     }
   } catch (error) {
-    console.error('Error generating web-searched definition/fact:', error)
-    // Fall back to basic definitions if web search fails
+    console.error('Error generating Perplexity definition/fact:', error)
+    // Fall back to basic definitions if Perplexity fails
     return {
       word,
       definition: getBasicDefinition(word),

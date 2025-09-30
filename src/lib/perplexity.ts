@@ -124,37 +124,22 @@ export async function getRoadWorkWithPerplexity(targetDate: string): Promise<any
   // Enhanced with stronger geographic filtering
   const prompt = JSON.stringify({
     "query": {
-      "description": `List every active road, lane, or bridge closure, detour, or major traffic restriction in effect on ${formattedDate} within 15 miles of ZIP code 56303 (St. Cloud, MN). ONLY include closures in the St. Cloud metro area.`,
+      "description": `List every active road, lane, or bridge closure, detour, or major traffic restriction in effect on ${formattedDate} within 15 miles of ZIP code 56303 (St. Cloud, MN). Focus on the immediate St. Cloud metro area including Waite Park, Sartell, Sauk Rapids, and St. Joseph.`,
       "criteria": {
         "date": targetDate,
         "location_radius": {
           "zip_code": "56303",
           "radius_miles": 15,
-          "strict_enforcement": true,
           "center_city": "St. Cloud, Minnesota",
-          "acceptable_cities": [
+          "priority_cities": [
             "St. Cloud",
             "Waite Park",
             "Sartell",
             "Sauk Rapids",
             "St. Joseph",
             "St. Augusta",
-            "Kimball",
-            "Annandale",
             "Clearwater",
-            "Clear Lake",
             "Rice"
-          ],
-          "exclude_distant_cities": [
-            "Paynesville",
-            "Plummer",
-            "Sandstone",
-            "Springfield",
-            "Stephen",
-            "Brainerd",
-            "Baxter",
-            "Buffalo",
-            "Monticello"
           ]
         },
         "inclusion_rules": {
@@ -169,12 +154,13 @@ export async function getRoadWorkWithPerplexity(targetDate: string): Promise<any
           },
           "include_conditions": {
             "examples": [
-              "current closures IN THE ST. CLOUD METRO AREA ONLY",
-              `recurring or periodic closures active on ${formattedDate} WITHIN 15 MILES OF ST. CLOUD`,
-              `closures that started any time before or on ${formattedDate} and are still active IN ST. CLOUD AND NEARBY CITIES`,
-              "closures from all road types (state, county, city streets) IN THE ST. CLOUD AREA",
-              "segment-specific impacts within larger projects IN THE ST. CLOUD METRO",
-              "direction-specific lane closures (e.g., westbound/eastbound) IN ST. CLOUD VICINITY"
+              "current closures in the St. Cloud metro area",
+              `recurring or periodic closures active on ${formattedDate}`,
+              `closures that started any time before or on ${formattedDate} and are still active`,
+              "closures from all road types (state, county, city streets)",
+              "segment-specific impacts within larger projects",
+              "direction-specific lane closures (e.g., westbound/eastbound)",
+              "prioritize closures in St. Cloud, Waite Park, Sartell, Sauk Rapids, St. Joseph"
             ]
           },
           "include_synonyms": {
@@ -238,19 +224,18 @@ export async function getRoadWorkWithPerplexity(targetDate: string): Promise<any
       "json_starts_with": "[",
       "date_format": "mmm d",
       "deduplicate": true,
-      "geographic_validation": "CRITICAL: Every item MUST be within 15 miles of St. Cloud, MN (56303). DO NOT include any closures from cities like Paynesville, Plummer, Sandstone, Springfield, Stephen, Brainerd, Baxter, Buffalo, or Monticello. ONLY St. Cloud metro area.",
+      "geographic_priority": "Prioritize closures closest to St. Cloud city center. Prefer items from St. Cloud, Waite Park, Sartell, Sauk Rapids, and St. Joseph over distant suburbs.",
       "structure": [
         {
           "road_name": "string",
           "road_range": "string",
-          "city_or_township": "string (MUST be St. Cloud or within 15 miles)",
+          "city_or_township": "string",
           "reason": "string",
           "start_date": "mmm d",
           "expected_reopen": "mmm d or 'TBD'",
           "source_url": "https://..."
         }
-      ],
-      "final_reminder": "VERIFY all 9 items are within 15 miles of St. Cloud, MN before returning. Remove any distant cities and replace with local St. Cloud metro closures."
+      ]
     }
   }, null, 2)`
 

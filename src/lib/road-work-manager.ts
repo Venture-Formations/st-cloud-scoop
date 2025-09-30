@@ -493,7 +493,6 @@ CRITICAL: Only return real, verified road work from actual government sources. I
       }
       }
     }
-  }
 
     // Parse AI response - simplified logic matching working debug endpoint
     let roadWorkItems: RoadWorkItem[] = []

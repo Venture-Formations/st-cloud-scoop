@@ -535,6 +535,24 @@ CRITICAL: Only return real, verified road work from actual government sources. I
       if (!dateStr || dateStr === 'TBD') return null
 
       try {
+        // Handle seasonal dates like "Fall 2027", "Spring 2025", "Summer 2026", "Winter 2025"
+        const seasonMatch = dateStr.match(/^(Spring|Summer|Fall|Autumn|Winter)\s+(\d{4})$/i)
+        if (seasonMatch) {
+          const [, season, year] = seasonMatch
+          const seasonLower = season.toLowerCase()
+
+          // Map seasons to approximate end dates
+          if (seasonLower === 'spring') {
+            return new Date(`June 20, ${year}`) // End of spring
+          } else if (seasonLower === 'summer') {
+            return new Date(`September 22, ${year}`) // End of summer
+          } else if (seasonLower === 'fall' || seasonLower === 'autumn') {
+            return new Date(`December 20, ${year}`) // End of fall
+          } else if (seasonLower === 'winter') {
+            return new Date(`March 20, ${year}`) // End of winter
+          }
+        }
+
         // Handle vague dates like "Late Aug", "Early Sep", "Mid Oct"
         const vagueMatch = dateStr.match(/^(Early|Mid|Late)\s+([A-Za-z]+)(?:\s+(\d{4}))?$/i)
         if (vagueMatch) {

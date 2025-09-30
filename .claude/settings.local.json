@@ -58,7 +58,8 @@
       "Bash(VERCEL_API_KEY=b2rRlFmL9kPxMPl6ZA7pgGDX npx vercel env list --token=b2rRlFmL9kPxMPl6ZA7pgGDX)",
       "mcp__ide__executeCode",
       "WebFetch(domain:www.tomsguide.com)",
-      "Bash(python:*)"
+      "Bash(python:*)",
+      "Bash(mcp__vercel__getDeployments:*)"
     ],
     "deny": [],
     "ask": []

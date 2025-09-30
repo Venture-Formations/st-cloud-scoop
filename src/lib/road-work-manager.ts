@@ -567,10 +567,12 @@ CRITICAL: Only return real, verified road work from actual government sources. I
       }
 
       // Check if project has already ended
-      const reopenDate = parseRoadWorkDate(item.expected_reopen)
-      if (reopenDate && reopenDate < today) {
-        console.log(`Filtering out completed project: ${item.road_name} (ended ${item.expected_reopen})`)
-        return false
+      if (item.expected_reopen) {
+        const reopenDate = parseRoadWorkDate(item.expected_reopen)
+        if (reopenDate && reopenDate < today) {
+          console.log(`Filtering out completed project: ${item.road_name} (ended ${item.expected_reopen})`)
+          return false
+        }
       }
 
       return true

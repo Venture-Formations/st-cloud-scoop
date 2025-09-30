@@ -6,37 +6,38 @@ export async function GET(request: NextRequest) {
   console.log('🚧 Starting road work data generation...')
 
   try {
-    // Get campaign date and campaign ID from query parameters
+    // Get campaign date from query parameters
     const { searchParams } = new URL(request.url)
     const campaignDate = searchParams.get('campaign_date')
-    let campaignId = searchParams.get('campaign_id')
+    const targetDate = campaignDate || new Date().toISOString().split('T')[0]
 
-    // If no campaign ID provided, look up today's campaign
-    if (!campaignId) {
-      const supabase = await createClient()
-      const targetDate = campaignDate || new Date().toISOString().split('T')[0]
+    // Look up campaign ID - required, no fallback
+    const supabase = await createClient()
+    const { data: campaign, error } = await supabase
+      .from('campaigns')
+      .select('id')
+      .eq('date', targetDate)
+      .single()
 
-      const { data: campaign } = await supabase
-        .from('campaigns')
-        .select('id')
-        .eq('date', targetDate)
-        .single()
-
-      if (campaign) {
-        campaignId = campaign.id
-        console.log(`Found campaign ID ${campaignId} for date ${targetDate}`)
-      } else {
-        console.warn(`No campaign found for date ${targetDate}`)
-      }
+    if (!campaign || error) {
+      console.error(`No campaign found for date ${targetDate}`)
+      return NextResponse.json({
+        success: false,
+        error: `No campaign found for date ${targetDate}`,
+        message: 'Cannot generate road work data without valid campaign'
+      }, { status: 404 })
     }
+
+    const campaignId = campaign.id
+    console.log(`Found campaign ID ${campaignId} for date ${targetDate}`)
 
     // Generate new road work data
     const roadWorkData = await generateDailyRoadWork(campaignDate || undefined)
     console.log('✅ Road work data generated successfully')
 
-    // Store items in normalized database if we have data and campaign ID
+    // Store items in normalized database
     let storedItems = []
-    if (roadWorkData.road_work_data && roadWorkData.road_work_data.length > 0 && campaignId) {
+    if (roadWorkData.road_work_data && roadWorkData.road_work_data.length > 0) {
       console.log(`Storing ${roadWorkData.road_work_data.length} road work items in normalized database`)
       storedItems = await storeRoadWorkItems(roadWorkData.road_work_data, campaignId)
       console.log(`✅ Stored ${storedItems.length} items in normalized database`)

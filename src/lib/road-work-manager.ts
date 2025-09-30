@@ -541,7 +541,6 @@ CRITICAL: Only return real, verified road work from actual government sources. I
           const currentYear = new Date().getFullYear()
           const yearToUse = year ? parseInt(year) : currentYear
 
-          // Create date at end of month for "Late", middle for "Mid", start for "Early"
           const dateString = `${month} 1, ${yearToUse}`
           const date = new Date(dateString)
 
@@ -552,24 +551,20 @@ CRITICAL: Only return real, verified road work from actual government sources. I
           } else if (timing.toLowerCase() === 'mid') {
             // 15th of month
             date.setDate(15)
-          } else {
-            // Keep as 1st of month for "early"
+          } else if (timing.toLowerCase() === 'early') {
+            // 5th of month
+            date.setDate(5)
           }
 
           return date
         }
 
-        // Handle "mmm yyyy" format (e.g., "Oct 2024", "Nov 2024")
+        // Handle "mmm yyyy" format (e.g., "Oct 2024", "Nov 2024") - use 20th of month
         const yearOnlyMatch = dateStr.match(/^([A-Za-z]+)\s+(\d{4})$/)
         if (yearOnlyMatch) {
           const [, month, year] = yearOnlyMatch
-          // Assume end of month for year-only dates
-          const dateString = `${month} 1, ${year}`
-          const date = new Date(dateString)
-          // Move to last day of month
-          date.setMonth(date.getMonth() + 1)
-          date.setDate(0)
-          return date
+          const dateString = `${month} 20, ${year}`
+          return new Date(dateString)
         }
 
         // Handle "mmm d" or "mmm d, yyyy" format (e.g., "Oct 15" or "Oct 15, 2025")

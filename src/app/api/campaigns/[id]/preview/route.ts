@@ -163,8 +163,8 @@ function generateLocalScoopSection(articles: any[]): string {
           : null
 
     const imageHtml = imageUrl
-      ? `<tr><td style='padding: 0 12px; text-align: center;'><img src='${imageUrl}' alt='${article.headline}' style='max-width: 100%; max-height: 500px; border-radius: 4px;'></td></tr>
-<tr><td style='padding: 0 12px 12px; text-align: center; font-size: 12px; color: #555; font-style: italic;'>Photo by ${article.rss_post?.author || article.rss_post?.rss_feed?.name || 'Unknown Source'}</td></tr>`
+      ? `<tr><td style='padding: 0 12px; text-align: center;'><img src='${imageUrl}' alt='${article.headline}' style='max-width: 100%; max-height: 500px; border-radius: 4px;'></td></tr>${article.rss_post?.author ? `
+<tr><td style='padding: 0 12px 12px; text-align: center; font-size: 12px; color: #555; font-style: italic;'>Photo by ${article.rss_post.author}</td></tr>` : ''}`
       : ''
 
     console.log(`Image HTML: ${imageHtml ? 'Generated' : 'None'}`)

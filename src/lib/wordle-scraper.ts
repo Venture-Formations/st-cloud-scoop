@@ -109,25 +109,17 @@ export async function getWordleDataForDate(dateStr: string): Promise<{
     return null
   }
 
-  // Use Perplexity to generate accurate definition and interesting fact
-  const { callPerplexity } = await import('./perplexity')
+  // Use ChatGPT to generate accurate definition and interesting fact
+  const { callOpenAI } = await import('./openai')
 
   try {
-    const definitionPrompt = `Look up the word "${word}" in reliable dictionaries and provide a brief, clear definition. Keep it under 50 words and make it suitable for a general audience. Return only the definition with no extra formatting.`
-    const definitionResult = await callPerplexity(definitionPrompt, {
-      model: 'sonar-pro',
-      temperature: 0.2,
-      searchContextSize: 'low'
-    })
-    const definition = definitionResult.trim()
+    const definitionPrompt = `Provide a brief, clear definition of the word "${word}". Keep it under 50 words and make it suitable for a general audience. Return only the definition with no extra formatting or preamble.`
+    const definitionResult = await callOpenAI(definitionPrompt, 100, 0.2)
+    const definition = (typeof definitionResult === 'string' ? definitionResult : definitionResult?.raw || '').trim()
 
-    const factPrompt = `Research the word "${word}" and share one interesting fact about its etymology, historical usage, or linguistic background. Keep it under 80 words and make it engaging. Return only the fact with no extra formatting.`
-    const factResult = await callPerplexity(factPrompt, {
-      model: 'sonar-pro',
-      temperature: 0.3,
-      searchContextSize: 'low'
-    })
-    const interesting_fact = factResult.trim()
+    const factPrompt = `Share one interesting fact about the word "${word}" - its etymology, historical usage, or linguistic background. Keep it under 80 words and make it engaging. Return only the fact with no extra formatting or preamble.`
+    const factResult = await callOpenAI(factPrompt, 150, 0.3)
+    const interesting_fact = (typeof factResult === 'string' ? factResult : factResult?.raw || '').trim()
 
     return {
       word,
@@ -135,8 +127,8 @@ export async function getWordleDataForDate(dateStr: string): Promise<{
       interesting_fact: interesting_fact || getInterestingFact(word)
     }
   } catch (error) {
-    console.error('Error generating Perplexity definition/fact:', error)
-    // Fall back to basic definitions if Perplexity fails
+    console.error('Error generating ChatGPT definition/fact:', error)
+    // Fall back to basic definitions if ChatGPT fails
     return {
       word,
       definition: getBasicDefinition(word),

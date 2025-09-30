@@ -435,34 +435,48 @@ CRITICAL REQUIREMENTS:
     let attemptNumber = 1
 
     try {
-      console.log(`Attempt ${attemptNumber}: Using OpenAI Responses API with web search`)
-      const { callOpenAIWithWebSearch } = await import('./openai')
-      aiResponse = await callOpenAIWithWebSearch(systemPrompt, userPrompt)
-      console.log('✅ Web search prompt succeeded:', typeof aiResponse, aiResponse?.length || 'N/A')
+      console.log(`Attempt ${attemptNumber}: Using direct page fetch + ChatGPT extraction (Make-style)`)
+      const { getRoadWorkWithChatGPT } = await import('./road-work-scraper')
+      aiResponse = await getRoadWorkWithChatGPT(formattedDate)
+      console.log('✅ ChatGPT extraction succeeded:', typeof aiResponse, aiResponse?.length || 'N/A')
+
+      if (!aiResponse || (Array.isArray(aiResponse) && aiResponse.length < 3)) {
+        throw new Error('Insufficient results from ChatGPT extraction, trying web search')
+      }
     } catch (error) {
       console.log(`❌ Attempt ${attemptNumber} failed:`, error instanceof Error ? error.message : error)
       attemptNumber++
 
       try {
-        // Fallback: Use the regular AI approach with emphasis on real data
-        console.log(`Attempt ${attemptNumber}: Using regular AI with real data emphasis`)
-        const fallbackPrompt = `Find real, current road work in St. Cloud, MN area for ${formattedDate}. Return JSON array with 9 entries using this structure:
-[{"road_name":"Highway 15","road_range":"from 2nd St to County Rd 75","city_or_township":"St. Cloud","reason":"Bridge maintenance","start_date":"${formattedDate}","expected_reopen":"2025-10-15","source_url":"https://www.dot.state.mn.us/d3/"}]
-
-CRITICAL: Only return real, verified road work from actual government sources. If fewer than 9 real projects exist, fill remaining with "No additional closures reported" entries.`
-
-        const { callOpenAI } = await import('./openai')
-        aiResponse = await callOpenAI(fallbackPrompt, undefined, 0.3)
-        console.log('✅ Fallback prompt succeeded:', typeof aiResponse, aiResponse?.length || 'N/A')
+        console.log(`Attempt ${attemptNumber}: Using OpenAI Responses API with web search`)
+        const { callOpenAIWithWebSearch } = await import('./openai')
+        aiResponse = await callOpenAIWithWebSearch(systemPrompt, userPrompt)
+        console.log('✅ Web search prompt succeeded:', typeof aiResponse, aiResponse?.length || 'N/A')
       } catch (error2) {
         console.log(`❌ Attempt ${attemptNumber} failed:`, error2 instanceof Error ? error2.message : error2)
         attemptNumber++
 
-        console.warn('⚠️ All AI attempts failed, using fallback road work data...')
-        // Use fallback data as last resort
-        const fallbackItems = generateFallbackRoadWorkData(targetDate)
-        aiResponse = fallbackItems
-        console.log('Using fallback road work data with', fallbackItems.length, 'items')
+        try {
+          // Fallback: Use the regular AI approach with emphasis on real data
+          console.log(`Attempt ${attemptNumber}: Using regular AI with real data emphasis`)
+          const fallbackPrompt = `Find real, current road work in St. Cloud, MN area for ${formattedDate}. Return JSON array with 9 entries using this structure:
+[{"road_name":"Highway 15","road_range":"from 2nd St to County Rd 75","city_or_township":"St. Cloud","reason":"Bridge maintenance","start_date":"${formattedDate}","expected_reopen":"2025-10-15","source_url":"https://www.dot.state.mn.us/d3/"}]
+
+CRITICAL: Only return real, verified road work from actual government sources. If fewer than 9 real projects exist, fill remaining with "No additional closures reported" entries.`
+
+          const { callOpenAI } = await import('./openai')
+          aiResponse = await callOpenAI(fallbackPrompt, undefined, 0.3)
+          console.log('✅ Fallback prompt succeeded:', typeof aiResponse, aiResponse?.length || 'N/A')
+        } catch (error3) {
+          console.log(`❌ Attempt ${attemptNumber} failed:`, error3 instanceof Error ? error3.message : error3)
+          attemptNumber++
+
+          console.warn('⚠️ All AI attempts failed, using fallback road work data...')
+          // Use fallback data as last resort
+          const fallbackItems = generateFallbackRoadWorkData(targetDate)
+          aiResponse = fallbackItems
+          console.log('Using fallback road work data with', fallbackItems.length, 'items')
+        }
       }
     }
 

@@ -59,7 +59,9 @@
       "mcp__ide__executeCode",
       "WebFetch(domain:www.tomsguide.com)",
       "Bash(python:*)",
-      "Bash(mcp__vercel__getDeployments:*)"
+      "Bash(mcp__vercel__getDeployments:*)",
+      "WebFetch(domain:coscgis.maps.arcgis.com)",
+      "WebFetch(domain:gis.co.stearns.mn.us)"
     ],
     "deny": [],
     "ask": []

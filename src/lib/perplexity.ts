@@ -292,7 +292,48 @@ Requirements:
     const parsed = JSON.parse(jsonMatch[0])
     console.log(`✅ Parsed ${parsed.length} road work items from Perplexity`)
 
-    return parsed
+    // Post-processing: Filter out items with dates that ended before target date
+    const targetDateObj = new Date(targetDate)
+    const filtered = parsed.filter((item: any) => {
+      // Skip items without expected_reopen date
+      if (!item.expected_reopen || item.expected_reopen === 'TBD' || item.expected_reopen === 'Not specified') {
+        return true // Keep items without clear end dates
+      }
+
+      try {
+        // Parse expected_reopen date (format: "mmm d" like "Oct 15")
+        const reopenStr = item.expected_reopen
+        const currentYear = targetDateObj.getFullYear()
+
+        // Try to parse date
+        let reopenDate: Date
+
+        // Format: "mmm d" (e.g., "Oct 15")
+        const monthDayMatch = reopenStr.match(/^([A-Za-z]+)\s+(\d+)$/)
+        if (monthDayMatch) {
+          reopenDate = new Date(`${monthDayMatch[1]} ${monthDayMatch[2]}, ${currentYear}`)
+        } else {
+          // Can't parse, keep the item
+          return true
+        }
+
+        // Filter out if reopen date is before target date
+        if (reopenDate < targetDateObj) {
+          console.log(`⚠️ Filtering out ${item.road_name} - ended ${item.expected_reopen} (before ${targetDate})`)
+          return false
+        }
+
+        return true
+      } catch (error) {
+        // If we can't parse the date, keep the item
+        console.log(`⚠️ Could not parse date for ${item.road_name}: ${item.expected_reopen}`)
+        return true
+      }
+    })
+
+    console.log(`✅ After date filtering: ${filtered.length} items (removed ${parsed.length - filtered.length} outdated items)`)
+
+    return filtered
 
   } catch (error) {
     console.error('Perplexity road work extraction failed:', error)

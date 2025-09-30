@@ -6,7 +6,7 @@ export async function GET() {
     // Get all RSS feeds
     const { data: feeds, error: feedsError } = await supabaseAdmin
       .from('rss_feeds')
-      .select('id, name, active, feed_url')
+      .select('id, name, active, url')
       .order('name')
 
     if (feedsError) {

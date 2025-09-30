@@ -120,8 +120,8 @@ export async function getRoadWorkWithPerplexity(targetDate: string): Promise<any
     day: 'numeric'
   })
 
-  // Simplified natural language prompt - Perplexity works better with direct instructions
-  const prompt = `Search for road closures, construction, and traffic restrictions in St. Cloud, Minnesota and surrounding cities (Waite Park, Sartell, Sauk Rapids, St. Joseph) that are active on ${formattedDate}.
+  // Request more results than needed so post-processing can filter to 9 valid local items
+  const prompt = `Search for road closures, construction, and traffic restrictions in St. Cloud, Minnesota and surrounding cities (Waite Park, Sartell, Sauk Rapids, St. Joseph, St. Augusta, Clearwater, Rice) that are active on ${formattedDate}.
 
 Check these sources:
 - https://www.dot.state.mn.us/d3/
@@ -130,9 +130,18 @@ Check these sources:
 - https://www.sartellmn.com/engineering/
 - https://www.ci.waitepark.mn.us/
 - https://ci.sauk-rapids.mn.us/
+- https://www.co.benton.mn.us/180/Highway
 - Local news: WJON Traffic, St. Cloud Times
 
-Find 9 active road work items within 15 miles of St. Cloud (ZIP 56303).
+Find as many active road work items as possible in the St. Cloud area (within 15 miles of ZIP 56303). Return 15-20 items if available.
+
+Include:
+- Full road closures
+- Lane closures
+- Bridge work
+- Detours
+- Construction on highways, county roads, and city streets
+- Both major and minor projects
 
 Return ONLY a JSON array with this exact structure:
 [
@@ -148,10 +157,10 @@ Return ONLY a JSON array with this exact structure:
 ]
 
 Requirements:
-- Return exactly 9 items
+- Return 15-20 items (will be filtered to 9 locally)
 - Only closures/construction active on ${formattedDate}
 - Use date format "mmm d" (e.g., "Sep 15")
-- Cities must be within 15 miles of St. Cloud
+- Include both St. Cloud city and surrounding suburbs
 - Return ONLY the JSON array, no markdown or extra text`
 
   // Old JSON structure prompt (keeping for reference)

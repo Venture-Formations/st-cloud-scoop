@@ -14,25 +14,30 @@ export async function GET() {
     }
 
     // Get a sample article to check what's being stored
-    const { data: sampleArticle } = await supabaseAdmin
+    const { data: sampleArticles } = await supabaseAdmin
       .from('articles')
       .select(`
         id,
         headline,
-        rss_post:rss_posts!inner (
-          rss_feed:rss_feeds!inner (
+        rss_post:rss_posts (
+          rss_feed:rss_feeds (
             id,
             name
           )
         )
       `)
-      .limit(1)
-      .single()
+      .limit(3)
+
+    const sampleFeedInfo = sampleArticles?.[0]?.rss_post as any
 
     return NextResponse.json({
       success: true,
       feeds: feeds || [],
-      sample_article_feed: sampleArticle?.rss_post?.rss_feed || null
+      sample_article_feed: sampleFeedInfo?.rss_feed || null,
+      sample_articles: sampleArticles?.map(a => ({
+        headline: a.headline,
+        feed_name: (a.rss_post as any)?.rss_feed?.name || 'No feed'
+      }))
     })
 
   } catch (error) {

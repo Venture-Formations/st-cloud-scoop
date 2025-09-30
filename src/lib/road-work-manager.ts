@@ -419,8 +419,9 @@ CRITICAL REQUIREMENTS:
 - Today is ${formattedDate} (September 30, 2025)
 - Only include projects CURRENTLY ACTIVE on September 30, 2025
 - DO NOT include projects that ended in 2024 or before September 30, 2025
-- DO NOT include projects with "Nov 2024", "Oct 2024", "Aug 2024", etc. as completion dates
-- For expected_reopen, use 2025 or later years only
+- DO NOT include projects with completion dates like "Nov 2024", "Oct 2024", "Aug 2024", "Late Aug", etc.
+- For expected_reopen, use specific dates with 2025 or later years (e.g., "Oct 15", "Nov 30")
+- Avoid vague dates like "Late Aug", "Early Sep" - use specific dates instead
 - Search ALL the government sources provided
 - Include highways, county roads, and city streets
 - Find at least 6-9 real current projects
@@ -533,6 +534,31 @@ CRITICAL: Only return real, verified road work from actual government sources. I
       if (!dateStr || dateStr === 'TBD') return null
 
       try {
+        // Handle vague dates like "Late Aug", "Early Sep", "Mid Oct"
+        const vagueMatch = dateStr.match(/^(Early|Mid|Late)\s+([A-Za-z]+)(?:\s+(\d{4}))?$/i)
+        if (vagueMatch) {
+          const [, timing, month, year] = vagueMatch
+          const currentYear = new Date().getFullYear()
+          const yearToUse = year ? parseInt(year) : currentYear
+
+          // Create date at end of month for "Late", middle for "Mid", start for "Early"
+          const dateString = `${month} 1, ${yearToUse}`
+          const date = new Date(dateString)
+
+          if (timing.toLowerCase() === 'late') {
+            // Last day of month
+            date.setMonth(date.getMonth() + 1)
+            date.setDate(0)
+          } else if (timing.toLowerCase() === 'mid') {
+            // 15th of month
+            date.setDate(15)
+          } else {
+            // Keep as 1st of month for "early"
+          }
+
+          return date
+        }
+
         // Handle "mmm yyyy" format (e.g., "Oct 2024", "Nov 2024")
         const yearOnlyMatch = dateStr.match(/^([A-Za-z]+)\s+(\d{4})$/)
         if (yearOnlyMatch) {

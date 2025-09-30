@@ -14,7 +14,7 @@ export async function GET(request: NextRequest) {
     // Look up campaign ID - required, no fallback
     console.log(`Looking up campaign for date: ${targetDate}`)
     const { data: campaign, error } = await supabaseAdmin
-      .from('campaigns')
+      .from('newsletter_campaigns')
       .select('id')
       .eq('date', targetDate)
       .single()

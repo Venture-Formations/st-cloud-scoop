@@ -492,6 +492,10 @@ CRITICAL: Only return real, verified road work from actual government sources. I
         }
       }
     }
+  } catch (error) {
+    console.error('❌ All road work generation attempts failed:', error)
+    throw error
+  }
 
     // Parse AI response - simplified logic matching working debug endpoint
     let roadWorkItems: RoadWorkItem[] = []

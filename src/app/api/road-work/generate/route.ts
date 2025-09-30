@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { generateDailyRoadWork, storeRoadWorkItems } from '@/lib/road-work-manager'
+import { createClient } from '@/lib/supabase/server'
 
 export async function GET(request: NextRequest) {
   console.log('🚧 Starting road work data generation...')
@@ -8,15 +9,34 @@ export async function GET(request: NextRequest) {
     // Get campaign date and campaign ID from query parameters
     const { searchParams } = new URL(request.url)
     const campaignDate = searchParams.get('campaign_date')
-    const campaignId = searchParams.get('campaign_id') || 'c9da768c-588b-4ca2-ba7f-5553a32a7298' // Default to latest campaign
+    let campaignId = searchParams.get('campaign_id')
+
+    // If no campaign ID provided, look up today's campaign
+    if (!campaignId) {
+      const supabase = await createClient()
+      const targetDate = campaignDate || new Date().toISOString().split('T')[0]
+
+      const { data: campaign } = await supabase
+        .from('campaigns')
+        .select('id')
+        .eq('date', targetDate)
+        .single()
+
+      if (campaign) {
+        campaignId = campaign.id
+        console.log(`Found campaign ID ${campaignId} for date ${targetDate}`)
+      } else {
+        console.warn(`No campaign found for date ${targetDate}`)
+      }
+    }
 
     // Generate new road work data
     const roadWorkData = await generateDailyRoadWork(campaignDate || undefined)
     console.log('✅ Road work data generated successfully')
 
-    // Store items in normalized database if we have data
+    // Store items in normalized database if we have data and campaign ID
     let storedItems = []
-    if (roadWorkData.road_work_data && roadWorkData.road_work_data.length > 0) {
+    if (roadWorkData.road_work_data && roadWorkData.road_work_data.length > 0 && campaignId) {
       console.log(`Storing ${roadWorkData.road_work_data.length} road work items in normalized database`)
       storedItems = await storeRoadWorkItems(roadWorkData.road_work_data, campaignId)
       console.log(`✅ Stored ${storedItems.length} items in normalized database`)

@@ -435,17 +435,30 @@ CRITICAL REQUIREMENTS:
     let attemptNumber = 1
 
     try {
-      console.log(`Attempt ${attemptNumber}: Using direct page fetch + ChatGPT extraction (Make-style)`)
-      const { getRoadWorkWithChatGPT } = await import('./road-work-scraper')
-      aiResponse = await getRoadWorkWithChatGPT(formattedDate)
-      console.log('✅ ChatGPT extraction succeeded:', typeof aiResponse, aiResponse?.length || 'N/A')
+      console.log(`Attempt ${attemptNumber}: Using Perplexity AI with web search (Make-style)`)
+      const { getRoadWorkWithPerplexity } = await import('./perplexity')
+      aiResponse = await getRoadWorkWithPerplexity(formattedDate)
+      console.log('✅ Perplexity extraction succeeded:', typeof aiResponse, aiResponse?.length || 'N/A')
 
       if (!aiResponse || (Array.isArray(aiResponse) && aiResponse.length < 3)) {
-        throw new Error('Insufficient results from ChatGPT extraction, trying web search')
+        throw new Error('Insufficient results from Perplexity, trying other methods')
       }
     } catch (error) {
       console.log(`❌ Attempt ${attemptNumber} failed:`, error instanceof Error ? error.message : error)
       attemptNumber++
+
+      try {
+        console.log(`Attempt ${attemptNumber}: Using direct page fetch + ChatGPT extraction`)
+        const { getRoadWorkWithChatGPT } = await import('./road-work-scraper')
+        aiResponse = await getRoadWorkWithChatGPT(formattedDate)
+        console.log('✅ ChatGPT extraction succeeded:', typeof aiResponse, aiResponse?.length || 'N/A')
+
+        if (!aiResponse || (Array.isArray(aiResponse) && aiResponse.length < 3)) {
+          throw new Error('Insufficient results from ChatGPT extraction, trying web search')
+        }
+      } catch (error2) {
+        console.log(`❌ Attempt ${attemptNumber} failed:`, error2 instanceof Error ? error2.message : error2)
+        attemptNumber++
 
       try {
         console.log(`Attempt ${attemptNumber}: Using OpenAI Responses API with web search`)

@@ -120,63 +120,50 @@ export async function getRoadWorkWithPerplexity(targetDate: string): Promise<any
     day: 'numeric'
   })
 
-  // Use the exact structured prompt format from RoadWorkDirections.txt (Make blueprint)
-  // Enhanced with stronger geographic filtering
-  const prompt = JSON.stringify({
-    "query": {
-      "description": `List every active road, lane, or bridge closure, detour, or major traffic restriction in effect on ${formattedDate} within 15 miles of ZIP code 56303 (St. Cloud, MN). Focus on the immediate St. Cloud metro area including Waite Park, Sartell, Sauk Rapids, and St. Joseph.`,
-      "criteria": {
-        "date": targetDate,
-        "location_radius": {
-          "zip_code": "56303",
-          "radius_miles": 15,
-          "center_city": "St. Cloud, Minnesota",
-          "priority_cities": [
-            "St. Cloud",
-            "Waite Park",
-            "Sartell",
-            "Sauk Rapids",
-            "St. Joseph",
-            "St. Augusta",
-            "Clearwater",
-            "Rice"
+  // Use the exact text format from Make/Google Sheets (not JSON.stringify)
+  // This matches how Make sends the prompt to Perplexity
+  const prompt = `{
+  "query": {
+    "description": "List every active road, lane, or bridge closure, detour, or major traffic restriction in effect on ${formattedDate} within 15 miles of ZIP code 56303 (St. Cloud, MN).",
+    "criteria": {
+      "date": "${targetDate}",
+      "location_radius": {
+        "zip_code": "56303",
+        "radius_miles": 15
+      },
+      "inclusion_rules": {
+        "include_types": {
+          "examples": [
+            "full closures",
+            "lane closures",
+            "bridge closures",
+            "detours",
+            "major traffic restrictions"
           ]
         },
-        "inclusion_rules": {
-          "include_types": {
-            "examples": [
-              "full closures",
-              "lane closures",
-              "bridge closures",
-              "detours",
-              "major traffic restrictions"
-            ]
-          },
-          "include_conditions": {
-            "examples": [
-              "current closures in the St. Cloud metro area",
-              `recurring or periodic closures active on ${formattedDate}`,
-              `closures that started any time before or on ${formattedDate} and are still active`,
-              "closures from all road types (state, county, city streets)",
-              "segment-specific impacts within larger projects",
-              "direction-specific lane closures (e.g., westbound/eastbound)",
-              "prioritize closures in St. Cloud, Waite Park, Sartell, Sauk Rapids, St. Joseph"
-            ]
-          },
-          "include_synonyms": {
-            "examples": [
-              "construction impacts",
-              "travel advisories",
-              "traffic alerts",
-              "detour notices"
-            ]
-          },
-          "explicitly_include": [
-            "Hwy 55",
-            "Hwy 15",
-            "closures near city boundaries or small towns like Kimball or Annandale"
+        "include_conditions": {
+          "examples": [
+            "current closures",
+            "recurring or periodic closures active on ${formattedDate}",
+            "closures that started any time before or on ${formattedDate} and are still active",
+            "closures from all road types (state, county, city streets)",
+            "segment-specific impacts within larger projects",
+            "direction-specific lane closures (e.g., westbound/eastbound)"
           ]
         },
+        "include_synonyms": {
+          "examples": [
+            "construction impacts",
+            "travel advisories",
+            "traffic alerts",
+            "detour notices"
+          ]
+        },
+        "explicitly_include": [
+          "Hwy 55",
+          "Hwy 15",
+          "closures near city boundaries or small towns like Kimball or Annandale"
+        ],
         "exclusion_rules": {
           "examples": [
             "completed closures",
@@ -222,9 +209,8 @@ export async function getRoadWorkWithPerplexity(targetDate: string): Promise<any
     "output_rules": {
       "format": "JSON_array_only",
       "json_starts_with": "[",
-      "date_format": "mmm d",
+      "date_format": "ISO-8601",
       "deduplicate": true,
-      "geographic_priority": "Prioritize closures closest to St. Cloud city center. Prefer items from St. Cloud, Waite Park, Sartell, Sauk Rapids, and St. Joseph over distant suburbs.",
       "structure": [
         {
           "road_name": "string",
@@ -237,7 +223,8 @@ export async function getRoadWorkWithPerplexity(targetDate: string): Promise<any
         }
       ]
     }
-  }, null, 2)`
+  }
+}`
 
   try {
     const response = await callPerplexity(prompt, {

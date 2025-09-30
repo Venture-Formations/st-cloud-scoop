@@ -380,138 +380,49 @@ export async function generateDailyRoadWork(campaignDate?: string): Promise<Road
     // Convert target date to the format expected by the user's prompts
     const formattedDate = new Date(targetDate).toISOString().split('T')[0] // Convert to YYYY-MM-DD
 
-    const systemPrompt = `You are a traffic researcher with live web access. Search official DOT/county/city/public-works sources and credible local media for active road impacts.
+    const systemPrompt = `You are a local traffic researcher with web search capabilities. Search for active road closures and construction in the St. Cloud, Minnesota area.
 
-Use this exact query structure:
+Target Date: ${formattedDate}
+Location: Within 15 miles of St. Cloud, MN (ZIP 56303)
+
+Search these official sources:
+- MnDOT District 3: https://www.dot.state.mn.us/d3/
+- Stearns County Public Works: https://www.stearnscountymn.gov/185/Public-Works
+- Benton County Highway: https://www.co.benton.mn.us/180/Highway
+- Sherburne County: https://www.co.sherburne.mn.us/162/Public-Works
+- City of St. Cloud: https://www.ci.stcloud.mn.us
+- City of Sartell: https://www.sartellmn.com/engineering/
+- City of Sauk Rapids: https://ci.sauk-rapids.mn.us/
+- City of Waite Park: https://www.ci.waitepark.mn.us/
+- Metro Bus: https://www.ridemetrobus.com
+- Local news: WJON, St. Cloud Times
+
+Include: Road closures, lane closures, bridge work, detours, construction on highways, county roads, and city streets.
+
+Respond with ONLY a JSON array. No explanations or markdown.`
+
+    const userPrompt = `Search for ALL active road closures, construction, and traffic restrictions in St. Cloud, MN area that are happening on ${formattedDate}.
+
+Return a JSON array with 6-9 items. Each item must use this exact format:
 
 {
-  "query": {
-    "description": "List every active road, lane, or bridge closure, detour, or major traffic restriction in effect on ${formattedDate} within 15 miles of ZIP code 56303 (St. Cloud, MN).",
-    "criteria": {
-      "date": "${formattedDate}",
-      "location_radius": {
-        "zip_code": "56303",
-        "radius_miles": 15
-      },
-      "inclusion_rules": {
-        "include_types": {
-          "examples": [
-            "full closures",
-            "lane closures",
-            "bridge closures",
-            "detours",
-            "major traffic restrictions"
-          ]
-        },
-        "include_conditions": {
-          "examples": [
-            "current closures",
-            "recurring or periodic closures active on ${formattedDate}",
-            "closures that started any time before or on ${formattedDate} and are still active",
-            "closures from all road types (state, county, city streets)",
-            "segment-specific impacts within larger projects",
-            "direction-specific lane closures (e.g., westbound/eastbound)"
-          ]
-        },
-        "include_synonyms": {
-          "examples": [
-            "construction impacts",
-            "travel advisories",
-            "traffic alerts",
-            "detour notices"
-          ]
-        },
-        "explicitly_include": [
-          "Hwy 55",
-          "Hwy 15",
-          "closures near city boundaries or small towns like Kimball or Annandale"
-        ],
-        "exclusion_rules": {
-          "examples": [
-            "completed closures",
-            "planned or future closures",
-            "shoulder-only work"
-          ]
-        },
-        "deduplicate_only": "truly overlapping or redundant entries"
-      },
-      "required_fields": [
-        "road_segment",
-        "city_or_township",
-        "reason",
-        "start_date",
-        "expected_reopen",
-        "source_url"
-      ],
-      "custom_parsing": {
-        "split_road_segment": "If road_segment contains phrasing like '[road name] from [start point] to [end point]', extract '[road name]' as 'road_name' and 'from [start] to [end]' as 'road_range'."
-      },
-      "minimum_results": null,
-      "maximum_results": null,
-      "pagination_allowed": true
-    },
-    "sources": {
-      "examples": [
-        "https://www.dot.state.mn.us/d3/",
-        "https://www.stearnscountymn.gov/185/Public-Works",
-        "https://www.co.benton.mn.us/180/Highway",
-        "https://www.co.sherburne.mn.us/162/Public-Works",
-        "https://www.sartellmn.com/engineering/",
-        "https://www.ci.stcloud.mn.us",
-        "https://www.cityofstjoseph.com/",
-        "https://www.ci.waitepark.mn.us/",
-        "https://ci.sauk-rapids.mn.us/",
-        "https://www.stcloudapo.org",
-        "https://www.ridemetrobus.com",
-        "Official Facebook pages (road/closure updates from last 30 days)",
-        "Local media such as WJON Traffic, St. Cloud Times Roads section"
-      ],
-      "allow_additional_sources": true
-    },
-    "output_rules": {
-      "format": "JSON_array_only",
-      "json_starts_with": "[",
-      "date_format": "ISO-8601",
-      "deduplicate": true,
-      "structure": [
-        {
-          "road_name": "string",
-          "road_range": "string",
-          "city_or_township": "string",
-          "reason": "string",
-          "start_date": "YYYY-MM-DD",
-          "expected_reopen": "YYYY-MM-DD or 'TBD'",
-          "source_url": "https://..."
-        }
-      ]
-    }
-  }
-}`
-
-    const userPrompt = `Execute the query structure provided in the system prompt. Search all the specified sources comprehensively and return ALL available road work items found.
-
-Return ONLY a JSON array starting with [ and ending with ].
-
-Each element must match this exact structure:
-{
-  "road_name": "string",
-  "road_range": "string",
-  "city_or_township": "string",
-  "reason": "string",
-  "start_date": "mmm d",
-  "expected_reopen": "mmm d or 'TBD'",
-  "source_url": "https://..."
+  "road_name": "Highway 15",
+  "road_range": "from 2nd St to County Rd 75",
+  "city_or_township": "St. Cloud",
+  "reason": "Bridge maintenance",
+  "start_date": "Sep 15",
+  "expected_reopen": "Oct 10",
+  "source_url": "https://www.dot.state.mn.us/d3/"
 }
 
-CRITICAL:
-- Return ALL available results (no limit - include everything you find)
-- Include all types: full closures, lane closures, bridge closures, detours, major traffic restrictions
-- Include utility work, construction impacts, travel advisories, traffic alerts
-- Include smaller utility work closures and bus detours
-- Search all sources: MnDOT, counties, cities, transit, local media
-- Only active on ${formattedDate} within 15 miles of ZIP 56303
-- Use pagination to find all available results
-- No markdown, no commentary - just the JSON array with all found items`
+Requirements:
+- Search ALL the government sources provided
+- Include highways, county roads, and city streets
+- Only projects active on ${formattedDate}
+- Find at least 6-9 real current projects
+- Use short date format (mmm d) not ISO dates
+- Return ONLY the JSON array, starting with [ and ending with ]
+- No markdown formatting, no explanations`
 
     // Try the web search approach with fallback strategies
     let aiResponse: any = null

@@ -351,7 +351,7 @@ export async function callOpenAIWithWebSearch(systemPrompt: string, userPrompt: 
     console.log('System prompt length:', systemPrompt.length)
     console.log('User prompt length:', userPrompt.length)
 
-    const timeoutId = setTimeout(() => controller.abort(), 60000) // 60 second timeout for web search
+    const timeoutId = setTimeout(() => controller.abort(), 90000) // 90 second timeout for web search
 
     try {
       console.log('Using GPT-4o model with web search tools...')
@@ -371,30 +371,40 @@ export async function callOpenAIWithWebSearch(systemPrompt: string, userPrompt: 
 
       clearTimeout(timeoutId)
 
+      // Log the full response structure for debugging
+      console.log('Full response structure:', JSON.stringify(response, null, 2).substring(0, 1000))
+
       // Extract the response text using the format from the user's example
       const text = response.output_text ?? response.output?.[0]?.content?.[0]?.text ?? ""
 
       if (!text) {
+        console.error('No text found in response. Response keys:', Object.keys(response))
         throw new Error('No response from OpenAI Responses API')
       }
 
       console.log('OpenAI Responses API response received, length:', text.length)
+      console.log('Response preview:', text.substring(0, 500))
 
       // Extract JSON array from the response
       const start = text.indexOf("[")
       const end = text.lastIndexOf("]")
 
       if (start === -1 || end === -1) {
-        console.warn('No JSON array found in response, returning raw text')
+        console.warn('No JSON array found in response')
+        console.warn('Full response text:', text.substring(0, 1000))
         return { raw: text }
       }
 
       const jsonString = text.slice(start, end + 1)
       console.log('Extracted JSON string length:', jsonString.length)
+      console.log('JSON preview:', jsonString.substring(0, 300))
 
       try {
         const parsedData = JSON.parse(jsonString)
         console.log('Successfully parsed road work data:', parsedData.length, 'items')
+        if (parsedData.length > 0) {
+          console.log('First item:', JSON.stringify(parsedData[0], null, 2))
+        }
         return parsedData
       } catch (parseError) {
         console.error('Failed to parse extracted JSON:', parseError)

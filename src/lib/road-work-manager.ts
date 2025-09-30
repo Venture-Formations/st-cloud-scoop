@@ -465,8 +465,8 @@ CRITICAL REQUIREMENTS:
         const { callOpenAIWithWebSearch } = await import('./openai')
         aiResponse = await callOpenAIWithWebSearch(systemPrompt, userPrompt)
         console.log('✅ Web search prompt succeeded:', typeof aiResponse, aiResponse?.length || 'N/A')
-      } catch (error2) {
-        console.log(`❌ Attempt ${attemptNumber} failed:`, error2 instanceof Error ? error2.message : error2)
+      } catch (error3) {
+        console.log(`❌ Attempt ${attemptNumber} failed:`, error3 instanceof Error ? error3.message : error3)
         attemptNumber++
 
         try {
@@ -480,8 +480,8 @@ CRITICAL: Only return real, verified road work from actual government sources. I
           const { callOpenAI } = await import('./openai')
           aiResponse = await callOpenAI(fallbackPrompt, undefined, 0.3)
           console.log('✅ Fallback prompt succeeded:', typeof aiResponse, aiResponse?.length || 'N/A')
-        } catch (error3) {
-          console.log(`❌ Attempt ${attemptNumber} failed:`, error3 instanceof Error ? error3.message : error3)
+        } catch (error4) {
+          console.log(`❌ Attempt ${attemptNumber} failed:`, error4 instanceof Error ? error4.message : error4)
           attemptNumber++
 
           console.warn('⚠️ All AI attempts failed, using fallback road work data...')
@@ -491,10 +491,8 @@ CRITICAL: Only return real, verified road work from actual government sources. I
           console.log('Using fallback road work data with', fallbackItems.length, 'items')
         }
       }
+      }
     }
-  } catch (error) {
-    console.error('❌ All road work generation attempts failed:', error)
-    throw error
   }
 
     // Parse AI response - simplified logic matching working debug endpoint

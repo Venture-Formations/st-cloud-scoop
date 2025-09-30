@@ -416,16 +416,16 @@ Return a JSON array with 6-9 items. Each item must use this exact format:
 }
 
 CRITICAL REQUIREMENTS:
-- Today is ${formattedDate} (September 30, 2025)
-- Only include projects CURRENTLY ACTIVE on September 30, 2025
-- DO NOT include projects that ended before September 30, 2025
-- DO NOT include any projects from 2024 or earlier
+- Today is ${formattedDate}
+- Only include projects CURRENTLY ACTIVE on ${formattedDate}
+- DO NOT include projects that ended before ${formattedDate}
+- DO NOT include any projects from previous years
 - For expected_reopen dates, prefer specific day format: "Oct 15", "Nov 30", "Dec 5"
 - If only month is known, use format "Oct 2025", "Nov 2025" (will be treated as 20th of month)
 - Vague dates like "Late Aug", "Early Oct" are acceptable if specific dates unavailable
 - Search ALL the government sources provided
 - Include highways, county roads, and city streets
-- Find at least 6-9 real current projects still active in late September/October 2025
+- Find at least 6-9 real current projects still active on ${formattedDate}
 - Use short date format like "Oct 15" not ISO dates
 - Return ONLY the JSON array, starting with [ and ending with ]
 - No markdown formatting, no explanations`

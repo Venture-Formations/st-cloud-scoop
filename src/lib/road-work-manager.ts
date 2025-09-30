@@ -418,9 +418,11 @@ Return a JSON array with 6-9 items. Each item must use this exact format:
 Requirements:
 - Search ALL the government sources provided
 - Include highways, county roads, and city streets
-- Only projects active on ${formattedDate}
+- CRITICAL: Only include projects that are CURRENTLY ACTIVE on ${formattedDate}
+- Do NOT include projects with expected_reopen dates that have already passed
 - Find at least 6-9 real current projects
 - Use short date format (mmm d) not ISO dates
+- For expected_reopen, use current year (2025) unless specified otherwise
 - Return ONLY the JSON array, starting with [ and ending with ]
 - No markdown formatting, no explanations`
 
@@ -524,13 +526,57 @@ CRITICAL: Only return real, verified road work from actual government sources. I
 
     console.log(`Found ${roadWorkItems.length} total road work items from web search`)
 
-    // Filter out placeholder entries to avoid repetitive content
-    roadWorkItems = roadWorkItems.filter(item =>
-      item.road_name !== 'No Additional Closures' &&
-      item.road_name !== 'No Additional Major Closures' &&
-      item.reason !== 'No additional major closures reported' &&
-      item.reason !== 'No major closures reported'
-    )
+    // Helper function to parse dates
+    const parseRoadWorkDate = (dateStr: string): Date | null => {
+      if (!dateStr || dateStr === 'TBD') return null
+
+      try {
+        // Handle "mmm d" format (e.g., "Oct 15")
+        const match = dateStr.match(/^([A-Za-z]+)\s+(\d+)(?:,?\s*(\d{4}))?$/)
+        if (match) {
+          const [, month, day, year] = match
+          const currentYear = new Date().getFullYear()
+          const yearToUse = year ? parseInt(year) : currentYear
+          const dateString = `${month} ${day}, ${yearToUse}`
+          return new Date(dateString)
+        }
+
+        // Try direct parsing as fallback
+        return new Date(dateStr)
+      } catch (error) {
+        console.warn(`Could not parse date: ${dateStr}`)
+        return null
+      }
+    }
+
+    // Get target date for comparison
+    const targetDateObj = new Date(targetDate)
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+
+    // Filter out placeholder entries and completed projects
+    const beforeFilter = roadWorkItems.length
+    roadWorkItems = roadWorkItems.filter(item => {
+      // Filter placeholders
+      if (item.road_name === 'No Additional Closures' ||
+          item.road_name === 'No Additional Major Closures' ||
+          item.reason === 'No additional major closures reported' ||
+          item.reason === 'No major closures reported') {
+        console.log(`Filtering out placeholder: ${item.road_name}`)
+        return false
+      }
+
+      // Check if project has already ended
+      const reopenDate = parseRoadWorkDate(item.expected_reopen)
+      if (reopenDate && reopenDate < today) {
+        console.log(`Filtering out completed project: ${item.road_name} (ended ${item.expected_reopen})`)
+        return false
+      }
+
+      return true
+    })
+
+    console.log(`Filtered ${beforeFilter - roadWorkItems.length} outdated/placeholder items`)
 
     // If we have more than 9 real items, take the first 9 (most significant ones should be first)
     if (roadWorkItems.length > 9) {

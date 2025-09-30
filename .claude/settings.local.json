@@ -61,7 +61,8 @@
       "Bash(python:*)",
       "Bash(mcp__vercel__getDeployments:*)",
       "WebFetch(domain:coscgis.maps.arcgis.com)",
-      "WebFetch(domain:gis.co.stearns.mn.us)"
+      "WebFetch(domain:gis.co.stearns.mn.us)",
+      "Bash(cat:*)"
     ],
     "deny": [],
     "ask": []

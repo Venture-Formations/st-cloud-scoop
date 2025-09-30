@@ -203,6 +203,27 @@ export async function storeRoadWorkItems(roadWorkItems: Array<{
   }
 
   console.log('✅ Road work items stored successfully:', data?.length || 0, 'items')
+
+  // Auto-select first 9 items for the campaign
+  if (data && data.length > 0) {
+    const itemsToSelect = data.slice(0, 9)
+    const selectionData = itemsToSelect.map((item, index) => ({
+      campaign_id: campaignId,
+      road_work_item_id: item.id,
+      selection_order: index + 1
+    }))
+
+    const { error: selectionError } = await supabaseAdmin
+      .from('campaign_road_work_selections')
+      .insert(selectionData)
+
+    if (selectionError) {
+      console.warn('⚠️ Failed to auto-select road work items (table may not exist yet):', selectionError.message)
+    } else {
+      console.log(`✅ Auto-selected ${itemsToSelect.length} road work items for campaign`)
+    }
+  }
+
   return data || []
 }
 
@@ -223,6 +244,42 @@ export async function getRoadWorkItemsForCampaign(campaignId: string): Promise<R
   }
 
   return data || []
+}
+
+/**
+ * Get SELECTED road work items for a campaign (only items selected for email)
+ */
+export async function getSelectedRoadWorkItemsForCampaign(campaignId: string): Promise<RoadWorkItem[]> {
+  const { data, error } = await supabaseAdmin
+    .from('campaign_road_work_selections')
+    .select(`
+      selection_order,
+      road_work_item:road_work_items(*)
+    `)
+    .eq('campaign_id', campaignId)
+    .order('selection_order', { ascending: true })
+
+  if (error) {
+    // If table doesn't exist yet, fall back to all items
+    if (error.message && error.message.includes('relation "campaign_road_work_selections" does not exist')) {
+      console.log('⚠️ Selection table not created yet, falling back to all road work items')
+      return getRoadWorkItemsForCampaign(campaignId)
+    }
+    console.error('Failed to get selected road work items:', error)
+    return []
+  }
+
+  // Extract road_work_item from the joined data
+  const items = data?.map((selection: any) => selection.road_work_item).filter(Boolean) || []
+
+  // If no selections exist, fall back to first 9 items
+  if (items.length === 0) {
+    console.log('⚠️ No selections found, falling back to first 9 road work items')
+    const allItems = await getRoadWorkItemsForCampaign(campaignId)
+    return allItems.slice(0, 9)
+  }
+
+  return items
 }
 
 /**

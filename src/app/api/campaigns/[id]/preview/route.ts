@@ -5,7 +5,7 @@ import { supabaseAdmin } from '@/lib/supabase'
 import { getWeatherForCampaign } from '@/lib/weather-manager'
 import { selectPropertiesForCampaign, getSelectedPropertiesForCampaign } from '@/lib/vrbo-selector'
 import { selectDiningDealsForCampaign, getDiningDealsForCampaign } from '@/lib/dining-selector'
-import { generateDailyRoadWork, getRoadWorkItemsForCampaign, storeRoadWorkItems, generateRoadWorkHTML } from '@/lib/road-work-manager'
+import { generateDailyRoadWork, getRoadWorkItemsForCampaign, getSelectedRoadWorkItemsForCampaign, storeRoadWorkItems, generateRoadWorkHTML } from '@/lib/road-work-manager'
 
 export async function GET(
   request: NextRequest,
@@ -659,13 +659,13 @@ async function generateRoadWorkSection(campaign: any): Promise<string> {
   try {
     console.log('Generating Road Work section for campaign:', campaign?.id)
 
-    // First, try to find existing road work items for this campaign (normalized approach)
-    const existingRoadWorkItems = await getRoadWorkItemsForCampaign(campaign.id)
+    // Get SELECTED road work items for this campaign (max 9)
+    const selectedRoadWorkItems = await getSelectedRoadWorkItemsForCampaign(campaign.id)
 
-    if (existingRoadWorkItems && existingRoadWorkItems.length > 0) {
-      console.log(`Using existing ${existingRoadWorkItems.length} road work items for campaign`)
+    if (selectedRoadWorkItems && selectedRoadWorkItems.length > 0) {
+      console.log(`Using ${selectedRoadWorkItems.length} selected road work items for campaign`)
       // Convert normalized items to the format expected by generateRoadWorkHTML
-      const itemsForHtml = existingRoadWorkItems.map(item => ({
+      const itemsForHtml = selectedRoadWorkItems.map(item => ({
         road_name: item.road_name,
         road_range: item.road_range || '',
         city_or_township: item.city_or_township || '',

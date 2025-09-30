@@ -401,7 +401,7 @@ Include: Road closures, lane closures, bridge work, detours, construction on hig
 
 Respond with ONLY a JSON array. No explanations or markdown.`
 
-    const userPrompt = `Search for ALL active road closures, construction, and traffic restrictions in St. Cloud, MN area that are happening on ${formattedDate}.
+    const userPrompt = `Today's date is ${formattedDate}. Search for ALL active road closures, construction, and traffic restrictions in St. Cloud, MN area that are CURRENTLY ACTIVE on this date.
 
 Return a JSON array with 6-9 items. Each item must use this exact format:
 
@@ -415,14 +415,16 @@ Return a JSON array with 6-9 items. Each item must use this exact format:
   "source_url": "https://www.dot.state.mn.us/d3/"
 }
 
-Requirements:
+CRITICAL REQUIREMENTS:
+- Today is ${formattedDate} (September 30, 2025)
+- Only include projects CURRENTLY ACTIVE on September 30, 2025
+- DO NOT include projects that ended in 2024 or before September 30, 2025
+- DO NOT include projects with "Nov 2024", "Oct 2024", "Aug 2024", etc. as completion dates
+- For expected_reopen, use 2025 or later years only
 - Search ALL the government sources provided
 - Include highways, county roads, and city streets
-- CRITICAL: Only include projects that are CURRENTLY ACTIVE on ${formattedDate}
-- Do NOT include projects with expected_reopen dates that have already passed
 - Find at least 6-9 real current projects
-- Use short date format (mmm d) not ISO dates
-- For expected_reopen, use current year (2025) unless specified otherwise
+- Use short date format like "Oct 15" not ISO dates
 - Return ONLY the JSON array, starting with [ and ending with ]
 - No markdown formatting, no explanations`
 
@@ -531,18 +533,42 @@ CRITICAL: Only return real, verified road work from actual government sources. I
       if (!dateStr || dateStr === 'TBD') return null
 
       try {
-        // Handle "mmm d" format (e.g., "Oct 15")
-        const match = dateStr.match(/^([A-Za-z]+)\s+(\d+)(?:,?\s*(\d{4}))?$/)
-        if (match) {
-          const [, month, day, year] = match
+        // Handle "mmm yyyy" format (e.g., "Oct 2024", "Nov 2024")
+        const yearOnlyMatch = dateStr.match(/^([A-Za-z]+)\s+(\d{4})$/)
+        if (yearOnlyMatch) {
+          const [, month, year] = yearOnlyMatch
+          // Assume end of month for year-only dates
+          const dateString = `${month} 1, ${year}`
+          const date = new Date(dateString)
+          // Move to last day of month
+          date.setMonth(date.getMonth() + 1)
+          date.setDate(0)
+          return date
+        }
+
+        // Handle "mmm d" or "mmm d, yyyy" format (e.g., "Oct 15" or "Oct 15, 2025")
+        const dayMatch = dateStr.match(/^([A-Za-z]+)\s+(\d+)(?:,?\s*(\d{4}))?$/)
+        if (dayMatch) {
+          const [, month, day, year] = dayMatch
           const currentYear = new Date().getFullYear()
           const yearToUse = year ? parseInt(year) : currentYear
           const dateString = `${month} ${day}, ${yearToUse}`
           return new Date(dateString)
         }
 
+        // Handle year-only format (e.g., "2024", "2027")
+        const onlyYearMatch = dateStr.match(/^(\d{4})$/)
+        if (onlyYearMatch) {
+          return new Date(`December 31, ${onlyYearMatch[1]}`)
+        }
+
         // Try direct parsing as fallback
-        return new Date(dateStr)
+        const fallbackDate = new Date(dateStr)
+        if (!isNaN(fallbackDate.getTime())) {
+          return fallbackDate
+        }
+
+        return null
       } catch (error) {
         console.warn(`Could not parse date: ${dateStr}`)
         return null

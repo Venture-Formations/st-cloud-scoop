@@ -4,7 +4,7 @@
 
 CREATE TABLE IF NOT EXISTS campaign_road_work_selections (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  campaign_id TEXT NOT NULL REFERENCES newsletter_campaigns(id) ON DELETE CASCADE,
+  campaign_id UUID NOT NULL REFERENCES newsletter_campaigns(id) ON DELETE CASCADE,
   road_work_item_id UUID NOT NULL REFERENCES road_work_items(id) ON DELETE CASCADE,
   selection_order INTEGER NOT NULL,
   created_at TIMESTAMPTZ DEFAULT NOW(),

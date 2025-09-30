@@ -120,9 +120,44 @@ export async function getRoadWorkWithPerplexity(targetDate: string): Promise<any
     day: 'numeric'
   })
 
-  // Use the exact text format from Make/Google Sheets (not JSON.stringify)
-  // This matches how Make sends the prompt to Perplexity
-  const prompt = `{
+  // Simplified natural language prompt - Perplexity works better with direct instructions
+  const prompt = `Search for road closures, construction, and traffic restrictions in St. Cloud, Minnesota and surrounding cities (Waite Park, Sartell, Sauk Rapids, St. Joseph) that are active on ${formattedDate}.
+
+Check these sources:
+- https://www.dot.state.mn.us/d3/
+- https://www.stearnscountymn.gov/185/Public-Works
+- https://www.ci.stcloud.mn.us
+- https://www.sartellmn.com/engineering/
+- https://www.ci.waitepark.mn.us/
+- https://ci.sauk-rapids.mn.us/
+- Local news: WJON Traffic, St. Cloud Times
+
+Find 9 active road work items within 15 miles of St. Cloud (ZIP 56303).
+
+Return ONLY a JSON array with this exact structure:
+[
+  {
+    "road_name": "Highway 15",
+    "road_range": "from 2nd St to County Rd 75",
+    "city_or_township": "St. Cloud",
+    "reason": "Bridge maintenance",
+    "start_date": "Sep 15",
+    "expected_reopen": "Oct 10",
+    "source_url": "https://www.dot.state.mn.us/d3/"
+  }
+]
+
+Requirements:
+- Return exactly 9 items
+- Only closures/construction active on ${formattedDate}
+- Use date format "mmm d" (e.g., "Sep 15")
+- Cities must be within 15 miles of St. Cloud
+- Return ONLY the JSON array, no markdown or extra text`
+
+  // Old JSON structure prompt (keeping for reference)
+  /*
+  const oldPrompt = `{
+  "query": {
   "query": {
     "description": "List every active road, lane, or bridge closure, detour, or major traffic restriction in effect on ${formattedDate} within 15 miles of ZIP code 56303 (St. Cloud, MN).",
     "criteria": {
@@ -224,7 +259,8 @@ export async function getRoadWorkWithPerplexity(targetDate: string): Promise<any
       ]
     }
   }
-}`
+  }`
+  */
 
   try {
     const response = await callPerplexity(prompt, {

@@ -35,12 +35,11 @@ export async function GET() {
   try {
     console.log('=== BULK AI SUMMARY GENERATION STARTED ===')
 
-    // Get all active events without event_summary
+    // Get all events without event_summary (regardless of active status)
     const { data: eventsWithoutSummary, error: fetchError } = await supabaseAdmin
       .from('events')
       .select('id, title, description, venue')
       .is('event_summary', null)
-      .eq('active', true)
       .not('description', 'is', null)
 
     if (fetchError) {

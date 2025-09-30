@@ -40,7 +40,7 @@ Look for phrases like:
 
 Return ONLY the 5-letter answer word in UPPERCASE with no additional text, explanations, or formatting.
 
-If you cannot find a definitive answer, return exactly: UNKNOWN`
+If you cannot find a definitive answer, leave your response blank.`
 
     console.log(`Using Perplexity to find Wordle #${number}`)
 

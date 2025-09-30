@@ -41,6 +41,7 @@ export async function GET(
           rss_post:rss_posts(
             source_url,
             image_url,
+            author,
             rss_feed:rss_feeds(name)
           )
         ),

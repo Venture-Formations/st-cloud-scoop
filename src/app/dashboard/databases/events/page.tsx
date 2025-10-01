@@ -11,8 +11,9 @@ type SortDirection = 'asc' | 'desc'
 
 interface EventsFilter {
   search: string
-  featured: 'all' | 'true' | 'false'
-  dateRange: 'all' | 'upcoming' | 'past'
+  placement: 'all' | 'featured' | 'paid' | 'featured_or_paid' | 'not_featured_or_paid'
+  dateFilter: 'all' | 'upcoming' | 'past' | 'specific'
+  specificDate?: string
 }
 
 interface ColumnConfig {
@@ -29,8 +30,9 @@ export default function EventsDatabasePage() {
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc')
   const [filter, setFilter] = useState<EventsFilter>({
     search: '',
-    featured: 'all',
-    dateRange: 'all'
+    placement: 'all',
+    dateFilter: 'all',
+    specificDate: ''
   })
   const [showAddForm, setShowAddForm] = useState(false)
   const [showCsvUpload, setShowCsvUpload] = useState(false)
@@ -48,8 +50,9 @@ export default function EventsDatabasePage() {
     { key: 'venue', label: 'Venue', visible: true, sortable: true },
     { key: 'address', label: 'Address', visible: false, sortable: false },
     { key: 'featured', label: 'Featured', visible: true, sortable: true },
+    { key: 'paid_placement', label: 'Paid', visible: true, sortable: true },
     { key: 'url', label: 'URL', visible: false, sortable: false },
-    { key: 'created_at', label: 'Created', visible: true, sortable: true }
+    { key: 'created_at', label: 'Created', visible: false, sortable: true }
   ])
 
   useEffect(() => {
@@ -76,7 +79,9 @@ export default function EventsDatabasePage() {
       title: event.title,
       venue: event.venue,
       address: event.address,
-      featured: event.featured
+      start_date: event.start_date,
+      featured: event.featured,
+      paid_placement: event.paid_placement
     })
   }
 
@@ -144,18 +149,28 @@ export default function EventsDatabasePage() {
       const matchesSearch = event.title.toLowerCase().includes(filter.search.toLowerCase()) ||
                            (event.venue && event.venue.toLowerCase().includes(filter.search.toLowerCase()))
 
-      const matchesFeatured = filter.featured === 'all' ||
-                             (filter.featured === 'true' && event.featured) ||
-                             (filter.featured === 'false' && !event.featured)
-
-      let matchesDate = true
-      if (filter.dateRange === 'upcoming') {
-        matchesDate = new Date(event.start_date) >= new Date()
-      } else if (filter.dateRange === 'past') {
-        matchesDate = new Date(event.start_date) < new Date()
+      let matchesPlacement = true
+      if (filter.placement === 'featured') {
+        matchesPlacement = event.featured && !event.paid_placement
+      } else if (filter.placement === 'paid') {
+        matchesPlacement = event.paid_placement
+      } else if (filter.placement === 'featured_or_paid') {
+        matchesPlacement = event.featured || event.paid_placement
+      } else if (filter.placement === 'not_featured_or_paid') {
+        matchesPlacement = !event.featured && !event.paid_placement
       }
 
-      return matchesSearch && matchesFeatured && matchesDate
+      let matchesDate = true
+      if (filter.dateFilter === 'upcoming') {
+        matchesDate = new Date(event.start_date) >= new Date()
+      } else if (filter.dateFilter === 'past') {
+        matchesDate = new Date(event.start_date) < new Date()
+      } else if (filter.dateFilter === 'specific' && filter.specificDate) {
+        const eventDate = new Date(event.start_date).toISOString().split('T')[0]
+        matchesDate = eventDate === filter.specificDate
+      }
+
+      return matchesSearch && matchesPlacement && matchesDate
     })
 
     filtered.sort((a, b) => {
@@ -194,13 +209,17 @@ export default function EventsDatabasePage() {
   }
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
+    const date = new Date(dateString)
+    const datePart = date.toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'short',
-      day: 'numeric',
+      day: 'numeric'
+    })
+    const timePart = date.toLocaleTimeString('en-US', {
       hour: '2-digit',
       minute: '2-digit'
     })
+    return { datePart, timePart }
   }
 
   const visibleColumns = columns.filter(col => col.visible)
@@ -287,7 +306,7 @@ export default function EventsDatabasePage() {
 
         {/* Filters */}
         <div className="bg-white p-4 rounded-lg shadow mb-6">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Search
@@ -302,57 +321,46 @@ export default function EventsDatabasePage() {
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Featured
+                Placement
               </label>
               <select
-                value={filter.featured}
-                onChange={(e) => setFilter(prev => ({ ...prev, featured: e.target.value as 'all' | 'true' | 'false' }))}
+                value={filter.placement}
+                onChange={(e) => setFilter(prev => ({ ...prev, placement: e.target.value as any }))}
                 className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
               >
                 <option value="all">All Events</option>
-                <option value="true">Featured Only</option>
-                <option value="false">Not Featured</option>
+                <option value="featured">Featured Only</option>
+                <option value="paid">Paid Placement Only</option>
+                <option value="featured_or_paid">Featured/Paid</option>
+                <option value="not_featured_or_paid">Not Featured/Paid</option>
               </select>
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Date Range
+                Date
               </label>
               <select
-                value={filter.dateRange}
-                onChange={(e) => setFilter(prev => ({ ...prev, dateRange: e.target.value as 'all' | 'upcoming' | 'past' }))}
+                value={filter.dateFilter}
+                onChange={(e) => setFilter(prev => ({ ...prev, dateFilter: e.target.value as any, specificDate: e.target.value === 'specific' ? prev.specificDate : '' }))}
                 className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
               >
                 <option value="all">All Dates</option>
                 <option value="upcoming">Upcoming</option>
                 <option value="past">Past</option>
+                <option value="specific">Specific Date</option>
               </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Columns
-              </label>
-              <div className="relative">
-                <select className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm">
-                  <option>Manage Columns</option>
-                </select>
-                <div className="absolute top-full left-0 right-0 bg-white border border-gray-300 rounded-md shadow-lg z-10 hidden">
-                  {columns.map(col => (
-                    <label key={col.key} className="flex items-center px-3 py-2 hover:bg-gray-50">
-                      <input
-                        type="checkbox"
-                        checked={col.visible}
-                        onChange={() => toggleColumn(col.key)}
-                        className="mr-2"
-                      />
-                      {col.label}
-                    </label>
-                  ))}
-                </div>
-              </div>
+              {filter.dateFilter === 'specific' && (
+                <input
+                  type="date"
+                  value={filter.specificDate || ''}
+                  onChange={(e) => setFilter(prev => ({ ...prev, specificDate: e.target.value }))}
+                  className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm mt-2"
+                />
+              )}
             </div>
           </div>
         </div>
+
 
         {/* Events Table */}
         <div className="bg-white shadow rounded-lg overflow-hidden">
@@ -366,6 +374,13 @@ export default function EventsDatabasePage() {
                       className={`px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider ${
                         col.sortable ? 'cursor-pointer hover:bg-gray-100' : ''
                       }`}
+                      style={{
+                        width: col.key === 'title' ? '25%' :
+                               col.key === 'start_date' ? '15%' :
+                               col.key === 'venue' ? '20%' :
+                               col.key === 'featured' ? '8%' :
+                               col.key === 'paid_placement' ? '8%' : 'auto'
+                      }}
                       onClick={() => col.sortable && handleSort(col.key as SortField)}
                     >
                       <div className="flex items-center">
@@ -378,7 +393,7 @@ export default function EventsDatabasePage() {
                       </div>
                     </th>
                   ))}
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider" style={{ width: '12%' }}>
                     Actions
                   </th>
                 </tr>
@@ -398,23 +413,46 @@ export default function EventsDatabasePage() {
                               onChange={(e) => setEditData({ ...editData, [col.key]: e.target.value })}
                               className="w-full px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-brand-primary focus:border-transparent"
                             />
+                          ) : isEditing && col.key === 'start_date' ? (
+                            <input
+                              type="datetime-local"
+                              value={editData.start_date ? new Date(editData.start_date).toISOString().slice(0, 16) : ''}
+                              onChange={(e) => setEditData({ ...editData, start_date: e.target.value ? new Date(e.target.value).toISOString() : '' })}
+                              className="w-full px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-brand-primary focus:border-transparent"
+                            />
                           ) : isEditing && col.key === 'featured' ? (
-                            <select
-                              value={editData.featured ? 'true' : 'false'}
-                              onChange={(e) => setEditData({ ...editData, featured: e.target.value === 'true' })}
-                              className="px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-brand-primary focus:border-transparent"
-                            >
-                              <option value="false">Standard</option>
-                              <option value="true">Featured</option>
-                            </select>
+                            <input
+                              type="checkbox"
+                              checked={editData.featured || false}
+                              onChange={(e) => setEditData({ ...editData, featured: e.target.checked })}
+                              className="h-4 w-4 text-brand-primary focus:ring-brand-primary border-gray-300 rounded"
+                            />
+                          ) : isEditing && col.key === 'paid_placement' ? (
+                            <input
+                              type="checkbox"
+                              checked={editData.paid_placement || false}
+                              onChange={(e) => setEditData({ ...editData, paid_placement: e.target.checked })}
+                              className="h-4 w-4 text-brand-primary focus:ring-brand-primary border-gray-300 rounded"
+                            />
                           ) : col.key === 'featured' ? (
                             <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
                               event.featured ? 'bg-yellow-100 text-yellow-800' : 'bg-gray-100 text-gray-800'
                             }`}>
                               {event.featured ? 'Featured' : 'Standard'}
                             </span>
+                          ) : col.key === 'paid_placement' ? (
+                            <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                              event.paid_placement ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
+                            }`}>
+                              {event.paid_placement ? 'Paid' : 'Standard'}
+                            </span>
                           ) : col.key === 'start_date' || col.key === 'end_date' || col.key === 'created_at' ? (
-                            event[col.key] ? formatDate(event[col.key] as string) : '-'
+                            event[col.key] ? (
+                              <div className="flex flex-col">
+                                <span>{formatDate(event[col.key] as string).datePart}</span>
+                                <span className="text-xs text-gray-500">{formatDate(event[col.key] as string).timePart}</span>
+                              </div>
+                            ) : '-'
                           ) : col.key === 'url' ? (
                             event.url ? (
                               <a href={event.url} target="_blank" rel="noopener noreferrer" className="text-brand-primary hover:underline">

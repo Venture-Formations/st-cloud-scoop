@@ -12,8 +12,7 @@ type SortDirection = 'asc' | 'desc'
 interface DiningFilter {
   search: string
   day_of_week: 'all' | 'Monday' | 'Tuesday' | 'Wednesday' | 'Thursday' | 'Friday' | 'Saturday' | 'Sunday'
-  featured: 'all' | 'true' | 'false'
-  active: 'all' | 'true' | 'false'
+  placement: 'all' | 'featured' | 'paid' | 'featured_or_paid' | 'not_featured_or_paid'
 }
 
 interface ColumnConfig {
@@ -33,8 +32,7 @@ export default function DiningDatabasePage() {
   const [filter, setFilter] = useState<DiningFilter>({
     search: '',
     day_of_week: 'all',
-    featured: 'all',
-    active: 'all'
+    placement: 'all'
   })
   const [showAddForm, setShowAddForm] = useState(false)
   const [showCsvUpload, setShowCsvUpload] = useState(false)
@@ -49,11 +47,12 @@ export default function DiningDatabasePage() {
     { key: 'business_name', label: 'Business', visible: true, sortable: true },
     { key: 'day_of_week', label: 'Day', visible: true, sortable: true },
     { key: 'special_description', label: 'Special', visible: true, sortable: true },
-    { key: 'special_time', label: 'Time', visible: true, sortable: false },
+    { key: 'special_time', label: 'Time', visible: false, sortable: false },
     { key: 'business_address', label: 'Address', visible: false, sortable: false },
     { key: 'google_profile', label: 'Google Profile', visible: false, sortable: false },
     { key: 'is_featured', label: 'Featured', visible: true, sortable: true },
-    { key: 'is_active', label: 'Active', visible: true, sortable: true },
+    { key: 'paid_placement', label: 'Paid', visible: true, sortable: true },
+    { key: 'is_active', label: 'Active', visible: false, sortable: true },
     { key: 'created_at', label: 'Created', visible: false, sortable: true }
   ])
 
@@ -85,12 +84,19 @@ export default function DiningDatabasePage() {
         deal.special_description.toLowerCase().includes(filter.search.toLowerCase())
 
       const matchesDay = filter.day_of_week === 'all' || deal.day_of_week === filter.day_of_week
-      const matchesFeatured = filter.featured === 'all' ||
-        (filter.featured === 'true') === deal.is_featured
-      const matchesActive = filter.active === 'all' ||
-        (filter.active === 'true') === deal.is_active
 
-      return matchesSearch && matchesDay && matchesFeatured && matchesActive
+      let matchesPlacement = true
+      if (filter.placement === 'featured') {
+        matchesPlacement = deal.is_featured && !deal.paid_placement
+      } else if (filter.placement === 'paid') {
+        matchesPlacement = deal.paid_placement
+      } else if (filter.placement === 'featured_or_paid') {
+        matchesPlacement = deal.is_featured || deal.paid_placement
+      } else if (filter.placement === 'not_featured_or_paid') {
+        matchesPlacement = !deal.is_featured && !deal.paid_placement
+      }
+
+      return matchesSearch && matchesDay && matchesPlacement
     })
 
     return filtered.sort((a, b) => {
@@ -315,35 +321,23 @@ export default function DiningDatabasePage() {
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Featured
+                Placement
               </label>
               <select
-                value={filter.featured}
-                onChange={(e) => setFilter(prev => ({ ...prev, featured: e.target.value as any }))}
+                value={filter.placement}
+                onChange={(e) => setFilter(prev => ({ ...prev, placement: e.target.value as any }))}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
               >
-                <option value="all">All</option>
-                <option value="true">Featured</option>
-                <option value="false">Not Featured</option>
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Status
-              </label>
-              <select
-                value={filter.active}
-                onChange={(e) => setFilter(prev => ({ ...prev, active: e.target.value as any }))}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
-              >
-                <option value="all">All</option>
-                <option value="true">Active</option>
-                <option value="false">Inactive</option>
+                <option value="all">All Deals</option>
+                <option value="featured">Featured Only</option>
+                <option value="paid">Paid Placement Only</option>
+                <option value="featured_or_paid">Featured/Paid</option>
+                <option value="not_featured_or_paid">Not Featured/Paid</option>
               </select>
             </div>
             <div className="flex items-end">
               <button
-                onClick={() => setFilter({ search: '', day_of_week: 'all', featured: 'all', active: 'all' })}
+                onClick={() => setFilter({ search: '', day_of_week: 'all', placement: 'all' })}
                 className="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-md text-sm transition-colors"
               >
                 Clear Filters
@@ -371,6 +365,13 @@ export default function DiningDatabasePage() {
                       className={`px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider ${
                         column.sortable ? 'cursor-pointer hover:bg-gray-100' : ''
                       }`}
+                      style={{
+                        width: column.key === 'business_name' ? '25%' :
+                               column.key === 'day_of_week' ? '10%' :
+                               column.key === 'special_description' ? '30%' :
+                               column.key === 'is_featured' ? '10%' :
+                               column.key === 'paid_placement' ? '10%' : 'auto'
+                      }}
                       onClick={() => column.sortable && handleSort(column.key as SortField)}
                     >
                       <div className="flex items-center space-x-1">
@@ -383,7 +384,7 @@ export default function DiningDatabasePage() {
                       </div>
                     </th>
                   ))}
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider" style={{ width: '15%' }}>
                     Actions
                   </th>
                 </tr>

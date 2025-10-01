@@ -62,7 +62,9 @@
       "Bash(mcp__vercel__getDeployments:*)",
       "WebFetch(domain:coscgis.maps.arcgis.com)",
       "WebFetch(domain:gis.co.stearns.mn.us)",
-      "Bash(cat:*)"
+      "Bash(cat:*)",
+      "Bash(git stash:*)",
+      "Bash(git restore:*)"
     ],
     "deny": [],
     "ask": []

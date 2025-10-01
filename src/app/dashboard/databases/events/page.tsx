@@ -418,7 +418,19 @@ export default function EventsDatabasePage() {
                               type="datetime-local"
                               step="300"
                               value={editData.start_date ? new Date(editData.start_date).toISOString().slice(0, 16) : ''}
-                              onChange={(e) => setEditData({ ...editData, start_date: e.target.value ? new Date(e.target.value).toISOString() : '' })}
+                              onChange={(e) => {
+                                const value = e.target.value
+                                if (value) {
+                                  const date = new Date(value)
+                                  const minutes = date.getMinutes()
+                                  const roundedMinutes = Math.round(minutes / 5) * 5
+                                  date.setMinutes(roundedMinutes)
+                                  date.setSeconds(0)
+                                  setEditData({ ...editData, start_date: date.toISOString() })
+                                } else {
+                                  setEditData({ ...editData, start_date: '' })
+                                }
+                              }}
                               className="w-full px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-brand-primary focus:border-transparent"
                             />
                           ) : isEditing && col.key === 'featured' ? (
@@ -657,7 +669,20 @@ function AddEventModal({
                 step="300"
                 required
                 value={formData.start_date}
-                onChange={(e) => setFormData(prev => ({ ...prev, start_date: e.target.value }))}
+                onChange={(e) => {
+                  const value = e.target.value
+                  if (value) {
+                    const date = new Date(value)
+                    const minutes = date.getMinutes()
+                    const roundedMinutes = Math.round(minutes / 5) * 5
+                    date.setMinutes(roundedMinutes)
+                    date.setSeconds(0)
+                    const roundedValue = date.toISOString().slice(0, 16)
+                    setFormData(prev => ({ ...prev, start_date: roundedValue }))
+                  } else {
+                    setFormData(prev => ({ ...prev, start_date: value }))
+                  }
+                }}
                 className="w-full border border-gray-300 rounded-md px-3 py-2"
                 disabled={submitting}
               />
@@ -670,7 +695,20 @@ function AddEventModal({
                 type="datetime-local"
                 step="300"
                 value={formData.end_date}
-                onChange={(e) => setFormData(prev => ({ ...prev, end_date: e.target.value }))}
+                onChange={(e) => {
+                  const value = e.target.value
+                  if (value) {
+                    const date = new Date(value)
+                    const minutes = date.getMinutes()
+                    const roundedMinutes = Math.round(minutes / 5) * 5
+                    date.setMinutes(roundedMinutes)
+                    date.setSeconds(0)
+                    const roundedValue = date.toISOString().slice(0, 16)
+                    setFormData(prev => ({ ...prev, end_date: roundedValue }))
+                  } else {
+                    setFormData(prev => ({ ...prev, end_date: value }))
+                  }
+                }}
                 className="w-full border border-gray-300 rounded-md px-3 py-2"
                 disabled={submitting}
               />

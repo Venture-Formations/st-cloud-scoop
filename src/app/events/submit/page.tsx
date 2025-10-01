@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import ReactCrop, { Crop, PixelCrop } from 'react-image-crop'
@@ -19,14 +19,14 @@ interface EventFormData {
   start_hour: string
   start_minute: string
   start_ampm: string
-  end_date: string
   end_hour: string
   end_minute: string
   end_ampm: string
   venue_id: string
   venue_name: string
   venue_address: string
-  submitter_name: string
+  submitter_first_name: string
+  submitter_last_name: string
   submitter_email: string
   submitter_phone: string
   url: string
@@ -53,14 +53,14 @@ export default function SubmitEventPage() {
     start_hour: '12',
     start_minute: '00',
     start_ampm: 'PM',
-    end_date: '',
     end_hour: '12',
     end_minute: '00',
     end_ampm: 'PM',
     venue_id: '',
     venue_name: '',
     venue_address: '',
-    submitter_name: '',
+    submitter_first_name: '',
+    submitter_last_name: '',
     submitter_email: '',
     submitter_phone: '',
     url: '',
@@ -72,6 +72,7 @@ export default function SubmitEventPage() {
   const [crop, setCrop] = useState<Crop>()
   const [completedCrop, setCompletedCrop] = useState<PixelCrop>()
   const [uploading, setUploading] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     loadVenues()
@@ -167,7 +168,7 @@ export default function SubmitEventPage() {
 
   const addToCart = async () => {
     // Validation
-    if (!formData.title || !formData.description || !formData.start_date || !formData.end_date) {
+    if (!formData.title || !formData.description || !formData.start_date) {
       alert('Please fill in all required fields')
       return
     }
@@ -177,8 +178,8 @@ export default function SubmitEventPage() {
       return
     }
 
-    if (!formData.submitter_name || !formData.submitter_email) {
-      alert('Please provide your name and email')
+    if (!formData.submitter_first_name || !formData.submitter_last_name || !formData.submitter_email) {
+      alert('Please provide your first name, last name, and email')
       return
     }
 
@@ -281,14 +282,14 @@ export default function SubmitEventPage() {
       start_hour: '12',
       start_minute: '00',
       start_ampm: 'PM',
-      end_date: '',
       end_hour: '12',
       end_minute: '00',
       end_ampm: 'PM',
       venue_id: formData.venue_id, // Keep venue selected
       venue_name: formData.venue_name,
       venue_address: formData.venue_address,
-      submitter_name: formData.submitter_name, // Keep contact info
+      submitter_first_name: formData.submitter_first_name, // Keep contact info
+      submitter_last_name: formData.submitter_last_name,
       submitter_email: formData.submitter_email,
       submitter_phone: formData.submitter_phone,
       url: '',
@@ -297,6 +298,11 @@ export default function SubmitEventPage() {
     setSelectedImage(null)
     setCrop(undefined)
     setCompletedCrop(undefined)
+
+    // Clear file input
+    if (fileInputRef.current) {
+      fileInputRef.current.value = ''
+    }
 
     alert('Event added to cart!')
   }
@@ -365,18 +371,28 @@ export default function SubmitEventPage() {
               />
             </div>
 
-            {/* Start Date/Time */}
+            {/* Date & Time */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Start Date & Time <span className="text-red-500">*</span>
+                Date <span className="text-red-500">*</span>
               </label>
-              <div className="grid grid-cols-4 gap-2">
-                <input
-                  type="date"
-                  value={formData.start_date}
-                  onChange={(e) => setFormData(prev => ({ ...prev, start_date: e.target.value }))}
-                  className="col-span-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
+              <input
+                type="date"
+                value={formData.start_date}
+                onChange={(e) => setFormData(prev => ({ ...prev, start_date: e.target.value }))}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              <p className="text-xs text-blue-600 mt-1">
+                Note: If your event spans multiple days, please submit each day as its own event.
+              </p>
+            </div>
+
+            {/* Start Time */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Start Time <span className="text-red-500">*</span>
+              </label>
+              <div className="grid grid-cols-3 gap-2">
                 <select
                   value={formData.start_hour}
                   onChange={(e) => setFormData(prev => ({ ...prev, start_hour: e.target.value }))}
@@ -407,18 +423,12 @@ export default function SubmitEventPage() {
               </div>
             </div>
 
-            {/* End Date/Time */}
+            {/* End Time */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                End Date & Time <span className="text-red-500">*</span>
+                End Time <span className="text-red-500">*</span>
               </label>
-              <div className="grid grid-cols-4 gap-2">
-                <input
-                  type="date"
-                  value={formData.end_date}
-                  onChange={(e) => setFormData(prev => ({ ...prev, end_date: e.target.value }))}
-                  className="col-span-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
+              <div className="grid grid-cols-3 gap-2">
                 <select
                   value={formData.end_hour}
                   onChange={(e) => setFormData(prev => ({ ...prev, end_hour: e.target.value }))}
@@ -515,10 +525,11 @@ export default function SubmitEventPage() {
             {/* Image Upload */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Event Image (required for paid promotions)
+                Event Image (only used for featured events)
               </label>
               <p className="text-xs text-gray-500 mb-2">Max 5MB, JPG format, will be cropped to 5:4 ratio (900x720px)</p>
               <input
+                ref={fileInputRef}
                 type="file"
                 accept="image/*"
                 onChange={handleImageUpload}
@@ -569,7 +580,7 @@ export default function SubmitEventPage() {
                     onChange={(e) => setFormData(prev => ({ ...prev, placement_type: 'paid' }))}
                     className="mr-2"
                   />
-                  <span>Paid Placement - ${pricing.paidPlacement} (3 days)</span>
+                  <span>Paid Placement - ${pricing.paidPlacement}</span>
                 </label>
                 <label className="flex items-center">
                   <input
@@ -580,7 +591,7 @@ export default function SubmitEventPage() {
                     onChange={(e) => setFormData(prev => ({ ...prev, placement_type: 'featured' }))}
                     className="mr-2"
                   />
-                  <span>Featured Event - ${pricing.featured} (3 days)</span>
+                  <span>Featured Event - ${pricing.featured}</span>
                 </label>
               </div>
             </div>
@@ -589,17 +600,31 @@ export default function SubmitEventPage() {
             <div className="bg-blue-50 p-4 rounded-lg">
               <h3 className="font-medium text-gray-900 mb-3">Your Contact Information</h3>
               <div className="space-y-3">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Name <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.submitter_name}
-                    onChange={(e) => setFormData(prev => ({ ...prev, submitter_name: e.target.value }))}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="Your name"
-                  />
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      First Name <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.submitter_first_name}
+                      onChange={(e) => setFormData(prev => ({ ...prev, submitter_first_name: e.target.value }))}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder="First name"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Last Name <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.submitter_last_name}
+                      onChange={(e) => setFormData(prev => ({ ...prev, submitter_last_name: e.target.value }))}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder="Last name"
+                    />
+                  </div>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">

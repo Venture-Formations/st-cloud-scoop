@@ -11,14 +11,14 @@ interface CartItem {
   start_hour: string
   start_minute: string
   start_ampm: string
-  end_date: string
   end_hour: string
   end_minute: string
   end_ampm: string
   venue_id: string
   venue_name: string
   venue_address: string
-  submitter_name: string
+  submitter_first_name: string
+  submitter_last_name: string
   submitter_email: string
   submitter_phone: string
   url: string
@@ -88,7 +88,7 @@ export default function CheckoutPage() {
       // Convert cart items to database format
       const eventsToSubmit = cart.map(item => {
         const startDateTime = `${item.start_date}T${convertTime12to24(item.start_hour, item.start_minute, item.start_ampm)}`
-        const endDateTime = `${item.end_date}T${convertTime12to24(item.end_hour, item.end_minute, item.end_ampm)}`
+        const endDateTime = `${item.start_date}T${convertTime12to24(item.end_hour, item.end_minute, item.end_ampm)}`
 
         return {
           title: item.title,
@@ -100,7 +100,7 @@ export default function CheckoutPage() {
           url: item.url || null,
           original_image_url: item.original_image_url || null,
           cropped_image_url: item.cropped_image_url || null,
-          submitter_name: item.submitter_name,
+          submitter_name: `${item.submitter_first_name} ${item.submitter_last_name}`,
           submitter_email: item.submitter_email,
           submitter_phone: item.submitter_phone || null,
           paid_placement: item.placement_type === 'paid',
@@ -201,7 +201,7 @@ export default function CheckoutPage() {
                     <h3 className="font-medium text-gray-900">{item.title}</h3>
                     <p className="text-sm text-gray-600">{item.venue_name}</p>
                     <p className="text-sm text-gray-500">
-                      {new Date(item.start_date).toLocaleDateString()} - {new Date(item.end_date).toLocaleDateString()}
+                      {new Date(item.start_date).toLocaleDateString()} • {item.start_hour}:{item.start_minute} {item.start_ampm} - {item.end_hour}:{item.end_minute} {item.end_ampm}
                     </p>
                   </div>
                   <div className="text-right">
@@ -228,7 +228,7 @@ export default function CheckoutPage() {
             {/* Contact Information */}
             <div className="bg-gray-50 p-4 rounded-lg mb-6">
               <h3 className="font-medium text-gray-900 mb-2">Contact Information</h3>
-              <p className="text-sm text-gray-700">Name: {cart[0]?.submitter_name}</p>
+              <p className="text-sm text-gray-700">Name: {cart[0]?.submitter_first_name} {cart[0]?.submitter_last_name}</p>
               <p className="text-sm text-gray-700">Email: {cart[0]?.submitter_email}</p>
               {cart[0]?.submitter_phone && (
                 <p className="text-sm text-gray-700">Phone: {cart[0]?.submitter_phone}</p>

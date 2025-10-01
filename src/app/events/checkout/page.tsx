@@ -16,7 +16,10 @@ interface CartItem {
   end_ampm: string
   venue_id: string
   venue_name: string
-  venue_address: string
+  venue_street: string
+  venue_city: string
+  venue_state: string
+  venue_zip: string
   submitter_first_name: string
   submitter_last_name: string
   submitter_email: string
@@ -96,7 +99,7 @@ export default function CheckoutPage() {
           start_date: new Date(startDateTime).toISOString(),
           end_date: new Date(endDateTime).toISOString(),
           venue: item.venue_name,
-          address: item.venue_address,
+          address: `${item.venue_street}, ${item.venue_city}, ${item.venue_state} ${item.venue_zip}`,
           url: item.url || null,
           original_image_url: item.original_image_url || null,
           cropped_image_url: item.cropped_image_url || null,

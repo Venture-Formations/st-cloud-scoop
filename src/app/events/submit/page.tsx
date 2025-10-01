@@ -24,7 +24,10 @@ interface EventFormData {
   end_ampm: string
   venue_id: string
   venue_name: string
-  venue_address: string
+  venue_street: string
+  venue_city: string
+  venue_state: string
+  venue_zip: string
   submitter_first_name: string
   submitter_last_name: string
   submitter_email: string
@@ -58,7 +61,10 @@ export default function SubmitEventPage() {
     end_ampm: 'PM',
     venue_id: '',
     venue_name: '',
-    venue_address: '',
+    venue_street: '',
+    venue_city: '',
+    venue_state: 'MN',
+    venue_zip: '',
     submitter_first_name: '',
     submitter_last_name: '',
     submitter_email: '',
@@ -158,11 +164,23 @@ export default function SubmitEventPage() {
     } else {
       setShowAddVenue(false)
       const venue = venues.find(v => v.id === venueId)
+      // Parse existing venue address (format: "street, city, state zip")
+      const addressParts = venue?.address?.split(',') || []
+      const street = addressParts[0]?.trim() || ''
+      const cityStateZip = addressParts[1]?.trim() || ''
+      const cityStateZipParts = cityStateZip.split(' ')
+      const zip = cityStateZipParts.pop() || ''
+      const state = cityStateZipParts.pop() || ''
+      const city = cityStateZipParts.join(' ')
+
       setFormData(prev => ({
         ...prev,
         venue_id: venueId,
         venue_name: venue?.name || '',
-        venue_address: venue?.address || ''
+        venue_street: street,
+        venue_city: city,
+        venue_state: state,
+        venue_zip: zip
       }))
     }
   }
@@ -174,8 +192,8 @@ export default function SubmitEventPage() {
       return
     }
 
-    if (!formData.venue_id && !formData.venue_name) {
-      alert('Please select or add a venue')
+    if (!formData.venue_id && (!formData.venue_name || !formData.venue_street || !formData.venue_city || !formData.venue_state || !formData.venue_zip)) {
+      alert('Please select a venue or complete all venue address fields')
       return
     }
 
@@ -312,7 +330,10 @@ export default function SubmitEventPage() {
       end_ampm: 'PM',
       venue_id: formData.venue_id, // Keep venue selected
       venue_name: formData.venue_name,
-      venue_address: formData.venue_address,
+      venue_street: formData.venue_street,
+      venue_city: formData.venue_city,
+      venue_state: formData.venue_state,
+      venue_zip: formData.venue_zip,
       submitter_first_name: formData.submitter_first_name, // Keep contact info
       submitter_last_name: formData.submitter_last_name,
       submitter_email: formData.submitter_email,
@@ -396,91 +417,96 @@ export default function SubmitEventPage() {
               />
             </div>
 
-            {/* Date & Time */}
+            {/* Date & Time - One Row on Desktop */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Date <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="date"
-                value={formData.start_date}
-                onChange={(e) => setFormData(prev => ({ ...prev, start_date: e.target.value }))}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-              <p className="text-xs text-blue-600 mt-1">
+              <p className="text-xs text-blue-600 mb-2">
                 Note: If your event spans multiple days, please submit each day as its own event.
               </p>
-            </div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {/* Date */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Date <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="date"
+                    value={formData.start_date}
+                    onChange={(e) => setFormData(prev => ({ ...prev, start_date: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
 
-            {/* Start Time */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Start Time <span className="text-red-500">*</span>
-              </label>
-              <div className="grid grid-cols-3 gap-2">
-                <select
-                  value={formData.start_hour}
-                  onChange={(e) => setFormData(prev => ({ ...prev, start_hour: e.target.value }))}
-                  className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  {Array.from({ length: 12 }, (_, i) => (
-                    <option key={i + 1} value={i + 1}>{i + 1}</option>
-                  ))}
-                </select>
-                <select
-                  value={formData.start_minute}
-                  onChange={(e) => setFormData(prev => ({ ...prev, start_minute: e.target.value }))}
-                  className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value="00">00</option>
-                  <option value="15">15</option>
-                  <option value="30">30</option>
-                  <option value="45">45</option>
-                </select>
-                <select
-                  value={formData.start_ampm}
-                  onChange={(e) => setFormData(prev => ({ ...prev, start_ampm: e.target.value }))}
-                  className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value="AM">AM</option>
-                  <option value="PM">PM</option>
-                </select>
-              </div>
-            </div>
+                {/* Start Time */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Start Time <span className="text-red-500">*</span>
+                  </label>
+                  <div className="grid grid-cols-3 gap-2">
+                    <select
+                      value={formData.start_hour}
+                      onChange={(e) => setFormData(prev => ({ ...prev, start_hour: e.target.value }))}
+                      className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      {Array.from({ length: 12 }, (_, i) => (
+                        <option key={i + 1} value={i + 1}>{i + 1}</option>
+                      ))}
+                    </select>
+                    <select
+                      value={formData.start_minute}
+                      onChange={(e) => setFormData(prev => ({ ...prev, start_minute: e.target.value }))}
+                      className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option value="00">00</option>
+                      <option value="15">15</option>
+                      <option value="30">30</option>
+                      <option value="45">45</option>
+                    </select>
+                    <select
+                      value={formData.start_ampm}
+                      onChange={(e) => setFormData(prev => ({ ...prev, start_ampm: e.target.value }))}
+                      className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option value="AM">AM</option>
+                      <option value="PM">PM</option>
+                    </select>
+                  </div>
+                </div>
 
-            {/* End Time */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                End Time <span className="text-red-500">*</span>
-              </label>
-              <div className="grid grid-cols-3 gap-2">
-                <select
-                  value={formData.end_hour}
-                  onChange={(e) => setFormData(prev => ({ ...prev, end_hour: e.target.value }))}
-                  className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  {Array.from({ length: 12 }, (_, i) => (
-                    <option key={i + 1} value={i + 1}>{i + 1}</option>
-                  ))}
-                </select>
-                <select
-                  value={formData.end_minute}
-                  onChange={(e) => setFormData(prev => ({ ...prev, end_minute: e.target.value }))}
-                  className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value="00">00</option>
-                  <option value="15">15</option>
-                  <option value="30">30</option>
-                  <option value="45">45</option>
-                </select>
-                <select
-                  value={formData.end_ampm}
-                  onChange={(e) => setFormData(prev => ({ ...prev, end_ampm: e.target.value }))}
-                  className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value="AM">AM</option>
-                  <option value="PM">PM</option>
-                </select>
+                {/* End Time */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    End Time <span className="text-red-500">*</span>
+                  </label>
+                  <div className="grid grid-cols-3 gap-2">
+                    <select
+                      value={formData.end_hour}
+                      onChange={(e) => setFormData(prev => ({ ...prev, end_hour: e.target.value }))}
+                      className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      {Array.from({ length: 12 }, (_, i) => (
+                        <option key={i + 1} value={i + 1}>{i + 1}</option>
+                      ))}
+                    </select>
+                    <select
+                      value={formData.end_minute}
+                      onChange={(e) => setFormData(prev => ({ ...prev, end_minute: e.target.value }))}
+                      className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option value="00">00</option>
+                      <option value="15">15</option>
+                      <option value="30">30</option>
+                      <option value="45">45</option>
+                    </select>
+                    <select
+                      value={formData.end_ampm}
+                      onChange={(e) => setFormData(prev => ({ ...prev, end_ampm: e.target.value }))}
+                      className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option value="AM">AM</option>
+                      <option value="PM">PM</option>
+                    </select>
+                  </div>
+                </div>
               </div>
             </div>
 
@@ -520,15 +546,57 @@ export default function SubmitEventPage() {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Full Address <span className="text-red-500">*</span>
+                    Street Address <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="text"
-                    value={formData.venue_address}
-                    onChange={(e) => setFormData(prev => ({ ...prev, venue_address: e.target.value }))}
+                    value={formData.venue_street}
+                    onChange={(e) => setFormData(prev => ({ ...prev, venue_street: e.target.value }))}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="Street address, city, state, zip"
+                    placeholder="123 Main St"
                   />
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      City <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.venue_city}
+                      onChange={(e) => setFormData(prev => ({ ...prev, venue_city: e.target.value }))}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder="St. Cloud"
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      State <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.venue_state}
+                      onChange={(e) => setFormData(prev => ({ ...prev, venue_state: e.target.value.toUpperCase().slice(0, 2) }))}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder="MN"
+                      maxLength={2}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      ZIP Code <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.venue_zip}
+                      onChange={(e) => setFormData(prev => ({ ...prev, venue_zip: e.target.value.replace(/\D/g, '').slice(0, 5) }))}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder="56301"
+                      maxLength={5}
+                    />
+                  </div>
                 </div>
               </div>
             )}

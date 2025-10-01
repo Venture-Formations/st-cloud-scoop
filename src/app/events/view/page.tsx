@@ -31,6 +31,7 @@ export default function ViewEventsPage() {
   const [selectedVenue, setSelectedVenue] = useState<string>('all')
   const [loading, setLoading] = useState(true)
   const [pricing, setPricing] = useState({ paidPlacement: 5, featured: 15 })
+  const [expandedEventId, setExpandedEventId] = useState<string | null>(null)
 
   useEffect(() => {
     loadEvents()
@@ -86,9 +87,33 @@ export default function ViewEventsPage() {
   }
 
   const promoteEvent = (eventId: string) => {
-    // Store the event ID in session and redirect to promotion page
+    // Store the event ID and redirect to submit page with promotion
     sessionStorage.setItem('promoteEventId', eventId)
-    router.push(`/events/promote/${eventId}`)
+    router.push(`/events/submit?promote=${eventId}`)
+  }
+
+  const stripHtmlTags = (html: string) => {
+    // Remove HTML tags and decode HTML entities
+    const tmp = document.createElement('DIV')
+    tmp.innerHTML = html
+    return tmp.textContent || tmp.innerText || ''
+  }
+
+  // Group events by date
+  const groupEventsByDate = (events: Event[]) => {
+    const groups = new Map<string, Event[]>()
+
+    events.forEach(event => {
+      const dateKey = new Date(event.start_date).toDateString()
+      if (!groups.has(dateKey)) {
+        groups.set(dateKey, [])
+      }
+      groups.get(dateKey)!.push(event)
+    })
+
+    // Sort groups by date
+    return Array.from(groups.entries())
+      .sort(([dateA], [dateB]) => new Date(dateA).getTime() - new Date(dateB).getTime())
   }
 
   const formatDate = (dateString: string) => {
@@ -157,7 +182,7 @@ export default function ViewEventsPage() {
           </select>
         </div>
 
-        {/* Events Grid */}
+        {/* Events List - Grouped by Date */}
         {events.length === 0 ? (
           <div className="bg-white shadow rounded-lg p-12 text-center">
             <p className="text-gray-600 text-lg mb-4">No events found</p>
@@ -169,85 +194,169 @@ export default function ViewEventsPage() {
             </button>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {events.map(event => (
-              <div key={event.id} className="bg-white shadow rounded-lg overflow-hidden hover:shadow-lg transition-shadow">
-                {/* Featured Badge */}
-                {event.featured && (
-                  <div className="bg-yellow-400 text-yellow-900 px-4 py-1 text-sm font-medium text-center">
-                    ⭐ Featured Event
-                  </div>
-                )}
+          <div className="space-y-6">
+            {groupEventsByDate(events).map(([date, dateEvents]) => (
+              <div key={date} className="bg-white shadow rounded-lg overflow-hidden">
+                {/* Date Header */}
+                <div className="bg-blue-600 text-white px-4 py-3">
+                  <h2 className="text-lg font-semibold">
+                    {new Date(date).toLocaleDateString('en-US', {
+                      weekday: 'long',
+                      month: 'long',
+                      day: 'numeric',
+                      year: 'numeric'
+                    })}
+                  </h2>
+                  <p className="text-sm text-blue-100">{dateEvents.length} event{dateEvents.length > 1 ? 's' : ''}</p>
+                </div>
 
-                {/* Paid Placement Badge */}
-                {event.paid_placement && !event.featured && (
-                  <div className="bg-blue-500 text-white px-4 py-1 text-sm font-medium text-center">
-                    Sponsored
-                  </div>
-                )}
+                {/* Events for this date */}
+                <div className="divide-y divide-gray-200">
+                  {dateEvents.map(event => {
+                    const isExpanded = expandedEventId === event.id
+                    const cleanDescription = stripHtmlTags(event.description)
 
-                {/* Event Image */}
-                {event.cropped_image_url && (
-                  <div className="relative h-48 w-full bg-gray-200">
-                    <img
-                      src={event.cropped_image_url}
-                      alt={event.title}
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
-                )}
+                    return (
+                      <div key={event.id} className="hover:bg-gray-50 transition-colors">
+                        {/* Compact View */}
+                        <div
+                          className="p-4 cursor-pointer"
+                          onClick={() => setExpandedEventId(isExpanded ? null : event.id)}
+                        >
+                          <div className="flex items-start justify-between gap-4">
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 mb-1">
+                                {event.featured && (
+                                  <span className="bg-yellow-400 text-yellow-900 px-2 py-0.5 text-xs font-medium rounded">
+                                    ⭐ Featured
+                                  </span>
+                                )}
+                                {event.paid_placement && !event.featured && (
+                                  <span className="bg-blue-500 text-white px-2 py-0.5 text-xs font-medium rounded">
+                                    Sponsored
+                                  </span>
+                                )}
+                              </div>
 
-                {/* Event Details */}
-                <div className="p-4">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-2 line-clamp-2">
-                    {event.title}
-                  </h3>
+                              <h3 className="text-base font-semibold text-gray-900 mb-1">
+                                {event.title}
+                              </h3>
 
-                  <div className="space-y-2 mb-4">
-                    <div className="flex items-start text-sm text-gray-600">
-                      <span className="font-medium mr-2">📅</span>
-                      <div>
-                        <div>{formatDate(event.start_date)} at {formatTime(event.start_date)}</div>
-                        <div className="text-xs">to {formatDate(event.end_date)} at {formatTime(event.end_date)}</div>
-                      </div>
-                    </div>
+                              <div className="flex flex-wrap items-center gap-4 text-sm text-gray-600 mb-2">
+                                <span className="flex items-center">
+                                  <span className="mr-1">🕒</span>
+                                  {formatTime(event.start_date)}
+                                </span>
+                                <span className="flex items-center">
+                                  <span className="mr-1">📍</span>
+                                  {event.venue}
+                                </span>
+                              </div>
 
-                    <div className="flex items-start text-sm text-gray-600">
-                      <span className="font-medium mr-2">📍</span>
-                      <div>
-                        <div className="font-medium">{event.venue}</div>
-                        {event.address && (
-                          <div className="text-xs text-gray-500">{event.address}</div>
+                              {!isExpanded && (
+                                <p className="text-sm text-gray-600 line-clamp-2">
+                                  {cleanDescription}
+                                </p>
+                              )}
+                            </div>
+
+                            {/* Compact Event Image */}
+                            {event.cropped_image_url && (
+                              <div className="flex-shrink-0">
+                                <img
+                                  src={event.cropped_image_url}
+                                  alt={event.title}
+                                  className="w-20 h-20 object-cover rounded"
+                                />
+                              </div>
+                            )}
+
+                            {/* Expand/Collapse Icon */}
+                            <div className="flex-shrink-0">
+                              <svg
+                                className={`w-5 h-5 text-gray-400 transition-transform ${isExpanded ? 'transform rotate-180' : ''}`}
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                              >
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                              </svg>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Expanded View */}
+                        {isExpanded && (
+                          <div className="px-4 pb-4 border-t border-gray-100">
+                            {/* Large Image */}
+                            {event.cropped_image_url && (
+                              <div className="mb-4 mt-4">
+                                <img
+                                  src={event.cropped_image_url}
+                                  alt={event.title}
+                                  className="w-full max-h-96 object-cover rounded-lg"
+                                />
+                              </div>
+                            )}
+
+                            {/* Full Details */}
+                            <div className="space-y-3 mb-4">
+                              <div className="flex items-start text-sm">
+                                <span className="font-medium mr-2 text-gray-700">📅 Date:</span>
+                                <div className="text-gray-600">
+                                  <div>{formatDate(event.start_date)} at {formatTime(event.start_date)}</div>
+                                  <div>to {formatDate(event.end_date)} at {formatTime(event.end_date)}</div>
+                                </div>
+                              </div>
+
+                              <div className="flex items-start text-sm">
+                                <span className="font-medium mr-2 text-gray-700">📍 Location:</span>
+                                <div className="text-gray-600">
+                                  <div className="font-medium">{event.venue}</div>
+                                  {event.address && (
+                                    <div className="text-gray-500">{event.address}</div>
+                                  )}
+                                </div>
+                              </div>
+
+                              <div className="text-sm">
+                                <span className="font-medium text-gray-700 block mb-2">📝 Description:</span>
+                                <p className="text-gray-600 whitespace-pre-wrap">
+                                  {cleanDescription}
+                                </p>
+                              </div>
+                            </div>
+
+                            {/* Action Buttons */}
+                            <div className="flex gap-2">
+                              {event.url && (
+                                <a
+                                  href={event.url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium text-center"
+                                  onClick={(e) => e.stopPropagation()}
+                                >
+                                  Learn More →
+                                </a>
+                              )}
+                              {!event.featured && !event.paid_placement && (
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    promoteEvent(event.id)
+                                  }}
+                                  className="flex-1 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md text-sm font-medium"
+                                >
+                                  Promote This Event
+                                </button>
+                              )}
+                            </div>
+                          </div>
                         )}
                       </div>
-                    </div>
-                  </div>
-
-                  <p className="text-sm text-gray-700 mb-4 line-clamp-3">
-                    {event.description}
-                  </p>
-
-                  {/* Action Buttons */}
-                  <div className="flex space-x-2">
-                    {event.url && (
-                      <a
-                        href={event.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-800 px-4 py-2 rounded-md text-sm font-medium text-center"
-                      >
-                        Learn More
-                      </a>
-                    )}
-                    {!event.featured && !event.paid_placement && (
-                      <button
-                        onClick={() => promoteEvent(event.id)}
-                        className="flex-1 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md text-sm font-medium"
-                      >
-                        Promote
-                      </button>
-                    )}
-                  </div>
+                    )
+                  })}
                 </div>
               </div>
             ))}

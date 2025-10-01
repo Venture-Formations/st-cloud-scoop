@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
-import { sendSlackNotification } from '@/lib/slack'
+import { SlackNotificationService } from '@/lib/slack'
 
 export async function POST(request: NextRequest) {
   try {
@@ -63,34 +63,23 @@ export async function POST(request: NextRequest) {
     const submitter = events[0]
     const eventTitles = events.map((e: any) => e.title).join('\n  • ')
 
-    await sendSlackNotification({
-      channel: process.env.SLACK_CHANNEL || '#general',
-      message: `🎉 New Event Submission${events.length > 1 ? 's' : ''}!`,
-      fields: [
-        {
-          title: 'Submitted by',
-          value: `${submitter.submitter_name}\n${submitter.submitter_email}${submitter.submitter_phone ? `\n${submitter.submitter_phone}` : ''}`,
-          short: true
-        },
-        {
-          title: 'Total Amount',
-          value: totalAmount > 0 ? `$${totalAmount.toFixed(2)}` : 'Free Listing',
-          short: true
-        },
-        {
-          title: `Event${events.length > 1 ? 's' : ''} (${events.length})`,
-          value: `  • ${eventTitles}`,
-          short: false
-        }
-      ],
-      actions: [
-        {
-          type: 'button',
-          text: 'Review Submissions',
-          url: `${process.env.NEXT_PUBLIC_URL || 'https://st-cloud-scoop.vercel.app'}/dashboard/events/review`
-        }
-      ]
-    })
+    const slack = new SlackNotificationService()
+    const message = [
+      `🎉 New Event Submission${events.length > 1 ? 's' : ''}!`,
+      ``,
+      `Submitted by: ${submitter.submitter_name}`,
+      `Email: ${submitter.submitter_email}`,
+      submitter.submitter_phone ? `Phone: ${submitter.submitter_phone}` : '',
+      ``,
+      `Total Amount: ${totalAmount > 0 ? `$${totalAmount.toFixed(2)}` : 'Free Listing'}`,
+      ``,
+      `Event${events.length > 1 ? 's' : ''} (${events.length}):`,
+      `  • ${eventTitles}`,
+      ``,
+      `Review: ${process.env.NEXT_PUBLIC_URL || 'https://st-cloud-scoop.vercel.app'}/dashboard/events/review`
+    ].filter(Boolean).join('\n')
+
+    await slack.sendSimpleMessage(message)
 
     return NextResponse.json({
       success: true,

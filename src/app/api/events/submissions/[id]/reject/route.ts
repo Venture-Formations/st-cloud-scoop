@@ -16,6 +16,90 @@ export async function POST(
     const { id } = await context.params
     const { reason } = await request.json()
 
+    // Get event details to check if refund is needed
+    const { data: event, error: fetchError } = await supabaseAdmin
+      .from('events')
+      .select('*')
+      .eq('id', id)
+      .single()
+
+    if (fetchError) throw fetchError
+
+    let refundResult = null
+
+    // If this was a paid event, process refund
+    if (event.payment_intent_id && event.payment_status === 'completed' && event.payment_amount && event.payment_amount > 0) {
+      const stripeSecretKey = process.env.STRIPE_SECRET_KEY
+
+      if (stripeSecretKey) {
+        try {
+          console.log(`[Reject] Processing refund for event ${id}, payment: ${event.payment_intent_id}`)
+
+          // Get payment intent to find the charge ID
+          const paymentResponse = await fetch(`https://api.stripe.com/v1/checkout/sessions/${event.payment_intent_id}`, {
+            method: 'GET',
+            headers: {
+              'Authorization': `Bearer ${stripeSecretKey}`,
+            }
+          })
+
+          if (paymentResponse.ok) {
+            const checkoutSession = await paymentResponse.json()
+            const paymentIntentId = checkoutSession.payment_intent
+
+            if (paymentIntentId) {
+              // Create refund
+              const refundResponse = await fetch('https://api.stripe.com/v1/refunds', {
+                method: 'POST',
+                headers: {
+                  'Authorization': `Bearer ${stripeSecretKey}`,
+                  'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: new URLSearchParams({
+                  'payment_intent': paymentIntentId,
+                  'reason': 'requested_by_customer',
+                  'metadata[event_id]': id,
+                  'metadata[rejection_reason]': reason || 'Event rejected by admin'
+                })
+              })
+
+              if (refundResponse.ok) {
+                const refund = await refundResponse.json()
+                console.log(`[Reject] Refund successful: ${refund.id}`)
+                refundResult = {
+                  success: true,
+                  refund_id: refund.id,
+                  amount: refund.amount / 100
+                }
+
+                // Update payment status
+                await supabaseAdmin
+                  .from('events')
+                  .update({
+                    payment_status: 'refunded'
+                  })
+                  .eq('id', id)
+              } else {
+                const errorText = await refundResponse.text()
+                console.error('[Reject] Refund failed:', errorText)
+                refundResult = {
+                  success: false,
+                  error: errorText
+                }
+              }
+            }
+          }
+        } catch (refundError) {
+          console.error('[Reject] Refund error:', refundError)
+          refundResult = {
+            success: false,
+            error: refundError instanceof Error ? refundError.message : 'Unknown refund error'
+          }
+        }
+      }
+    }
+
+    // Update event status
     const { error } = await supabaseAdmin
       .from('events')
       .update({
@@ -51,7 +135,10 @@ export async function POST(
       }
     }
 
-    return NextResponse.json({ success: true })
+    return NextResponse.json({
+      success: true,
+      refund: refundResult
+    })
 
   } catch (error) {
     console.error('Failed to reject submission:', error)

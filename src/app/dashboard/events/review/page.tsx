@@ -34,6 +34,7 @@ export default function ReviewSubmissionsPage() {
   const [loading, setLoading] = useState(true)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editedEvent, setEditedEvent] = useState<Partial<EventSubmission>>({})
+  const [counts, setCounts] = useState({ pending: 0, approved: 0, rejected: 0, all: 0 })
 
   useEffect(() => {
     loadSubmissions()
@@ -50,6 +51,9 @@ export default function ReviewSubmissionsPage() {
       if (response.ok) {
         const data = await response.json()
         setSubmissions(data.submissions || [])
+        if (data.counts) {
+          setCounts(data.counts)
+        }
       }
     } catch (error) {
       console.error('Failed to load submissions:', error)
@@ -90,7 +94,19 @@ export default function ReviewSubmissionsPage() {
       })
 
       if (response.ok) {
-        alert('Event rejected')
+        const data = await response.json()
+
+        // Show refund info if applicable
+        if (data.refund) {
+          if (data.refund.success) {
+            alert(`Event rejected and refund of $${data.refund.amount.toFixed(2)} processed successfully.`)
+          } else {
+            alert(`Event rejected but refund failed: ${data.refund.error}\n\nPlease process refund manually in Stripe Dashboard.`)
+          }
+        } else {
+          alert('Event rejected')
+        }
+
         loadSubmissions()
       } else {
         alert('Failed to reject event')
@@ -170,10 +186,10 @@ export default function ReviewSubmissionsPage() {
           <div className="border-b border-gray-200 mb-6">
             <nav className="-mb-px flex space-x-8">
               {[
-                { id: 'pending', name: 'Pending', count: submissions.filter(s => s.submission_status === 'pending').length },
-                { id: 'approved', name: 'Approved', count: submissions.filter(s => s.submission_status === 'approved').length },
-                { id: 'rejected', name: 'Rejected', count: submissions.filter(s => s.submission_status === 'rejected').length },
-                { id: 'all', name: 'All', count: submissions.length }
+                { id: 'pending', name: 'Pending', count: counts.pending },
+                { id: 'approved', name: 'Approved', count: counts.approved },
+                { id: 'rejected', name: 'Rejected', count: counts.rejected },
+                { id: 'all', name: 'All', count: counts.all }
               ].map((tab) => (
                 <button
                   key={tab.id}
@@ -184,7 +200,7 @@ export default function ReviewSubmissionsPage() {
                       : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                   }`}
                 >
-                  {tab.name} ({tab.id === filter ? submissions.length : tab.count})
+                  {tab.name} ({tab.count})
                 </button>
               ))}
             </nav>

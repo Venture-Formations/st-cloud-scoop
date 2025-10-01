@@ -18,9 +18,18 @@ export async function POST(request: NextRequest) {
     const repoName = process.env.GITHUB_REPO_NAME
 
     if (!githubToken || !repoOwner || !repoName) {
-      console.error('Missing GitHub configuration')
+      console.error('Missing GitHub configuration:', {
+        hasToken: !!githubToken,
+        hasOwner: !!repoOwner,
+        hasRepo: !!repoName
+      })
       return NextResponse.json({
-        error: 'GitHub configuration not set up'
+        error: 'GitHub configuration not set up. Please contact administrator.',
+        details: 'Missing: ' + [
+          !githubToken && 'GITHUB_TOKEN',
+          !repoOwner && 'GITHUB_REPO_OWNER',
+          !repoName && 'GITHUB_REPO_NAME'
+        ].filter(Boolean).join(', ')
       }, { status: 500 })
     }
 
@@ -60,8 +69,13 @@ export async function POST(request: NextRequest) {
 
     if (!originalResponse.ok) {
       const error = await originalResponse.json()
-      console.error('GitHub original upload error:', error)
-      throw new Error('Failed to upload original image to GitHub')
+      console.error('GitHub original upload error:', {
+        status: originalResponse.status,
+        statusText: originalResponse.statusText,
+        error,
+        filename: originalFilename
+      })
+      throw new Error(`Failed to upload original image to GitHub: ${error.message || originalResponse.statusText}`)
     }
 
     const originalData = await originalResponse.json()
@@ -84,8 +98,13 @@ export async function POST(request: NextRequest) {
 
     if (!croppedResponse.ok) {
       const error = await croppedResponse.json()
-      console.error('GitHub cropped upload error:', error)
-      throw new Error('Failed to upload cropped image to GitHub')
+      console.error('GitHub cropped upload error:', {
+        status: croppedResponse.status,
+        statusText: croppedResponse.statusText,
+        error,
+        filename: croppedFilename
+      })
+      throw new Error(`Failed to upload cropped image to GitHub: ${error.message || croppedResponse.statusText}`)
     }
 
     const croppedData = await croppedResponse.json()

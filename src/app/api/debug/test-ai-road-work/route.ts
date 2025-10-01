@@ -75,6 +75,22 @@ export async function GET(request: NextRequest) {
       console.error('Parsing failed:', error)
     }
 
+    // Test the validation logic
+    let validationResult: any = null
+    let validationError: any = null
+
+    if (roadWorkItems.length > 0) {
+      try {
+        console.log('🔍 Testing validation logic...')
+        const validationPrompt = AI_PROMPTS.roadWorkValidator(roadWorkItems, targetDate)
+        validationResult = await callOpenAI(validationPrompt, 2000, 0)
+        console.log('Validation result:', JSON.stringify(validationResult, null, 2))
+      } catch (error) {
+        validationError = error
+        console.error('Validation failed:', error)
+      }
+    }
+
     return NextResponse.json({
       success: !parseError,
       targetDate,
@@ -91,6 +107,9 @@ export async function GET(request: NextRequest) {
         count: roadWorkItems?.length,
         items: roadWorkItems
       },
+      validation: validationError ? {
+        error: validationError.message
+      } : validationResult,
       debugInfo: {
         timestamp: new Date().toISOString(),
         prompt: prompt

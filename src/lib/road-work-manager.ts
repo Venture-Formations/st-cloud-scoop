@@ -556,6 +556,37 @@ CRITICAL: Only return real, verified road work from actual government sources. I
 
     console.log(`Found ${roadWorkItems.length} total road work items from web search`)
 
+    // Validate road work items for accuracy using AI
+    console.log('🔍 Validating road work items for date accuracy and completeness...')
+
+    try {
+      const validationPrompt = AI_PROMPTS.roadWorkValidator(roadWorkItems, formattedDate)
+      const validationResponse = await callOpenAI(validationPrompt, 2000, 0)
+
+      console.log('Validation response:', JSON.stringify(validationResponse, null, 2))
+
+      if (validationResponse && validationResponse.validated_items) {
+        // Filter to only valid items
+        const validIndices = validationResponse.validated_items
+          .filter((item: any) => item.valid === true && item.confidence >= 0.7)
+          .map((item: any) => item.index)
+
+        const beforeValidation = roadWorkItems.length
+        roadWorkItems = roadWorkItems.filter((_, index) => validIndices.includes(index))
+
+        console.log(`✅ AI Validation: ${roadWorkItems.length}/${beforeValidation} items passed (${validationResponse.summary?.accuracy_score || 'N/A'} accuracy score)`)
+
+        // Log rejected items for debugging
+        validationResponse.validated_items
+          .filter((item: any) => !item.valid || item.confidence < 0.7)
+          .forEach((item: any) => {
+            console.log(`   ❌ Rejected item ${item.index}: ${item.reason} (confidence: ${item.confidence})`)
+          })
+      }
+    } catch (validationError) {
+      console.warn('⚠️ AI validation failed, proceeding with unvalidated items:', validationError)
+    }
+
     // Helper function to parse dates
     const parseRoadWorkDate = (dateStr: string): Date | null => {
       if (!dateStr || dateStr === 'TBD') return null

@@ -622,7 +622,7 @@ function AddDealForm({ onClose, onSuccess }: { onClose: () => void; onSuccess: (
   const [formData, setFormData] = useState({
     business_name: '',
     business_address: '',
-    google_profile: '',
+    google_cid: '',
     day_of_week: 'Monday' as DiningDeal['day_of_week'],
     special_description: '',
     special_time: '',
@@ -637,10 +637,19 @@ function AddDealForm({ onClose, onSuccess }: { onClose: () => void; onSuccess: (
     setError('')
 
     try {
+      // Convert google_cid to google_profile URL
+      const submitData = {
+        ...formData,
+        google_profile: formData.google_cid ? `https://maps.google.com/?cid=${formData.google_cid}` : null
+      }
+
+      // Remove google_cid from submission (not a database field)
+      const { google_cid, ...dataToSubmit } = submitData as any
+
       const response = await fetch('/api/dining/deals', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData)
+        body: JSON.stringify(dataToSubmit)
       })
 
       if (!response.ok) {
@@ -687,14 +696,26 @@ function AddDealForm({ onClose, onSuccess }: { onClose: () => void; onSuccess: (
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">Google Profile URL</label>
+        <label className="block text-sm font-medium text-gray-700 mb-1">Google CID</label>
         <input
-          type="url"
-          value={formData.google_profile}
-          onChange={(e) => setFormData(prev => ({ ...prev, google_profile: e.target.value }))}
+          type="text"
+          value={formData.google_cid}
+          onChange={(e) => setFormData(prev => ({ ...prev, google_cid: e.target.value }))}
           className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
-          placeholder="https://..."
+          placeholder="1234567890123456789"
         />
+        <p className="text-xs text-gray-500 mt-1">
+          Google Customer ID from Google Maps. Use{' '}
+          <a
+            href="https://cidfinder.com/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-blue-600 hover:text-blue-800 underline"
+          >
+            cidfinder.com
+          </a>
+          {' '}to find CIDs easily
+        </p>
       </div>
 
       <div>
@@ -809,6 +830,40 @@ function CsvUploadForm({ onClose, onSuccess }: { onClose: () => void; onSuccess:
         </div>
       )}
 
+      {/* Download Template Section */}
+      <div className="bg-blue-50 border border-blue-200 rounded-md p-4">
+        <div className="flex items-start justify-between">
+          <div className="flex-1">
+            <h4 className="text-sm font-medium text-blue-900 mb-1">Need a template?</h4>
+            <p className="text-xs text-blue-700 mb-2">
+              Download our CSV template with example data and proper formatting
+            </p>
+            <p className="text-xs text-blue-600">
+              <strong>Finding Google CIDs:</strong> Use{' '}
+              <a
+                href="https://cidfinder.com/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="underline hover:text-blue-800 font-medium"
+              >
+                cidfinder.com
+              </a>
+              {' '}to easily find Google Customer IDs for businesses
+            </p>
+          </div>
+          <a
+            href="/api/dining-deals/template"
+            download="dining_deals_template.csv"
+            className="ml-4 inline-flex items-center px-3 py-1.5 text-xs font-medium text-blue-700 bg-blue-100 border border-blue-300 rounded-md hover:bg-blue-200 transition-colors whitespace-nowrap"
+          >
+            <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+            </svg>
+            Download Template
+          </a>
+        </div>
+      </div>
+
       <form onSubmit={handleSubmit}>
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -822,7 +877,7 @@ function CsvUploadForm({ onClose, onSuccess }: { onClose: () => void; onSuccess:
             required
           />
           <p className="text-xs text-gray-500 mt-1">
-            CSV should have columns: Business Name, Business Address, Google Profile, Day of Week, Special Description, Special Time
+            CSV should have columns: business_name, business_address, google_cid, day_of_week, special_description, special_time, is_featured, is_active
           </p>
         </div>
 

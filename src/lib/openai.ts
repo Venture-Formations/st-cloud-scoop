@@ -218,6 +218,8 @@ CRITICAL DATE REQUIREMENT:
 - Expected reopen date must be AFTER ${campaignDate} (not completed yet)
 - Start date must be ON OR BEFORE ${campaignDate} (already begun)
 - Do NOT include completed projects from summer 2025 or earlier
+- MUST have CONFIRMED specific dates (e.g., "Oct 15", "Nov 30") - NO vague ranges like "Fall 2026" or "TBD"
+- REJECT any items with unconfirmed or vague date ranges
 
 SEARCH CRITERIA:
 - Date: ${campaignDate}
@@ -263,16 +265,21 @@ REQUIRED SOURCES TO CHECK:
 - Local media: WJON Traffic, St. Cloud Times Roads section
 - 511mn.org (Minnesota road conditions)
 
-TARGET: Find 6-9 different road work entries. Include minor lane restrictions and construction impacts, not just major closures.
+TARGET: Find 6-9 different road work entries with CONFIRMED dates. Prioritize accuracy over volume - better to return fewer items with confirmed dates than more items with vague dates.
 
 REQUIRED OUTPUT FORMAT:
-Return ONLY a JSON array. Include as many real closures as found (aim for 6-9 entries).
+Return ONLY a JSON array. Include as many real closures as found with confirmed dates (aim for 6-9 entries, but quality over quantity).
 
 [
-{"road_name":"[actual road name]","road_range":"from [start] to [end]","city_or_township":"[actual city]","reason":"[actual reason from source]","start_date":"[actual date from source]","expected_reopen":"[actual date or TBD]","source_url":"[actual URL where info was found]"}
+{"road_name":"[actual road name]","road_range":"from [start] to [end]","city_or_township":"[actual city]","reason":"[actual reason from source]","start_date":"[specific date like Oct 15]","expected_reopen":"[specific date like Nov 30]","source_url":"[actual URL where info was found]"}
 ]
 
-CRITICAL: Only return real, verified road work from actual government sources. Include minor impacts like lane restrictions, not just major closures.`,
+CRITICAL REQUIREMENTS:
+- Only return real, verified road work from actual government sources
+- MUST have confirmed specific dates - NO "TBD", "Fall 2026", or vague ranges
+- Better to return 3-4 items with confirmed dates than 9 items with vague dates
+- Include minor impacts like lane restrictions, not just major closures
+- Each item must be currently active on the target date`,
 
   imageAnalyzer: () => `
 Analyze this image and return strict JSON:
@@ -335,7 +342,70 @@ AGE GROUP ANALYSIS:
 - conf: Confidence level (0-1) for age group classification
 - Set to null if no people detected or ages cannot be determined
 
-IMPORTANT: Only include OCR fields if readable text is actually present. Only include age_groups if people are visible and ages can be reasonably estimated. Set to null if not detected.`
+IMPORTANT: Only include OCR fields if readable text is actually present. Only include age_groups if people are visible and ages can be reasonably estimated. Set to null if not detected.`,
+
+  roadWorkValidator: (roadWorkItems: Array<{
+    road_name: string
+    road_range: string | null
+    city_or_township: string | null
+    reason: string | null
+    start_date: string | null
+    expected_reopen: string | null
+    source_url: string | null
+  }>, targetDate: string) => `
+You are validating road work data for accuracy and relevance. Review each item and determine if it should be included in the newsletter.
+
+Target Date: ${targetDate}
+Current Date: ${new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}
+
+Road Work Items to Validate:
+${roadWorkItems.map((item, i) => `
+${i + 1}. ${item.road_name}
+   Range: ${item.road_range || 'Not specified'}
+   Location: ${item.city_or_township || 'Not specified'}
+   Reason: ${item.reason || 'Not specified'}
+   Start: ${item.start_date || 'Not specified'}
+   Expected Reopen: ${item.expected_reopen || 'Not specified'}
+   Source: ${item.source_url || 'Not specified'}
+`).join('\n')}
+
+VALIDATION CRITERIA - Mark as INVALID if:
+1. **Unconfirmed Dates**: Start date or expected reopen is "TBD", "To be determined", "Not specified", or similar vague language
+2. **Already Completed**: Expected reopen date is before ${targetDate}
+3. **Not Yet Started**: Start date is after ${targetDate}
+4. **Vague Date Ranges**: Uses phrases like "Spring 2026", "Late Summer", "Fall", without specific month/day
+5. **Old Projects**: Any indication the project is from a previous year that has already passed
+6. **Missing Critical Info**: No road name, no location, or no reason specified
+7. **Placeholder Content**: Generic entries like "No additional closures" or "TBD"
+
+VALIDATION CRITERIA - Mark as VALID if:
+1. **Confirmed Dates**: Has specific month/day format (e.g., "Oct 15", "Nov 30")
+2. **Currently Active**: Start date is on or before ${targetDate} AND expected reopen is after ${targetDate}
+3. **Real Project**: Has specific road name, location, reason, and source URL
+4. **Verifiable**: Source URL points to government website (MnDOT, county, city)
+
+For each item, provide:
+- valid: true/false
+- reason: Brief explanation of why it passed or failed validation
+- confidence: 0-1 score (1.0 = certain, 0.5 = uncertain)
+
+Respond with valid JSON in this exact format:
+{
+  "validated_items": [
+    {
+      "index": 0,
+      "valid": true,
+      "reason": "Has confirmed dates (Oct 15 - Nov 30) and is currently active",
+      "confidence": 0.95
+    }
+  ],
+  "summary": {
+    "total_items": 9,
+    "valid_items": 6,
+    "invalid_items": 3,
+    "accuracy_score": 0.67
+  }
+}`
 }
 
 // This function is no longer needed since we use web scraping instead of AI

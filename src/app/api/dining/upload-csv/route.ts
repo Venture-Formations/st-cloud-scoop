@@ -28,14 +28,22 @@ export async function POST(request: NextRequest) {
     // Parse CSV header
     const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, ''))
 
-    // Expected columns mapping
+    // Expected columns mapping - google_cid will be converted to google_profile
     const columnMapping = {
       'Business Name': 'business_name',
+      'business_name': 'business_name',
       'Business Address': 'business_address',
+      'business_address': 'business_address',
+      'Google CID': 'google_cid',
+      'google_cid': 'google_cid',
       'Google Profile': 'google_profile',
+      'google_profile': 'google_profile',
       'Day of Week': 'day_of_week',
+      'day_of_week': 'day_of_week',
       'Special Description': 'special_description',
-      'Special Time': 'special_time'
+      'special_description': 'special_description',
+      'Special Time': 'special_time',
+      'special_time': 'special_time'
     }
 
     // Find column indices
@@ -74,6 +82,8 @@ export async function POST(request: NextRequest) {
 
         // Extract data from CSV row
         const rowData: any = {}
+        let googleCid: string | null = null
+
         for (const [dbField, index] of Object.entries(columnIndices)) {
           const value = values[index]?.trim().replace(/"/g, '') || null
 
@@ -86,10 +96,23 @@ export async function POST(request: NextRequest) {
                   throw new Error(`Invalid day of week: ${value}. Must be one of: ${validDays.join(', ')}`)
                 }
                 break
+              case 'google_cid':
+                // Store CID to convert to URL later
+                googleCid = value
+                break
+              case 'google_profile':
+                // If google_profile is directly provided, use it
+                rowData[dbField] = value
+                break
               default:
                 rowData[dbField] = value
             }
           }
+        }
+
+        // Convert Google CID to profile URL if provided
+        if (googleCid && !rowData.google_profile) {
+          rowData.google_profile = `https://maps.google.com/?cid=${googleCid}`
         }
 
         // Validate required fields

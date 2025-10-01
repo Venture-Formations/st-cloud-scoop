@@ -771,6 +771,28 @@ function EventsCsvUploadForm({ onClose, onSuccess }: { onClose: () => void; onSu
         </div>
       )}
 
+      {/* Download Template Section */}
+      <div className="bg-blue-50 border border-blue-200 rounded-md p-4">
+        <div className="flex items-start justify-between">
+          <div className="flex-1">
+            <h4 className="text-sm font-medium text-blue-900 mb-1">Need a template?</h4>
+            <p className="text-xs text-blue-700">
+              Download our CSV template with example data and proper formatting
+            </p>
+          </div>
+          <a
+            href="/api/events/template"
+            download="events_template.csv"
+            className="ml-4 inline-flex items-center px-3 py-1.5 text-xs font-medium text-blue-700 bg-blue-100 border border-blue-300 rounded-md hover:bg-blue-200 transition-colors"
+          >
+            <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+            </svg>
+            Download Template
+          </a>
+        </div>
+      </div>
+
       <form onSubmit={handleSubmit}>
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -784,7 +806,7 @@ function EventsCsvUploadForm({ onClose, onSuccess }: { onClose: () => void; onSu
             required
           />
           <p className="text-xs text-gray-500 mt-1">
-            CSV should have columns: Title, Description, Start Date, End Date, Venue, Address, URL, Image URL
+            CSV should have columns: external_id, title, description, start_date, end_date, venue, address, url, image_url, featured, active
           </p>
         </div>
 

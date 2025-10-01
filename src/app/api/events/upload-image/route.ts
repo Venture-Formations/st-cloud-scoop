@@ -3,11 +3,11 @@ import { NextRequest, NextResponse } from 'next/server'
 export async function POST(request: NextRequest) {
   try {
     const formData = await request.formData()
-    const originalDataUrl = formData.get('original') as string
+    const originalBlob = formData.get('original') as Blob
     const croppedBlob = formData.get('cropped') as Blob
     const eventTitle = formData.get('eventTitle') as string
 
-    if (!originalDataUrl || !croppedBlob || !eventTitle) {
+    if (!originalBlob || !croppedBlob || !eventTitle) {
       return NextResponse.json({
         error: 'Missing required fields'
       }, { status: 400 })
@@ -44,8 +44,9 @@ export async function POST(request: NextRequest) {
     const originalFilename = `public-events/originals/${safeTitle}-${timestamp}.jpg`
     const croppedFilename = `public-events/cropped/${safeTitle}-${timestamp}.jpg`
 
-    // Convert original data URL to base64
-    const originalBase64 = originalDataUrl.split(',')[1]
+    // Convert original blob to base64
+    const originalArrayBuffer = await originalBlob.arrayBuffer()
+    const originalBase64 = Buffer.from(originalArrayBuffer).toString('base64')
 
     // Convert cropped blob to base64
     const croppedArrayBuffer = await croppedBlob.arrayBuffer()

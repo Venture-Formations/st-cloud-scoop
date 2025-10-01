@@ -416,6 +416,7 @@ export default function EventsDatabasePage() {
                           ) : isEditing && col.key === 'start_date' ? (
                             <input
                               type="datetime-local"
+                              step="300"
                               value={editData.start_date ? new Date(editData.start_date).toISOString().slice(0, 16) : ''}
                               onChange={(e) => setEditData({ ...editData, start_date: e.target.value ? new Date(e.target.value).toISOString() : '' })}
                               className="w-full px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-brand-primary focus:border-transparent"
@@ -652,6 +653,7 @@ function AddEventModal({
               </label>
               <input
                 type="datetime-local"
+                step="300"
                 required
                 value={formData.start_date}
                 onChange={(e) => setFormData(prev => ({ ...prev, start_date: e.target.value }))}
@@ -665,6 +667,7 @@ function AddEventModal({
               </label>
               <input
                 type="datetime-local"
+                step="300"
                 value={formData.end_date}
                 onChange={(e) => setFormData(prev => ({ ...prev, end_date: e.target.value }))}
                 className="w-full border border-gray-300 rounded-md px-3 py-2"

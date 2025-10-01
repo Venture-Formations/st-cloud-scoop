@@ -248,12 +248,36 @@ export interface Event {
   address: string | null
   url: string | null
   image_url: string | null
+  original_image_url: string | null
+  cropped_image_url: string | null
   featured: boolean
   paid_placement: boolean
   active: boolean
+  submission_status: 'pending' | 'approved' | 'rejected'
+  payment_status: string | null
+  payment_intent_id: string | null
+  payment_amount: number | null
+  submitter_name: string | null
+  submitter_email: string | null
+  submitter_phone: string | null
+  reviewed_by: string | null
+  reviewed_at: string | null
   raw_data: any
   created_at: string
   updated_at: string
+}
+
+export interface PendingEventSubmission {
+  id: string
+  stripe_session_id: string
+  events_data: any[]
+  submitter_email: string
+  submitter_name: string
+  total_amount: number
+  created_at: string
+  expires_at: string
+  processed: boolean
+  processed_at: string | null
 }
 
 export interface WeatherForecast {

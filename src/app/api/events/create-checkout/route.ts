@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { supabaseAdmin } from '@/lib/supabase'
 
 export async function POST(request: NextRequest) {
   try {
@@ -23,6 +24,16 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({
         error: 'Payment system not configured'
       }, { status: 500 })
+    }
+
+    // Validate submitter information
+    const submitterEmail = events[0]?.submitter_email
+    const submitterName = events[0]?.submitter_name
+
+    if (!submitterEmail || !submitterName) {
+      return NextResponse.json({
+        error: 'Submitter information required'
+      }, { status: 400 })
     }
 
     // Create line items for Stripe
@@ -104,22 +115,29 @@ export async function POST(request: NextRequest) {
 
     const session = await stripeResponse.json()
 
-    // Store events data temporarily with session ID for webhook processing
-    // In production, you might want to use Redis or a database table for this
-    // For now, we'll store it in a temporary cache or handle it via webhook metadata
+    // Store events data in pending_event_submissions table
+    // This will be retrieved by the webhook handler after successful payment
+    const { error: insertError } = await supabaseAdmin
+      .from('pending_event_submissions')
+      .insert({
+        stripe_session_id: session.id,
+        events_data: events,
+        submitter_email: submitterEmail,
+        submitter_name: submitterName,
+        total_amount: total,
+        created_at: new Date().toISOString(),
+        expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(), // 24 hours
+        processed: false
+      })
 
-    // Store events in database with pending payment status
-    const eventsWithPaymentInfo = events.map((event: any) => ({
-      ...event,
-      payment_intent_id: session.id,
-      payment_status: 'pending',
-      payment_amount: event.paid_placement ? 5.00 : event.featured ? 15.00 : 0,
-      submission_status: 'pending'
-    }))
+    if (insertError) {
+      console.error('Failed to store pending submission:', insertError)
+      // Continue anyway - webhook can still process without this record
+      // but log it for debugging
+    }
 
-    // We'll insert these events after successful payment via webhook
-    // For now, store them with the session ID in a temporary table or cache
-    // You could create a pending_submissions table for this purpose
+    console.log(`[Checkout] Created pending submission for session: ${session.id}`)
+    console.log(`[Checkout] Events count: ${events.length}, Total: $${total}`)
 
     return NextResponse.json({
       checkout_url: session.url,

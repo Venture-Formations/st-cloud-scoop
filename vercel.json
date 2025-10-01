@@ -43,6 +43,10 @@
     {
       "path": "/api/cron/collect-wordle",
       "schedule": "0 19 * * *"
+    },
+    {
+      "path": "/api/cron/cleanup-pending-submissions",
+      "schedule": "0 7 * * *"
     }
   ],
   "functions": {
@@ -84,6 +88,9 @@
     },
     "app/api/events/manual-sync/route.ts": {
       "maxDuration": 300
+    },
+    "app/api/cron/cleanup-pending-submissions/route.ts": {
+      "maxDuration": 60
     }
   }
 }

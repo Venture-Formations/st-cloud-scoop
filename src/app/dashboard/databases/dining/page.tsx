@@ -47,7 +47,7 @@ export default function DiningDatabasePage() {
     { key: 'business_name', label: 'Business', visible: true, sortable: true },
     { key: 'day_of_week', label: 'Day', visible: true, sortable: true },
     { key: 'special_description', label: 'Special', visible: true, sortable: true },
-    { key: 'special_time', label: 'Time', visible: false, sortable: false },
+    { key: 'special_time', label: 'Time', visible: true, sortable: false },
     { key: 'business_address', label: 'Address', visible: false, sortable: false },
     { key: 'google_profile', label: 'Google Profile', visible: false, sortable: false },
     { key: 'is_featured', label: 'Featured', visible: true, sortable: true },
@@ -366,11 +366,12 @@ export default function DiningDatabasePage() {
                         column.sortable ? 'cursor-pointer hover:bg-gray-100' : ''
                       }`}
                       style={{
-                        width: column.key === 'business_name' ? '25%' :
-                               column.key === 'day_of_week' ? '10%' :
-                               column.key === 'special_description' ? '30%' :
-                               column.key === 'is_featured' ? '10%' :
-                               column.key === 'paid_placement' ? '10%' : 'auto'
+                        width: column.key === 'business_name' ? '20%' :
+                               column.key === 'day_of_week' ? '8%' :
+                               column.key === 'special_description' ? '25%' :
+                               column.key === 'special_time' ? '12%' :
+                               column.key === 'is_featured' ? '8%' :
+                               column.key === 'paid_placement' ? '8%' : 'auto'
                       }}
                       onClick={() => column.sortable && handleSort(column.key as SortField)}
                     >
@@ -509,13 +510,13 @@ function DisplayCell({ column, deal }: { column: ColumnConfig; deal: DiningDeal 
 
   switch (column.key) {
     case 'is_featured':
-      return (
-        <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-          value ? 'bg-yellow-100 text-yellow-800' : 'bg-gray-100 text-gray-600'
-        }`}>
-          {value ? 'Featured' : 'Regular'}
-        </span>
-      )
+      return value ? (
+        <span className="text-green-600 text-lg">✓</span>
+      ) : null
+    case 'paid_placement':
+      return value ? (
+        <span className="text-green-600 text-lg">✓</span>
+      ) : null
     case 'is_active':
       return (
         <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
@@ -554,9 +555,6 @@ function DisplayCell({ column, deal }: { column: ColumnConfig; deal: DiningDeal 
       return (
         <div className="max-w-xs">
           <div className="text-gray-900 text-sm">{value}</div>
-          {deal.special_time && (
-            <div className="text-xs text-gray-500 mt-1">{deal.special_time}</div>
-          )}
         </div>
       )
     default:
@@ -589,12 +587,13 @@ function EditCell({
       )
     case 'is_featured':
     case 'is_active':
+    case 'paid_placement':
       return (
         <input
           type="checkbox"
           checked={value || false}
           onChange={(e) => onChange(e.target.checked)}
-          className="rounded border-gray-300"
+          className="h-4 w-4 text-brand-primary focus:ring-brand-primary border-gray-300 rounded"
         />
       )
     case 'special_description':

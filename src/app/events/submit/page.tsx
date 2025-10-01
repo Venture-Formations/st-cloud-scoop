@@ -227,25 +227,29 @@ export default function SubmitEventPage() {
           targetHeight
         )
 
-        // Convert to blob
+        // Convert cropped canvas to blob
         const croppedBlob = await new Promise<Blob>((resolve) => {
           canvas.toBlob((blob) => resolve(blob!), 'image/jpeg', 0.95)
         })
 
+        // Convert original data URL to blob
+        const dataUrlResponse = await fetch(selectedImage)
+        const originalBlob = await dataUrlResponse.blob()
+
         // Upload both original and cropped
         const formDataUpload = new FormData()
-        formDataUpload.append('original', selectedImage)
-        formDataUpload.append('cropped', croppedBlob)
+        formDataUpload.append('original', originalBlob, 'original.jpg')
+        formDataUpload.append('cropped', croppedBlob, 'cropped.jpg')
         formDataUpload.append('eventTitle', formData.title)
 
-        const response = await fetch('/api/events/upload-image', {
+        const uploadResponse = await fetch('/api/events/upload-image', {
           method: 'POST',
           body: formDataUpload
         })
 
-        if (!response.ok) throw new Error('Failed to upload images')
+        if (!uploadResponse.ok) throw new Error('Failed to upload images')
 
-        const data = await response.json()
+        const data = await uploadResponse.json()
         original_image_url = data.original_url
         cropped_image_url = data.cropped_url
 

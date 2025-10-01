@@ -421,37 +421,71 @@ export default function EventsDatabasePage() {
                                 onChange={(e) => {
                                   const datePart = e.target.value
                                   const currentDate = editData.start_date ? new Date(editData.start_date) : new Date()
-                                  const timePart = `${currentDate.getUTCHours().toString().padStart(2, '0')}:${currentDate.getUTCMinutes().toString().padStart(2, '0')}`
-                                  setEditData({ ...editData, start_date: `${datePart}T${timePart}:00.000Z` })
+                                  const h = currentDate.getUTCHours().toString().padStart(2, '0')
+                                  const m = currentDate.getUTCMinutes().toString().padStart(2, '0')
+                                  setEditData({ ...editData, start_date: `${datePart}T${h}:${m}:00.000Z` })
                                 }}
                                 className="flex-1 px-2 py-1 border border-gray-300 rounded text-sm"
                               />
                               <select
                                 value={editData.start_date ? (() => {
                                   const d = new Date(editData.start_date)
-                                  const h = d.getUTCHours().toString().padStart(2, '0')
-                                  const m = d.getUTCMinutes().toString().padStart(2, '0')
-                                  return `${h}:${m}`
+                                  const hour = d.getUTCHours()
+                                  return hour === 0 ? '12' : hour > 12 ? (hour - 12).toString() : hour.toString()
                                 })() : ''}
                                 onChange={(e) => {
                                   const datePart = editData.start_date ? new Date(editData.start_date).toISOString().split('T')[0] : new Date().toISOString().split('T')[0]
-                                  setEditData({ ...editData, start_date: `${datePart}T${e.target.value}:00.000Z` })
+                                  const currentDate = editData.start_date ? new Date(editData.start_date) : new Date()
+                                  const currentMin = currentDate.getUTCMinutes().toString().padStart(2, '0')
+                                  const currentHour = currentDate.getUTCHours()
+                                  const isAM = currentHour < 12
+                                  const hour12 = parseInt(e.target.value)
+                                  let hour24 = hour12 === 12 ? 0 : hour12
+                                  if (!isAM) hour24 += 12
+                                  const h = hour24.toString().padStart(2, '0')
+                                  setEditData({ ...editData, start_date: `${datePart}T${h}:${currentMin}:00.000Z` })
                                 }}
                                 className="px-2 py-1 border border-gray-300 rounded text-sm"
                               >
-                                {Array.from({ length: 24 * 4 }, (_, i) => {
-                                  const hour = Math.floor(i / 4)
-                                  const minute = (i % 4) * 15
-                                  const hourStr = hour.toString().padStart(2, '0')
-                                  const minuteStr = minute.toString().padStart(2, '0')
-                                  const displayHour = hour === 0 ? 12 : hour > 12 ? hour - 12 : hour
-                                  const ampm = hour < 12 ? 'AM' : 'PM'
-                                  return (
-                                    <option key={`${hourStr}:${minuteStr}`} value={`${hourStr}:${minuteStr}`}>
-                                      {displayHour}:{minuteStr} {ampm}
-                                    </option>
-                                  )
-                                })}
+                                {Array.from({ length: 12 }, (_, i) => (
+                                  <option key={i + 1} value={i + 1}>{i + 1}</option>
+                                ))}
+                              </select>
+                              <select
+                                value={editData.start_date ? new Date(editData.start_date).getUTCMinutes().toString().padStart(2, '0') : ''}
+                                onChange={(e) => {
+                                  const datePart = editData.start_date ? new Date(editData.start_date).toISOString().split('T')[0] : new Date().toISOString().split('T')[0]
+                                  const currentDate = editData.start_date ? new Date(editData.start_date) : new Date()
+                                  const h = currentDate.getUTCHours().toString().padStart(2, '0')
+                                  setEditData({ ...editData, start_date: `${datePart}T${h}:${e.target.value}:00.000Z` })
+                                }}
+                                className="px-2 py-1 border border-gray-300 rounded text-sm"
+                              >
+                                <option value="00">00</option>
+                                <option value="15">15</option>
+                                <option value="30">30</option>
+                                <option value="45">45</option>
+                              </select>
+                              <select
+                                value={editData.start_date ? (new Date(editData.start_date).getUTCHours() < 12 ? 'AM' : 'PM') : ''}
+                                onChange={(e) => {
+                                  const datePart = editData.start_date ? new Date(editData.start_date).toISOString().split('T')[0] : new Date().toISOString().split('T')[0]
+                                  const currentDate = editData.start_date ? new Date(editData.start_date) : new Date()
+                                  const currentHour = currentDate.getUTCHours()
+                                  const currentMin = currentDate.getUTCMinutes().toString().padStart(2, '0')
+                                  let newHour = currentHour
+                                  if (e.target.value === 'PM' && currentHour < 12) {
+                                    newHour = currentHour + 12
+                                  } else if (e.target.value === 'AM' && currentHour >= 12) {
+                                    newHour = currentHour - 12
+                                  }
+                                  const h = newHour.toString().padStart(2, '0')
+                                  setEditData({ ...editData, start_date: `${datePart}T${h}:${currentMin}:00.000Z` })
+                                }}
+                                className="px-2 py-1 border border-gray-300 rounded text-sm"
+                              >
+                                <option value="AM">AM</option>
+                                <option value="PM">PM</option>
                               </select>
                             </div>
                           ) : isEditing && col.key === 'featured' ? (

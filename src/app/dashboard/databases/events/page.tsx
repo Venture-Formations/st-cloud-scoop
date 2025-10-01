@@ -371,15 +371,15 @@ export default function EventsDatabasePage() {
                   {visibleColumns.map(col => (
                     <th
                       key={col.key}
-                      className={`px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider ${
+                      className={`px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider ${
                         col.sortable ? 'cursor-pointer hover:bg-gray-100' : ''
                       }`}
                       style={{
-                        width: col.key === 'title' ? '25%' :
-                               col.key === 'start_date' ? '15%' :
-                               col.key === 'venue' ? '20%' :
-                               col.key === 'featured' ? '8%' :
-                               col.key === 'paid_placement' ? '8%' : 'auto'
+                        width: col.key === 'title' ? '30%' :
+                               col.key === 'start_date' ? '18%' :
+                               col.key === 'venue' ? '25%' :
+                               col.key === 'featured' ? '6%' :
+                               col.key === 'paid_placement' ? '6%' : 'auto'
                       }}
                       onClick={() => col.sortable && handleSort(col.key as SortField)}
                     >
@@ -393,7 +393,7 @@ export default function EventsDatabasePage() {
                       </div>
                     </th>
                   ))}
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider" style={{ width: '12%' }}>
+                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider" style={{ width: '15%' }}>
                     Actions
                   </th>
                 </tr>
@@ -405,7 +405,7 @@ export default function EventsDatabasePage() {
                   return (
                     <tr key={event.id} className={`hover:bg-gray-50 ${isEditing ? 'bg-blue-50' : ''}`}>
                       {visibleColumns.map(col => (
-                        <td key={col.key} className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        <td key={col.key} className="px-4 py-3 text-sm text-gray-900">
                           {isEditing && (col.key === 'title' || col.key === 'venue' || col.key === 'address') ? (
                             <input
                               type="text"
@@ -435,17 +435,13 @@ export default function EventsDatabasePage() {
                               className="h-4 w-4 text-brand-primary focus:ring-brand-primary border-gray-300 rounded"
                             />
                           ) : col.key === 'featured' ? (
-                            <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                              event.featured ? 'bg-yellow-100 text-yellow-800' : 'bg-gray-100 text-gray-800'
-                            }`}>
-                              {event.featured ? 'Featured' : 'Standard'}
-                            </span>
+                            event.featured ? (
+                              <span className="text-green-600 text-lg">✓</span>
+                            ) : null
                           ) : col.key === 'paid_placement' ? (
-                            <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                              event.paid_placement ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
-                            }`}>
-                              {event.paid_placement ? 'Paid' : 'Standard'}
-                            </span>
+                            event.paid_placement ? (
+                              <span className="text-green-600 text-lg">✓</span>
+                            ) : null
                           ) : col.key === 'start_date' || col.key === 'end_date' || col.key === 'created_at' ? (
                             event[col.key] ? (
                               <div className="flex flex-col">
@@ -464,7 +460,7 @@ export default function EventsDatabasePage() {
                           )}
                         </td>
                       ))}
-                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                      <td className="px-4 py-3 whitespace-nowrap text-right text-sm font-medium">
                         {isEditing ? (
                           <div className="flex justify-end space-x-2">
                             <button

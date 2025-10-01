@@ -73,6 +73,7 @@ export default function SubmitEventPage() {
   const [completedCrop, setCompletedCrop] = useState<PixelCrop>()
   const [uploading, setUploading] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const imgRef = useRef<HTMLImageElement>(null)
 
   useEffect(() => {
     loadVenues()
@@ -195,19 +196,36 @@ export default function SubmitEventPage() {
     if (selectedImage && completedCrop) {
       setUploading(true)
       try {
-        // Create canvas to get cropped image
-        const image = new window.Image()
-        image.src = selectedImage
-        await new Promise((resolve) => {
-          image.onload = resolve
-        })
+        // Ensure we have valid crop dimensions
+        if (!completedCrop.width || !completedCrop.height) {
+          throw new Error('Invalid crop dimensions')
+        }
+
+        // Use the image ref if available, otherwise create new image
+        const image = imgRef.current || new window.Image()
+        if (!imgRef.current) {
+          image.src = selectedImage
+          // Wait for image to load
+          await new Promise<void>((resolve, reject) => {
+            image.onload = () => resolve()
+            image.onerror = () => reject(new Error('Failed to load image'))
+          })
+        }
 
         const canvas = document.createElement('canvas')
-        const scaleX = image.naturalWidth / image.width
-        const scaleY = image.naturalHeight / image.height
+
+        // Calculate scale between displayed image and natural size
+        const scaleX = image.naturalWidth / (image.width || image.naturalWidth)
+        const scaleY = image.naturalHeight / (image.height || image.naturalHeight)
+
+        // Calculate actual crop dimensions in the source image
+        const sourceX = completedCrop.x * scaleX
+        const sourceY = completedCrop.y * scaleY
+        const sourceWidth = completedCrop.width * scaleX
+        const sourceHeight = completedCrop.height * scaleY
 
         // Target size: 900x720 (5:4 ratio)
-        const targetWidth = Math.min(900, completedCrop.width * scaleX)
+        const targetWidth = Math.min(900, sourceWidth)
         const targetHeight = (targetWidth * 4) / 5
 
         canvas.width = targetWidth
@@ -216,12 +234,13 @@ export default function SubmitEventPage() {
         const ctx = canvas.getContext('2d')
         if (!ctx) throw new Error('Failed to get canvas context')
 
+        // Draw the cropped portion from the source image
         ctx.drawImage(
           image,
-          completedCrop.x * scaleX,
-          completedCrop.y * scaleY,
-          completedCrop.width * scaleX,
-          completedCrop.height * scaleY,
+          sourceX,
+          sourceY,
+          sourceWidth,
+          sourceHeight,
           0,
           0,
           targetWidth,
@@ -229,8 +248,11 @@ export default function SubmitEventPage() {
         )
 
         // Convert cropped canvas to blob
-        const croppedBlob = await new Promise<Blob>((resolve) => {
-          canvas.toBlob((blob) => resolve(blob!), 'image/jpeg', 0.95)
+        const croppedBlob = await new Promise<Blob>((resolve, reject) => {
+          canvas.toBlob((blob) => {
+            if (blob) resolve(blob)
+            else reject(new Error('Failed to create blob from canvas'))
+          }, 'image/jpeg', 0.95)
         })
 
         // Convert original data URL to blob
@@ -248,7 +270,10 @@ export default function SubmitEventPage() {
           body: formDataUpload
         })
 
-        if (!uploadResponse.ok) throw new Error('Failed to upload images')
+        if (!uploadResponse.ok) {
+          const errorData = await uploadResponse.json().catch(() => ({}))
+          throw new Error(errorData.error || 'Failed to upload images')
+        }
 
         const data = await uploadResponse.json()
         original_image_url = data.original_url
@@ -256,7 +281,7 @@ export default function SubmitEventPage() {
 
       } catch (error) {
         console.error('Image upload failed:', error)
-        alert('Failed to upload images. Please try again.')
+        alert(`Failed to upload images: ${error instanceof Error ? error.message : 'Unknown error'}`)
         setUploading(false)
         return
       }
@@ -549,7 +574,12 @@ export default function SubmitEventPage() {
                   onComplete={(c) => setCompletedCrop(c)}
                   aspect={5 / 4}
                 >
-                  <img src={selectedImage} alt="Crop preview" style={{ maxWidth: '100%' }} />
+                  <img
+                    ref={imgRef}
+                    src={selectedImage}
+                    alt="Crop preview"
+                    style={{ maxWidth: '100%' }}
+                  />
                 </ReactCrop>
               </div>
             )}

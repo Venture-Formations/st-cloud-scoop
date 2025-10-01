@@ -683,9 +683,9 @@ function AddEventModal({
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Start Date *
+                Start Date & Time *
               </label>
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-4 gap-2">
                 <input
                   type="date"
                   required
@@ -695,43 +695,93 @@ function AddEventModal({
                     const timePart = formData.start_date.split('T')[1] || '09:00'
                     setFormData(prev => ({ ...prev, start_date: datePart ? `${datePart}T${timePart}` : '' }))
                   }}
-                  className="w-full border border-gray-300 rounded-md px-3 py-2"
+                  className="col-span-1 border border-gray-300 rounded-md px-3 py-2"
                   disabled={submitting}
                 />
                 <select
                   required
-                  value={formData.start_date.split('T')[1]?.slice(0, 5) || ''}
+                  value={(() => {
+                    const time = formData.start_date.split('T')[1]
+                    if (!time) return ''
+                    const [h] = time.split(':')
+                    const hour = parseInt(h)
+                    return hour === 0 ? '12' : hour > 12 ? (hour - 12).toString() : hour.toString()
+                  })()}
                   onChange={(e) => {
                     const datePart = formData.start_date.split('T')[0]
-                    const timePart = e.target.value
-                    setFormData(prev => ({ ...prev, start_date: datePart ? `${datePart}T${timePart}` : '' }))
+                    const currentTime = formData.start_date.split('T')[1] || '09:00'
+                    const [, min] = currentTime.split(':')
+                    const hour12 = parseInt(e.target.value)
+                    const currentHour24 = parseInt(currentTime.split(':')[0])
+                    const isAM = currentHour24 < 12
+                    let hour24 = hour12 === 12 ? 0 : hour12
+                    if (!isAM) hour24 += 12
+                    const hourStr = hour24.toString().padStart(2, '0')
+                    setFormData(prev => ({ ...prev, start_date: datePart ? `${datePart}T${hourStr}:${min}` : '' }))
                   }}
-                  className="w-full border border-gray-300 rounded-md px-3 py-2"
+                  className="border border-gray-300 rounded-md px-3 py-2"
                   disabled={submitting}
                 >
-                  <option value="">Time...</option>
-                  {Array.from({ length: 24 * 4 }, (_, i) => {
-                    const hour = Math.floor(i / 4)
-                    const minute = (i % 4) * 15
-                    const hourStr = hour.toString().padStart(2, '0')
-                    const minuteStr = minute.toString().padStart(2, '0')
-                    const displayHour = hour === 0 ? 12 : hour > 12 ? hour - 12 : hour
-                    const ampm = hour < 12 ? 'AM' : 'PM'
-                    return (
-                      <option key={`${hourStr}:${minuteStr}`} value={`${hourStr}:${minuteStr}`}>
-                        {displayHour}:{minuteStr} {ampm}
-                      </option>
-                    )
-                  })}
+                  <option value="">Hr</option>
+                  {Array.from({ length: 12 }, (_, i) => (
+                    <option key={i + 1} value={i + 1}>{i + 1}</option>
+                  ))}
+                </select>
+                <select
+                  required
+                  value={formData.start_date.split('T')[1]?.split(':')[1] || ''}
+                  onChange={(e) => {
+                    const datePart = formData.start_date.split('T')[0]
+                    const currentTime = formData.start_date.split('T')[1] || '09:00'
+                    const [h] = currentTime.split(':')
+                    setFormData(prev => ({ ...prev, start_date: datePart ? `${datePart}T${h}:${e.target.value}` : '' }))
+                  }}
+                  className="border border-gray-300 rounded-md px-3 py-2"
+                  disabled={submitting}
+                >
+                  <option value="">Min</option>
+                  <option value="00">00</option>
+                  <option value="15">15</option>
+                  <option value="30">30</option>
+                  <option value="45">45</option>
+                </select>
+                <select
+                  required
+                  value={(() => {
+                    const time = formData.start_date.split('T')[1]
+                    if (!time) return ''
+                    const [h] = time.split(':')
+                    return parseInt(h) < 12 ? 'AM' : 'PM'
+                  })()}
+                  onChange={(e) => {
+                    const datePart = formData.start_date.split('T')[0]
+                    const currentTime = formData.start_date.split('T')[1] || '09:00'
+                    const [h, min] = currentTime.split(':')
+                    const currentHour = parseInt(h)
+                    let newHour = currentHour
+                    if (e.target.value === 'PM' && currentHour < 12) {
+                      newHour = currentHour + 12
+                    } else if (e.target.value === 'AM' && currentHour >= 12) {
+                      newHour = currentHour - 12
+                    }
+                    const hourStr = newHour.toString().padStart(2, '0')
+                    setFormData(prev => ({ ...prev, start_date: datePart ? `${datePart}T${hourStr}:${min}` : '' }))
+                  }}
+                  className="border border-gray-300 rounded-md px-3 py-2"
+                  disabled={submitting}
+                >
+                  <option value="">--</option>
+                  <option value="AM">AM</option>
+                  <option value="PM">PM</option>
                 </select>
               </div>
             </div>
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                End Date
+                End Date & Time
               </label>
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-4 gap-2">
                 <input
                   type="date"
                   value={formData.end_date.split('T')[0] || ''}
@@ -740,33 +790,81 @@ function AddEventModal({
                     const timePart = formData.end_date.split('T')[1] || '17:00'
                     setFormData(prev => ({ ...prev, end_date: datePart ? `${datePart}T${timePart}` : '' }))
                   }}
-                  className="w-full border border-gray-300 rounded-md px-3 py-2"
+                  className="col-span-1 border border-gray-300 rounded-md px-3 py-2"
                   disabled={submitting}
                 />
                 <select
-                  value={formData.end_date.split('T')[1]?.slice(0, 5) || ''}
+                  value={(() => {
+                    const time = formData.end_date.split('T')[1]
+                    if (!time) return ''
+                    const [h] = time.split(':')
+                    const hour = parseInt(h)
+                    return hour === 0 ? '12' : hour > 12 ? (hour - 12).toString() : hour.toString()
+                  })()}
                   onChange={(e) => {
                     const datePart = formData.end_date.split('T')[0]
-                    const timePart = e.target.value
-                    setFormData(prev => ({ ...prev, end_date: datePart ? `${datePart}T${timePart}` : '' }))
+                    const currentTime = formData.end_date.split('T')[1] || '17:00'
+                    const [, min] = currentTime.split(':')
+                    const hour12 = parseInt(e.target.value)
+                    const currentHour24 = parseInt(currentTime.split(':')[0])
+                    const isAM = currentHour24 < 12
+                    let hour24 = hour12 === 12 ? 0 : hour12
+                    if (!isAM) hour24 += 12
+                    const hourStr = hour24.toString().padStart(2, '0')
+                    setFormData(prev => ({ ...prev, end_date: datePart ? `${datePart}T${hourStr}:${min}` : '' }))
                   }}
-                  className="w-full border border-gray-300 rounded-md px-3 py-2"
+                  className="border border-gray-300 rounded-md px-3 py-2"
                   disabled={submitting}
                 >
-                  <option value="">Time...</option>
-                  {Array.from({ length: 24 * 4 }, (_, i) => {
-                    const hour = Math.floor(i / 4)
-                    const minute = (i % 4) * 15
-                    const hourStr = hour.toString().padStart(2, '0')
-                    const minuteStr = minute.toString().padStart(2, '0')
-                    const displayHour = hour === 0 ? 12 : hour > 12 ? hour - 12 : hour
-                    const ampm = hour < 12 ? 'AM' : 'PM'
-                    return (
-                      <option key={`${hourStr}:${minuteStr}`} value={`${hourStr}:${minuteStr}`}>
-                        {displayHour}:{minuteStr} {ampm}
-                      </option>
-                    )
-                  })}
+                  <option value="">Hr</option>
+                  {Array.from({ length: 12 }, (_, i) => (
+                    <option key={i + 1} value={i + 1}>{i + 1}</option>
+                  ))}
+                </select>
+                <select
+                  value={formData.end_date.split('T')[1]?.split(':')[1] || ''}
+                  onChange={(e) => {
+                    const datePart = formData.end_date.split('T')[0]
+                    const currentTime = formData.end_date.split('T')[1] || '17:00'
+                    const [h] = currentTime.split(':')
+                    setFormData(prev => ({ ...prev, end_date: datePart ? `${datePart}T${h}:${e.target.value}` : '' }))
+                  }}
+                  className="border border-gray-300 rounded-md px-3 py-2"
+                  disabled={submitting}
+                >
+                  <option value="">Min</option>
+                  <option value="00">00</option>
+                  <option value="15">15</option>
+                  <option value="30">30</option>
+                  <option value="45">45</option>
+                </select>
+                <select
+                  value={(() => {
+                    const time = formData.end_date.split('T')[1]
+                    if (!time) return ''
+                    const [h] = time.split(':')
+                    return parseInt(h) < 12 ? 'AM' : 'PM'
+                  })()}
+                  onChange={(e) => {
+                    const datePart = formData.end_date.split('T')[0]
+                    const currentTime = formData.end_date.split('T')[1] || '17:00'
+                    const [h, min] = currentTime.split(':')
+                    const currentHour = parseInt(h)
+                    let newHour = currentHour
+                    if (e.target.value === 'PM' && currentHour < 12) {
+                      newHour = currentHour + 12
+                    } else if (e.target.value === 'AM' && currentHour >= 12) {
+                      newHour = currentHour - 12
+                    }
+                    const hourStr = newHour.toString().padStart(2, '0')
+                    setFormData(prev => ({ ...prev, end_date: datePart ? `${datePart}T${hourStr}:${min}` : '' }))
+                  }}
+                  className="border border-gray-300 rounded-md px-3 py-2"
+                  disabled={submitting}
+                >
+                  <option value="">--</option>
+                  <option value="AM">AM</option>
+                  <option value="PM">PM</option>
                 </select>
               </div>
             </div>

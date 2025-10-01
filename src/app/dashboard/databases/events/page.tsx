@@ -594,7 +594,8 @@ function AddEventModal({
     address: '',
     url: '',
     image_url: '',
-    featured: false
+    featured: false,
+    paid_placement: false
   })
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -738,6 +739,19 @@ function AddEventModal({
                 disabled={submitting}
               />
               <span className="text-sm font-medium text-gray-700">Featured Event</span>
+            </label>
+          </div>
+
+          <div>
+            <label className="flex items-center">
+              <input
+                type="checkbox"
+                checked={formData.paid_placement}
+                onChange={(e) => setFormData(prev => ({ ...prev, paid_placement: e.target.checked }))}
+                className="mr-2"
+                disabled={submitting}
+              />
+              <span className="text-sm font-medium text-gray-700">Paid Placement Event</span>
             </label>
           </div>
 

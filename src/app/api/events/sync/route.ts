@@ -268,9 +268,7 @@ export async function POST(request: NextRequest) {
         let eventSummary = null
         const shouldGenerateSummary = !existingEvent || !existingEvent.event_summary
 
-        // Temporarily disable AI summary generation during sync for speed
-        // TODO: Re-enable after optimizing sync performance or run as separate job
-        if (false && shouldGenerateSummary && eventData.description) {
+        if (shouldGenerateSummary && eventData.description) {
           eventSummary = await generateEventSummary({
             title: eventData.title,
             description: eventData.description,

@@ -7,9 +7,28 @@ export async function POST(request: NextRequest) {
     const croppedBlob = formData.get('cropped') as Blob
     const eventTitle = formData.get('eventTitle') as string
 
+    console.log('Upload request received:', {
+      hasOriginal: !!originalBlob,
+      hasOriginalSize: originalBlob?.size,
+      hasCropped: !!croppedBlob,
+      hasCroppedSize: croppedBlob?.size,
+      hasTitle: !!eventTitle,
+      title: eventTitle
+    })
+
     if (!originalBlob || !croppedBlob || !eventTitle) {
+      console.error('Missing required fields:', {
+        hasOriginal: !!originalBlob,
+        hasCropped: !!croppedBlob,
+        hasTitle: !!eventTitle
+      })
       return NextResponse.json({
-        error: 'Missing required fields'
+        error: 'Missing required fields',
+        details: {
+          hasOriginal: !!originalBlob,
+          hasCropped: !!croppedBlob,
+          hasTitle: !!eventTitle
+        }
       }, { status: 400 })
     }
 
@@ -44,13 +63,23 @@ export async function POST(request: NextRequest) {
     const originalFilename = `public-events/originals/${safeTitle}-${timestamp}.jpg`
     const croppedFilename = `public-events/cropped/${safeTitle}-${timestamp}.jpg`
 
+    console.log('Converting images to base64...')
+
     // Convert original blob to base64
     const originalArrayBuffer = await originalBlob.arrayBuffer()
     const originalBase64 = Buffer.from(originalArrayBuffer).toString('base64')
+    console.log('Original image converted:', {
+      size: originalArrayBuffer.byteLength,
+      base64Length: originalBase64.length
+    })
 
     // Convert cropped blob to base64
     const croppedArrayBuffer = await croppedBlob.arrayBuffer()
     const croppedBase64 = Buffer.from(croppedArrayBuffer).toString('base64')
+    console.log('Cropped image converted:', {
+      size: croppedArrayBuffer.byteLength,
+      base64Length: croppedBase64.length
+    })
 
     // Upload original image
     const originalResponse = await fetch(

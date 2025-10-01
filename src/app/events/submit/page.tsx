@@ -265,17 +265,32 @@ export default function SubmitEventPage() {
           targetHeight
         )
 
-        // Convert cropped canvas to blob
+        // Convert cropped canvas to blob with compression
         const croppedBlob = await new Promise<Blob>((resolve, reject) => {
           canvas.toBlob((blob) => {
             if (blob) resolve(blob)
             else reject(new Error('Failed to create blob from canvas'))
-          }, 'image/jpeg', 0.95)
+          }, 'image/jpeg', 0.8)
         })
 
-        // Convert original data URL to blob
-        const dataUrlResponse = await fetch(selectedImage)
-        const originalBlob = await dataUrlResponse.blob()
+        // Compress original image by drawing to canvas at max 1600px width
+        const originalCanvas = document.createElement('canvas')
+        const maxOriginalWidth = 1600
+        const originalScale = Math.min(1, maxOriginalWidth / image.naturalWidth)
+        originalCanvas.width = image.naturalWidth * originalScale
+        originalCanvas.height = image.naturalHeight * originalScale
+
+        const originalCtx = originalCanvas.getContext('2d')
+        if (!originalCtx) throw new Error('Failed to get canvas context for original')
+
+        originalCtx.drawImage(image, 0, 0, originalCanvas.width, originalCanvas.height)
+
+        const originalBlob = await new Promise<Blob>((resolve, reject) => {
+          originalCanvas.toBlob((blob) => {
+            if (blob) resolve(blob)
+            else reject(new Error('Failed to create blob from original'))
+          }, 'image/jpeg', 0.85)
+        })
 
         // Upload both original and cropped
         const formDataUpload = new FormData()
@@ -283,14 +298,27 @@ export default function SubmitEventPage() {
         formDataUpload.append('cropped', croppedBlob, 'cropped.jpg')
         formDataUpload.append('eventTitle', formData.title)
 
+        console.log('Uploading images:', {
+          originalSize: originalBlob.size,
+          croppedSize: croppedBlob.size,
+          title: formData.title
+        })
+
         const uploadResponse = await fetch('/api/events/upload-image', {
           method: 'POST',
           body: formDataUpload
         })
 
+        console.log('Upload response:', {
+          status: uploadResponse.status,
+          statusText: uploadResponse.statusText,
+          ok: uploadResponse.ok
+        })
+
         if (!uploadResponse.ok) {
           const errorData = await uploadResponse.json().catch(() => ({}))
-          throw new Error(errorData.error || 'Failed to upload images')
+          console.error('Upload error response:', errorData)
+          throw new Error(errorData.error || errorData.message || 'Failed to upload images')
         }
 
         const data = await uploadResponse.json()

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { supabaseAdmin } from '@/lib/supabase'
 
 export async function POST(request: NextRequest) {
   try {
@@ -32,26 +33,6 @@ export async function POST(request: NextRequest) {
       }, { status: 400 })
     }
 
-    const githubToken = process.env.GITHUB_TOKEN
-    const repoOwner = process.env.GITHUB_REPO_OWNER
-    const repoName = process.env.GITHUB_REPO_NAME
-
-    if (!githubToken || !repoOwner || !repoName) {
-      console.error('Missing GitHub configuration:', {
-        hasToken: !!githubToken,
-        hasOwner: !!repoOwner,
-        hasRepo: !!repoName
-      })
-      return NextResponse.json({
-        error: 'GitHub configuration not set up. Please contact administrator.',
-        details: 'Missing: ' + [
-          !githubToken && 'GITHUB_TOKEN',
-          !repoOwner && 'GITHUB_REPO_OWNER',
-          !repoName && 'GITHUB_REPO_NAME'
-        ].filter(Boolean).join(', ')
-      }, { status: 500 })
-    }
-
     // Create safe filename from event title
     const timestamp = Date.now()
     const safeTitle = eventTitle
@@ -60,93 +41,58 @@ export async function POST(request: NextRequest) {
       .replace(/^-+|-+$/g, '')
       .substring(0, 50)
 
-    const originalFilename = `public-events/originals/${safeTitle}-${timestamp}.jpg`
-    const croppedFilename = `public-events/cropped/${safeTitle}-${timestamp}.jpg`
+    const originalPath = `public-events/originals/${safeTitle}-${timestamp}.jpg`
+    const croppedPath = `public-events/cropped/${safeTitle}-${timestamp}.jpg`
 
-    console.log('Converting images to base64...')
+    console.log('Uploading to Supabase Storage...')
 
-    // Convert original blob to base64
-    const originalArrayBuffer = await originalBlob.arrayBuffer()
-    const originalBase64 = Buffer.from(originalArrayBuffer).toString('base64')
-    console.log('Original image converted:', {
-      size: originalArrayBuffer.byteLength,
-      base64Length: originalBase64.length
-    })
-
-    // Convert cropped blob to base64
-    const croppedArrayBuffer = await croppedBlob.arrayBuffer()
-    const croppedBase64 = Buffer.from(croppedArrayBuffer).toString('base64')
-    console.log('Cropped image converted:', {
-      size: croppedArrayBuffer.byteLength,
-      base64Length: croppedBase64.length
-    })
-
-    // Upload original image
-    const originalResponse = await fetch(
-      `https://api.github.com/repos/${repoOwner}/${repoName}/contents/${originalFilename}`,
-      {
-        method: 'PUT',
-        headers: {
-          Authorization: `Bearer ${githubToken}`,
-          'Accept': 'application/vnd.github+json',
-          'X-GitHub-Api-Version': '2022-11-28',
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          message: `Add original image for event: ${eventTitle}`,
-          content: originalBase64,
-        }),
-      }
-    )
-
-    if (!originalResponse.ok) {
-      const error = await originalResponse.json()
-      console.error('GitHub original upload error:', {
-        status: originalResponse.status,
-        statusText: originalResponse.statusText,
-        error,
-        filename: originalFilename
+    // Upload original image to Supabase Storage
+    const { data: originalData, error: originalError } = await supabaseAdmin.storage
+      .from('images')
+      .upload(originalPath, originalBlob, {
+        contentType: 'image/jpeg',
+        upsert: false
       })
-      throw new Error(`Failed to upload original image to GitHub: ${error.message || originalResponse.statusText}`)
+
+    if (originalError) {
+      console.error('Original upload error:', originalError)
+      throw new Error(`Failed to upload original image: ${originalError.message}`)
     }
 
-    const originalData = await originalResponse.json()
+    // Get public URL for original
+    const { data: originalUrlData } = supabaseAdmin.storage
+      .from('images')
+      .getPublicUrl(originalPath)
 
-    // Upload cropped image
-    const croppedResponse = await fetch(
-      `https://api.github.com/repos/${repoOwner}/${repoName}/contents/${croppedFilename}`,
-      {
-        method: 'PUT',
-        headers: {
-          Authorization: `Bearer ${githubToken}`,
-          'Accept': 'application/vnd.github+json',
-          'X-GitHub-Api-Version': '2022-11-28',
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          message: `Add cropped image for event: ${eventTitle}`,
-          content: croppedBase64,
-        }),
-      }
-    )
-
-    if (!croppedResponse.ok) {
-      const error = await croppedResponse.json()
-      console.error('GitHub cropped upload error:', {
-        status: croppedResponse.status,
-        statusText: croppedResponse.statusText,
-        error,
-        filename: croppedFilename
+    // Upload cropped image to Supabase Storage
+    const { data: croppedData, error: croppedError } = await supabaseAdmin.storage
+      .from('images')
+      .upload(croppedPath, croppedBlob, {
+        contentType: 'image/jpeg',
+        upsert: false
       })
-      throw new Error(`Failed to upload cropped image to GitHub: ${error.message || croppedResponse.statusText}`)
+
+    if (croppedError) {
+      console.error('Cropped upload error:', croppedError)
+      // Try to clean up original image
+      await supabaseAdmin.storage.from('images').remove([originalPath])
+      throw new Error(`Failed to upload cropped image: ${croppedError.message}`)
     }
 
-    const croppedData = await croppedResponse.json()
+    // Get public URL for cropped
+    const { data: croppedUrlData } = supabaseAdmin.storage
+      .from('images')
+      .getPublicUrl(croppedPath)
 
-    // Return the download URLs
+    console.log('Upload successful:', {
+      originalUrl: originalUrlData.publicUrl,
+      croppedUrl: croppedUrlData.publicUrl
+    })
+
+    // Return the public URLs
     return NextResponse.json({
-      original_url: originalData.content.download_url,
-      cropped_url: croppedData.content.download_url,
+      original_url: originalUrlData.publicUrl,
+      cropped_url: croppedUrlData.publicUrl,
     })
 
   } catch (error) {

@@ -1,0 +1,106 @@
+import { NextRequest, NextResponse } from 'next/server'
+
+export async function POST(request: NextRequest) {
+  try {
+    const formData = await request.formData()
+    const originalDataUrl = formData.get('original') as string
+    const croppedBlob = formData.get('cropped') as Blob
+    const eventTitle = formData.get('eventTitle') as string
+
+    if (!originalDataUrl || !croppedBlob || !eventTitle) {
+      return NextResponse.json({
+        error: 'Missing required fields'
+      }, { status: 400 })
+    }
+
+    const githubToken = process.env.GITHUB_TOKEN
+    const repoOwner = process.env.GITHUB_REPO_OWNER
+    const repoName = process.env.GITHUB_REPO_NAME
+
+    if (!githubToken || !repoOwner || !repoName) {
+      console.error('Missing GitHub configuration')
+      return NextResponse.json({
+        error: 'GitHub configuration not set up'
+      }, { status: 500 })
+    }
+
+    // Create safe filename from event title
+    const timestamp = Date.now()
+    const safeTitle = eventTitle
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '')
+      .substring(0, 50)
+
+    const originalFilename = `public-events/originals/${safeTitle}-${timestamp}.jpg`
+    const croppedFilename = `public-events/cropped/${safeTitle}-${timestamp}.jpg`
+
+    // Convert original data URL to base64
+    const originalBase64 = originalDataUrl.split(',')[1]
+
+    // Convert cropped blob to base64
+    const croppedArrayBuffer = await croppedBlob.arrayBuffer()
+    const croppedBase64 = Buffer.from(croppedArrayBuffer).toString('base64')
+
+    // Upload original image
+    const originalResponse = await fetch(
+      `https://api.github.com/repos/${repoOwner}/${repoName}/contents/${originalFilename}`,
+      {
+        method: 'PUT',
+        headers: {
+          Authorization: `token ${githubToken}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          message: `Add original image for event: ${eventTitle}`,
+          content: originalBase64,
+        }),
+      }
+    )
+
+    if (!originalResponse.ok) {
+      const error = await originalResponse.json()
+      console.error('GitHub original upload error:', error)
+      throw new Error('Failed to upload original image to GitHub')
+    }
+
+    const originalData = await originalResponse.json()
+
+    // Upload cropped image
+    const croppedResponse = await fetch(
+      `https://api.github.com/repos/${repoOwner}/${repoName}/contents/${croppedFilename}`,
+      {
+        method: 'PUT',
+        headers: {
+          Authorization: `token ${githubToken}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          message: `Add cropped image for event: ${eventTitle}`,
+          content: croppedBase64,
+        }),
+      }
+    )
+
+    if (!croppedResponse.ok) {
+      const error = await croppedResponse.json()
+      console.error('GitHub cropped upload error:', error)
+      throw new Error('Failed to upload cropped image to GitHub')
+    }
+
+    const croppedData = await croppedResponse.json()
+
+    // Return the download URLs
+    return NextResponse.json({
+      original_url: originalData.content.download_url,
+      cropped_url: croppedData.content.download_url,
+    })
+
+  } catch (error) {
+    console.error('Image upload failed:', error)
+    return NextResponse.json({
+      error: 'Image upload failed',
+      message: error instanceof Error ? error.message : 'Unknown error'
+    }, { status: 500 })
+  }
+}

@@ -1352,9 +1352,26 @@ export class RSSProcessor {
         })
 
         if (eventsForDate.length > 0) {
-          // Auto-select up to 8 events per day, randomly selected
-          const shuffled = [...eventsForDate].sort(() => Math.random() - 0.5)
-          eventsByDate[date] = shuffled.slice(0, Math.min(8, eventsForDate.length))
+          // Separate paid placements - these are GUARANTEED selections
+          const paidEvents = eventsForDate.filter(e => e.paid_placement)
+          const nonPaidEvents = eventsForDate.filter(e => !e.paid_placement)
+
+          // Auto-select up to 8 events per day: all paid placements + fill remaining slots randomly
+          const shuffledNonPaid = [...nonPaidEvents].sort(() => Math.random() - 0.5)
+          const spotsAvailable = 8
+          const remainingSlots = Math.max(0, spotsAvailable - paidEvents.length)
+
+          // Combine: paid placements first, then random selection from non-paid
+          const selectedEvents = [
+            ...paidEvents,
+            ...shuffledNonPaid.slice(0, remainingSlots)
+          ]
+
+          if (paidEvents.length > spotsAvailable) {
+            console.warn(`Warning: ${paidEvents.length} paid placement events exceed ${spotsAvailable} spots for ${date}. All will be included.`)
+          }
+
+          eventsByDate[date] = selectedEvents
         }
       })
 

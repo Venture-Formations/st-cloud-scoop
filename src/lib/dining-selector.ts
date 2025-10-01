@@ -111,24 +111,37 @@ export async function selectDiningDealsForCampaign(campaignId: string, campaignD
       }
     }
 
-    // Randomize the available deals while preserving featured priority
-    const featuredDeals = availableDeals.filter(deal => deal.is_featured)
-    const nonFeaturedDeals = availableDeals.filter(deal => !deal.is_featured)
+    // Separate paid placements - these are GUARANTEED selections
+    const paidPlacementDeals = availableDeals.filter(deal => deal.paid_placement)
+    const nonPaidDeals = availableDeals.filter(deal => !deal.paid_placement)
 
-    // Shuffle non-featured deals randomly
+    // Randomize the non-paid deals while preserving featured priority
+    const featuredDeals = nonPaidDeals.filter(deal => deal.is_featured)
+    const nonFeaturedDeals = nonPaidDeals.filter(deal => !deal.is_featured)
+
+    // Shuffle non-featured, non-paid deals randomly
     const shuffledNonFeatured = [...nonFeaturedDeals].sort(() => 0.5 - Math.random())
 
-    // Combine featured first, then shuffled non-featured
-    const randomizedDeals = [...featuredDeals, ...shuffledNonFeatured]
+    // Combine: paid placements first, then featured, then shuffled non-featured
+    const prioritizedDeals = [...paidPlacementDeals, ...featuredDeals, ...shuffledNonFeatured]
 
-    // Select up to 8 deals with business limits from randomized list
-    const selectedDeals = selectDealsWithBusinessLimit(randomizedDeals, 8, 2)
+    // Calculate how many slots we have: 8 total, minus guaranteed paid placements
+    const spotsAvailable = 8
+    const guaranteedPaidCount = paidPlacementDeals.length
 
-    // Finally randomize the selected deals order (except keep featured first if any)
-    const selectedFeatured = selectedDeals.filter(deal => deal.is_featured)
-    const selectedNonFeatured = selectedDeals.filter(deal => !deal.is_featured)
+    if (guaranteedPaidCount > spotsAvailable) {
+      console.warn(`Warning: ${guaranteedPaidCount} paid placements exceed ${spotsAvailable} spots. All will be included.`)
+    }
+
+    // Select deals: all paid placements + fill remaining slots with business limits
+    const selectedDeals = selectDealsWithBusinessLimit(prioritizedDeals, Math.max(8, guaranteedPaidCount), 2)
+
+    // Finally randomize the selected deals order (except keep paid placements and featured first)
+    const selectedPaid = selectedDeals.filter(deal => deal.paid_placement)
+    const selectedFeatured = selectedDeals.filter(deal => deal.is_featured && !deal.paid_placement)
+    const selectedNonFeatured = selectedDeals.filter(deal => !deal.is_featured && !deal.paid_placement)
     const shuffledSelected = [...selectedNonFeatured].sort(() => 0.5 - Math.random())
-    const finalOrderedDeals = [...selectedFeatured, ...shuffledSelected]
+    const finalOrderedDeals = [...selectedPaid, ...selectedFeatured, ...shuffledSelected]
 
     // If no deals are featured, mark the first one as featured
     if (finalOrderedDeals.length > 0 && !finalOrderedDeals.some(deal => deal.is_featured)) {
@@ -165,9 +178,12 @@ export async function selectDiningDealsForCampaign(campaignId: string, campaignD
       .filter(([_, count]) => count > 1)
       .length
 
+    const paidCount = finalOrderedDeals.filter(d => d.paid_placement).length
+    const featuredCount = finalOrderedDeals.filter(d => d.is_featured).length
+
     return {
       deals: finalOrderedDeals,
-      message: `Selected ${finalOrderedDeals.length} dining deals for ${dayOfWeek} (${finalOrderedDeals.filter(d => d.is_featured).length} featured, max 2 per business, randomized order${businessesWithMultiple > 0 ? `, ${businessesWithMultiple} businesses with multiple deals` : ''})`
+      message: `Selected ${finalOrderedDeals.length} dining deals for ${dayOfWeek} (${paidCount} paid placements, ${featuredCount} featured, max 2 per business, randomized order${businessesWithMultiple > 0 ? `, ${businessesWithMultiple} businesses with multiple deals` : ''})`
     }
 
   } catch (error) {

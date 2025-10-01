@@ -249,6 +249,7 @@ export interface Event {
   url: string | null
   image_url: string | null
   featured: boolean
+  paid_placement: boolean
   active: boolean
   raw_data: any
   created_at: string
@@ -417,9 +418,10 @@ export interface DiningDeal {
   business_address: string | null
   google_profile: string | null  // Google Maps URL
   day_of_week: 'Monday' | 'Tuesday' | 'Wednesday' | 'Thursday' | 'Friday' | 'Saturday' | 'Sunday'
-  special_description: string
+  special_description: string  // Max 65 characters
   special_time: string | null  // e.g., "11AM - 3PM", "All day", etc.
   is_featured: boolean
+  paid_placement: boolean
   is_active: boolean
   created_at: string
   updated_at: string

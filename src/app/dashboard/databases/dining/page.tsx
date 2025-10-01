@@ -626,7 +626,8 @@ function AddDealForm({ onClose, onSuccess }: { onClose: () => void; onSuccess: (
     day_of_week: 'Monday' as DiningDeal['day_of_week'],
     special_description: '',
     special_time: '',
-    is_featured: false
+    is_featured: false,
+    paid_placement: false
   })
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
@@ -740,7 +741,11 @@ function AddDealForm({ onClose, onSuccess }: { onClose: () => void; onSuccess: (
           onChange={(e) => setFormData(prev => ({ ...prev, special_description: e.target.value }))}
           className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
           rows={3}
+          maxLength={65}
         />
+        <p className="text-xs text-gray-500 mt-1">
+          {formData.special_description.length}/65 characters
+        </p>
       </div>
 
       <div>
@@ -754,7 +759,7 @@ function AddDealForm({ onClose, onSuccess }: { onClose: () => void; onSuccess: (
         />
       </div>
 
-      <div>
+      <div className="space-y-2">
         <label className="flex items-center space-x-2">
           <input
             type="checkbox"
@@ -763,6 +768,16 @@ function AddDealForm({ onClose, onSuccess }: { onClose: () => void; onSuccess: (
             className="rounded border-gray-300"
           />
           <span className="text-sm font-medium text-gray-700">Featured Deal</span>
+        </label>
+
+        <label className="flex items-center space-x-2">
+          <input
+            type="checkbox"
+            checked={formData.paid_placement}
+            onChange={(e) => setFormData(prev => ({ ...prev, paid_placement: e.target.checked }))}
+            className="rounded border-gray-300"
+          />
+          <span className="text-sm font-medium text-gray-700">Paid Placement (Guaranteed Selection)</span>
         </label>
       </div>
 
@@ -877,7 +892,7 @@ function CsvUploadForm({ onClose, onSuccess }: { onClose: () => void; onSuccess:
             required
           />
           <p className="text-xs text-gray-500 mt-1">
-            CSV should have columns: business_name, business_address, google_cid, day_of_week, special_description, special_time, is_featured, is_active
+            CSV should have columns: business_name, business_address, google_cid, day_of_week (dropdown), special_description (max 65 chars), special_time, is_featured (checkbox), paid_placement (checkbox)
           </p>
         </div>
 

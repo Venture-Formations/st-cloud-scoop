@@ -806,7 +806,7 @@ function EventsCsvUploadForm({ onClose, onSuccess }: { onClose: () => void; onSu
             required
           />
           <p className="text-xs text-gray-500 mt-1">
-            CSV should have columns: external_id, title, description, start_date, end_date, venue, address, url, image_url, featured, active
+            CSV should have columns: external_id, title, description, start_date, end_date, venue, address, url, image_url, featured (checkbox), paid_placement (checkbox)
           </p>
         </div>
 

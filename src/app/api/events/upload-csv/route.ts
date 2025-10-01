@@ -28,16 +28,34 @@ export async function POST(request: NextRequest) {
     // Parse CSV header
     const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, ''))
 
-    // Expected columns mapping
+    // Expected columns mapping (supports both combined and separate date/time fields)
     const columnMapping = {
+      'external_id': 'external_id',
+      'External ID': 'external_id',
       'Title': 'title',
+      'title': 'title',
       'Description': 'description',
+      'description': 'description',
       'Start Date': 'start_date',
+      'start_date': 'start_date',
+      'Start Time': 'start_time',
+      'start_time': 'start_time',
       'End Date': 'end_date',
+      'end_date': 'end_date',
+      'End Time': 'end_time',
+      'end_time': 'end_time',
       'Venue': 'venue',
+      'venue': 'venue',
       'Address': 'address',
+      'address': 'address',
       'URL': 'url',
-      'Image URL': 'image_url'
+      'url': 'url',
+      'Image URL': 'image_url',
+      'image_url': 'image_url',
+      'Featured': 'featured',
+      'featured': 'featured',
+      'Paid Placement': 'paid_placement',
+      'paid_placement': 'paid_placement'
     }
 
     // Find column indices
@@ -77,21 +95,75 @@ export async function POST(request: NextRequest) {
         for (const [dbField, index] of Object.entries(columnIndices)) {
           const value = values[index]?.trim().replace(/"/g, '') || null
 
-          // Handle date fields - convert to ISO format if needed
-          if ((dbField === 'start_date' || dbField === 'end_date') && value) {
-            try {
-              const dateObj = new Date(value)
-              if (isNaN(dateObj.getTime())) {
-                throw new Error(`Invalid date format: ${value}`)
-              }
-              rowData[dbField] = dateObj.toISOString().split('T')[0] // YYYY-MM-DD format
-            } catch (dateError) {
-              throw new Error(`Invalid date in ${dbField}: ${value}`)
+          if (dbField === 'featured' || dbField === 'paid_placement') {
+            // Parse boolean values (TRUE/FALSE, true/false, 1/0, yes/no)
+            if (value) {
+              const boolValue = value.toLowerCase()
+              rowData[dbField] = boolValue === 'true' || boolValue === '1' || boolValue === 'yes'
             }
           } else {
             rowData[dbField] = value
           }
         }
+
+        // Combine separate date and time fields if provided
+        if (rowData.start_date && rowData.start_time) {
+          try {
+            // Combine date and time: YYYY-MM-DD + HH:MM:SS
+            const combinedStart = `${rowData.start_date}T${rowData.start_time}`
+            const startObj = new Date(combinedStart)
+            if (isNaN(startObj.getTime())) {
+              throw new Error(`Invalid start date/time combination`)
+            }
+            rowData.start_date = startObj.toISOString()
+          } catch (error) {
+            throw new Error(`Invalid start date/time: ${rowData.start_date} ${rowData.start_time}`)
+          }
+        } else if (rowData.start_date) {
+          // Handle date-only format (backward compatibility)
+          try {
+            const dateObj = new Date(rowData.start_date)
+            if (isNaN(dateObj.getTime())) {
+              throw new Error(`Invalid date format`)
+            }
+            rowData.start_date = dateObj.toISOString()
+          } catch (error) {
+            throw new Error(`Invalid start date: ${rowData.start_date}`)
+          }
+        }
+
+        // Same for end_date
+        if (rowData.end_date && rowData.end_time) {
+          try {
+            const combinedEnd = `${rowData.end_date}T${rowData.end_time}`
+            const endObj = new Date(combinedEnd)
+            if (isNaN(endObj.getTime())) {
+              throw new Error(`Invalid end date/time combination`)
+            }
+            rowData.end_date = endObj.toISOString()
+          } catch (error) {
+            throw new Error(`Invalid end date/time: ${rowData.end_date} ${rowData.end_time}`)
+          }
+        } else if (rowData.end_date) {
+          // Handle date-only format (backward compatibility)
+          try {
+            const dateObj = new Date(rowData.end_date)
+            if (isNaN(dateObj.getTime())) {
+              throw new Error(`Invalid date format`)
+            }
+            rowData.end_date = dateObj.toISOString()
+          } catch (error) {
+            throw new Error(`Invalid end date: ${rowData.end_date}`)
+          }
+        }
+
+        // Remove temporary time fields (not in database schema)
+        delete rowData.start_time
+        delete rowData.end_time
+
+        // Set defaults for boolean fields if not provided
+        if (rowData.featured === undefined) rowData.featured = false
+        if (rowData.paid_placement === undefined) rowData.paid_placement = false
 
         // Validate required fields
         if (!rowData.title || !rowData.start_date) {

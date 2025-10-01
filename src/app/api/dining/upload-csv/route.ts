@@ -43,7 +43,11 @@ export async function POST(request: NextRequest) {
       'Special Description': 'special_description',
       'special_description': 'special_description',
       'Special Time': 'special_time',
-      'special_time': 'special_time'
+      'special_time': 'special_time',
+      'Is Featured': 'is_featured',
+      'is_featured': 'is_featured',
+      'Paid Placement': 'paid_placement',
+      'paid_placement': 'paid_placement'
     }
 
     // Find column indices
@@ -96,6 +100,13 @@ export async function POST(request: NextRequest) {
                   throw new Error(`Invalid day of week: ${value}. Must be one of: ${validDays.join(', ')}`)
                 }
                 break
+              case 'special_description':
+                // Validate 65 character limit
+                if (value.length > 65) {
+                  throw new Error(`Special description exceeds 65 character limit (${value.length} characters): ${value.substring(0, 50)}...`)
+                }
+                rowData[dbField] = value
+                break
               case 'google_cid':
                 // Store CID to convert to URL later
                 googleCid = value
@@ -103,6 +114,12 @@ export async function POST(request: NextRequest) {
               case 'google_profile':
                 // If google_profile is directly provided, use it
                 rowData[dbField] = value
+                break
+              case 'is_featured':
+              case 'paid_placement':
+                // Parse boolean values (TRUE/FALSE, true/false, 1/0, yes/no)
+                const boolValue = value.toLowerCase()
+                rowData[dbField] = boolValue === 'true' || boolValue === '1' || boolValue === 'yes'
                 break
               default:
                 rowData[dbField] = value
@@ -114,6 +131,10 @@ export async function POST(request: NextRequest) {
         if (googleCid && !rowData.google_profile) {
           rowData.google_profile = `https://maps.google.com/?cid=${googleCid}`
         }
+
+        // Set defaults for boolean fields if not provided
+        if (rowData.is_featured === undefined) rowData.is_featured = false
+        if (rowData.paid_placement === undefined) rowData.paid_placement = false
 
         // Validate required fields
         if (!rowData.business_name || !rowData.day_of_week || !rowData.special_description) {

@@ -57,7 +57,9 @@ export async function POST(request: NextRequest) {
       {
         method: 'PUT',
         headers: {
-          Authorization: `token ${githubToken}`,
+          Authorization: `Bearer ${githubToken}`,
+          'Accept': 'application/vnd.github+json',
+          'X-GitHub-Api-Version': '2022-11-28',
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
@@ -86,7 +88,9 @@ export async function POST(request: NextRequest) {
       {
         method: 'PUT',
         headers: {
-          Authorization: `token ${githubToken}`,
+          Authorization: `Bearer ${githubToken}`,
+          'Accept': 'application/vnd.github+json',
+          'X-GitHub-Api-Version': '2022-11-28',
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({

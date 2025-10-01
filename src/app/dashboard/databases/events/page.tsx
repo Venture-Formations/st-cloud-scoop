@@ -414,13 +414,46 @@ export default function EventsDatabasePage() {
                               className="w-full px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-brand-primary focus:border-transparent"
                             />
                           ) : isEditing && col.key === 'start_date' ? (
-                            <input
-                              type="datetime-local"
-                              step="300"
-                              value={editData.start_date ? new Date(editData.start_date).toISOString().slice(0, 16) : ''}
-                              onChange={(e) => setEditData({ ...editData, start_date: e.target.value ? new Date(e.target.value).toISOString() : '' })}
-                              className="w-full px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-brand-primary focus:border-transparent"
-                            />
+                            <div className="flex gap-1">
+                              <input
+                                type="date"
+                                value={editData.start_date ? new Date(editData.start_date).toISOString().split('T')[0] : ''}
+                                onChange={(e) => {
+                                  const datePart = e.target.value
+                                  const currentDate = editData.start_date ? new Date(editData.start_date) : new Date()
+                                  const timePart = `${currentDate.getUTCHours().toString().padStart(2, '0')}:${currentDate.getUTCMinutes().toString().padStart(2, '0')}`
+                                  setEditData({ ...editData, start_date: `${datePart}T${timePart}:00.000Z` })
+                                }}
+                                className="flex-1 px-2 py-1 border border-gray-300 rounded text-sm"
+                              />
+                              <select
+                                value={editData.start_date ? (() => {
+                                  const d = new Date(editData.start_date)
+                                  const h = d.getUTCHours().toString().padStart(2, '0')
+                                  const m = d.getUTCMinutes().toString().padStart(2, '0')
+                                  return `${h}:${m}`
+                                })() : ''}
+                                onChange={(e) => {
+                                  const datePart = editData.start_date ? new Date(editData.start_date).toISOString().split('T')[0] : new Date().toISOString().split('T')[0]
+                                  setEditData({ ...editData, start_date: `${datePart}T${e.target.value}:00.000Z` })
+                                }}
+                                className="px-2 py-1 border border-gray-300 rounded text-sm"
+                              >
+                                {Array.from({ length: 24 * 4 }, (_, i) => {
+                                  const hour = Math.floor(i / 4)
+                                  const minute = (i % 4) * 15
+                                  const hourStr = hour.toString().padStart(2, '0')
+                                  const minuteStr = minute.toString().padStart(2, '0')
+                                  const displayHour = hour === 0 ? 12 : hour > 12 ? hour - 12 : hour
+                                  const ampm = hour < 12 ? 'AM' : 'PM'
+                                  return (
+                                    <option key={`${hourStr}:${minuteStr}`} value={`${hourStr}:${minuteStr}`}>
+                                      {displayHour}:{minuteStr} {ampm}
+                                    </option>
+                                  )
+                                })}
+                              </select>
+                            </div>
                           ) : isEditing && col.key === 'featured' ? (
                             <input
                               type="checkbox"
@@ -647,35 +680,95 @@ function AddEventModal({
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Start Date & Time *
+                Start Date *
               </label>
-              <input
-                type="datetime-local"
-                step="300"
-                required
-                value={formData.start_date}
-                onChange={(e) => setFormData(prev => ({ ...prev, start_date: e.target.value }))}
-                className="w-full border border-gray-300 rounded-md px-3 py-2"
-                disabled={submitting}
-              />
-              <p className="text-xs text-gray-500 mt-1">Use keyboard to type time in 5-min intervals (e.g., 09:00, 09:05)</p>
+              <div className="grid grid-cols-2 gap-2">
+                <input
+                  type="date"
+                  required
+                  value={formData.start_date.split('T')[0] || ''}
+                  onChange={(e) => {
+                    const datePart = e.target.value
+                    const timePart = formData.start_date.split('T')[1] || '09:00'
+                    setFormData(prev => ({ ...prev, start_date: datePart ? `${datePart}T${timePart}` : '' }))
+                  }}
+                  className="w-full border border-gray-300 rounded-md px-3 py-2"
+                  disabled={submitting}
+                />
+                <select
+                  required
+                  value={formData.start_date.split('T')[1]?.slice(0, 5) || ''}
+                  onChange={(e) => {
+                    const datePart = formData.start_date.split('T')[0]
+                    const timePart = e.target.value
+                    setFormData(prev => ({ ...prev, start_date: datePart ? `${datePart}T${timePart}` : '' }))
+                  }}
+                  className="w-full border border-gray-300 rounded-md px-3 py-2"
+                  disabled={submitting}
+                >
+                  <option value="">Time...</option>
+                  {Array.from({ length: 24 * 4 }, (_, i) => {
+                    const hour = Math.floor(i / 4)
+                    const minute = (i % 4) * 15
+                    const hourStr = hour.toString().padStart(2, '0')
+                    const minuteStr = minute.toString().padStart(2, '0')
+                    const displayHour = hour === 0 ? 12 : hour > 12 ? hour - 12 : hour
+                    const ampm = hour < 12 ? 'AM' : 'PM'
+                    return (
+                      <option key={`${hourStr}:${minuteStr}`} value={`${hourStr}:${minuteStr}`}>
+                        {displayHour}:{minuteStr} {ampm}
+                      </option>
+                    )
+                  })}
+                </select>
+              </div>
             </div>
+
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                End Date & Time
+                End Date
               </label>
-              <input
-                type="datetime-local"
-                step="300"
-                value={formData.end_date}
-                onChange={(e) => setFormData(prev => ({ ...prev, end_date: e.target.value }))}
-                className="w-full border border-gray-300 rounded-md px-3 py-2"
-                disabled={submitting}
-              />
-              <p className="text-xs text-gray-500 mt-1">Use keyboard to type time in 5-min intervals</p>
+              <div className="grid grid-cols-2 gap-2">
+                <input
+                  type="date"
+                  value={formData.end_date.split('T')[0] || ''}
+                  onChange={(e) => {
+                    const datePart = e.target.value
+                    const timePart = formData.end_date.split('T')[1] || '17:00'
+                    setFormData(prev => ({ ...prev, end_date: datePart ? `${datePart}T${timePart}` : '' }))
+                  }}
+                  className="w-full border border-gray-300 rounded-md px-3 py-2"
+                  disabled={submitting}
+                />
+                <select
+                  value={formData.end_date.split('T')[1]?.slice(0, 5) || ''}
+                  onChange={(e) => {
+                    const datePart = formData.end_date.split('T')[0]
+                    const timePart = e.target.value
+                    setFormData(prev => ({ ...prev, end_date: datePart ? `${datePart}T${timePart}` : '' }))
+                  }}
+                  className="w-full border border-gray-300 rounded-md px-3 py-2"
+                  disabled={submitting}
+                >
+                  <option value="">Time...</option>
+                  {Array.from({ length: 24 * 4 }, (_, i) => {
+                    const hour = Math.floor(i / 4)
+                    const minute = (i % 4) * 15
+                    const hourStr = hour.toString().padStart(2, '0')
+                    const minuteStr = minute.toString().padStart(2, '0')
+                    const displayHour = hour === 0 ? 12 : hour > 12 ? hour - 12 : hour
+                    const ampm = hour < 12 ? 'AM' : 'PM'
+                    return (
+                      <option key={`${hourStr}:${minuteStr}`} value={`${hourStr}:${minuteStr}`}>
+                        {displayHour}:{minuteStr} {ampm}
+                      </option>
+                    )
+                  })}
+                </select>
+              </div>
             </div>
           </div>
 

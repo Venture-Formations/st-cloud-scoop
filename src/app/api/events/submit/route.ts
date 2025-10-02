@@ -6,6 +6,8 @@ export async function POST(request: NextRequest) {
   try {
     const { events } = await request.json()
 
+    console.log('Event submission received:', { eventCount: events?.length, events })
+
     if (!events || !Array.isArray(events) || events.length === 0) {
       return NextResponse.json({
         error: 'No events provided'
@@ -16,9 +18,15 @@ export async function POST(request: NextRequest) {
 
     // Insert each event
     for (const event of events) {
+      console.log('Inserting event:', event)
+
+      // Generate external_id for user-submitted events
+      const external_id = `user_${Date.now()}_${Math.random().toString(36).substring(7)}`
+
       const { data, error } = await supabaseAdmin
         .from('events')
         .insert([{
+          external_id,
           title: event.title,
           description: event.description,
           start_date: event.start_date,
@@ -47,7 +55,8 @@ export async function POST(request: NextRequest) {
 
       if (error) {
         console.error('Error inserting event:', error)
-        throw error
+        console.error('Event data that failed:', event)
+        throw new Error(`Database error: ${error.message} (${error.code})`)
       }
 
       insertedEvents.push(data)

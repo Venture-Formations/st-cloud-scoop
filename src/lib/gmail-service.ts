@@ -2,6 +2,8 @@ import nodemailer from 'nodemailer'
 
 export class GmailService {
   private transporter: nodemailer.Transporter
+  private fromEmail: string
+  private fromName: string
 
   constructor() {
     this.transporter = nodemailer.createTransport({
@@ -11,6 +13,10 @@ export class GmailService {
         pass: process.env.GMAIL_APP_PASSWORD
       }
     })
+
+    // Use custom FROM email if provided, otherwise use Gmail account
+    this.fromEmail = process.env.GMAIL_FROM_EMAIL || process.env.GMAIL_USER || ''
+    this.fromName = process.env.GMAIL_FROM_NAME || 'St. Cloud Scoop'
   }
 
   async sendEventApprovalEmail(event: {
@@ -117,7 +123,7 @@ export class GmailService {
 `
 
       const info = await this.transporter.sendMail({
-        from: `"St. Cloud Scoop" <${process.env.GMAIL_USER}>`,
+        from: `"${this.fromName}" <${this.fromEmail}>`,
         to: event.submitter_email,
         subject: `✅ Your Event "${event.title}" Has Been Approved`,
         html: emailHtml
@@ -190,7 +196,7 @@ export class GmailService {
 `
 
       const info = await this.transporter.sendMail({
-        from: `"St. Cloud Scoop" <${process.env.GMAIL_USER}>`,
+        from: `"${this.fromName}" <${this.fromEmail}>`,
         to: event.submitter_email,
         subject: `Event Submission Update: "${event.title}"`,
         html: emailHtml

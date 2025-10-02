@@ -116,15 +116,35 @@ export default function CheckoutPage() {
     try {
       // Convert cart items to database format
       const eventsToSubmit = cart.map(item => {
+        console.log('Processing cart item:', {
+          title: item.title,
+          start_date: item.start_date,
+          start_hour: item.start_hour,
+          start_minute: item.start_minute,
+          start_ampm: item.start_ampm,
+          end_hour: item.end_hour,
+          end_minute: item.end_minute,
+          end_ampm: item.end_ampm
+        })
+
         const startDateTime = `${item.start_date}T${convertTime12to24(item.start_hour, item.start_minute, item.start_ampm)}`
         const endDateTime = `${item.start_date}T${convertTime12to24(item.end_hour, item.end_minute, item.end_ampm)}`
+
+        console.log('Constructed date strings:', { startDateTime, endDateTime })
 
         const startDate = new Date(startDateTime)
         const endDate = new Date(endDateTime)
 
+        console.log('Parsed dates:', {
+          startDate: startDate.toString(),
+          endDate: endDate.toString(),
+          startValid: !isNaN(startDate.getTime()),
+          endValid: !isNaN(endDate.getTime())
+        })
+
         // Validate dates
         if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
-          throw new Error(`Invalid date for event "${item.title}". Please check the cart and try again.`)
+          throw new Error(`Invalid date for event "${item.title}". Start: ${startDateTime}, End: ${endDateTime}`)
         }
 
         return {

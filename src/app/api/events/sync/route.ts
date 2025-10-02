@@ -4,11 +4,26 @@ import { supabaseAdmin } from '@/lib/supabase'
 import { authOptions } from '@/lib/auth'
 import { callOpenAI, AI_PROMPTS } from '@/lib/openai'
 
-// Helper function to decode HTML entities
+// Helper function to strip HTML tags and decode HTML entities
 function decodeHtmlEntities(text: string | null | undefined): string | null {
   if (!text) return null
 
-  return text
+  // First, strip HTML tags but preserve content
+  let cleaned = text
+    // Replace <br> tags with newlines
+    .replace(/<br\s*\/?>/gi, '\n')
+    // Replace closing </p>, </div>, </li> tags with newlines
+    .replace(/<\/(p|div|li)>/gi, '\n')
+    // Remove all other HTML tags completely
+    .replace(/<[^>]+>/g, '')
+    // Replace multiple newlines with double newline
+    .replace(/\n{3,}/g, '\n\n')
+    // Trim each line
+    .split('\n').map(line => line.trim()).join('\n')
+    .trim()
+
+  // Then decode HTML entities
+  return cleaned
     .replace(/&#8217;/g, "'")  // Right single quotation mark
     .replace(/&#8216;/g, "'")  // Left single quotation mark
     .replace(/&#8220;/g, '"')  // Left double quotation mark

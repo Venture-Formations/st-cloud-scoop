@@ -109,12 +109,12 @@ export class GmailService {
         ` : ''}
       </div>
 
-      <p>Your event will be featured in our newsletter and on our website. Thank you for helping keep the St. Cloud community informed!</p>
+      <p>Thank you for helping keep the St. Cloud community informed!</p>
 
       <p>Best regards,<br>The St. Cloud Scoop Team</p>
 
       <div class="footer">
-        <p>St. Cloud Scoop | <a href="https://st-cloud-scoop.vercel.app">st-cloud-scoop.vercel.app</a></p>
+        <p>St. Cloud Scoop | <a href="https://stcscoop.com">stcscoop.com</a></p>
       </div>
     </div>
   </div>
@@ -187,7 +187,7 @@ export class GmailService {
       <p>Best regards,<br>The St. Cloud Scoop Team</p>
 
       <div class="footer">
-        <p>St. Cloud Scoop | <a href="https://st-cloud-scoop.vercel.app">st-cloud-scoop.vercel.app</a></p>
+        <p>St. Cloud Scoop | <a href="https://stcscoop.com">stcscoop.com</a></p>
       </div>
     </div>
   </div>

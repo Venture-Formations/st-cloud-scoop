@@ -28,6 +28,9 @@ interface CartItem {
   placement_type: 'none' | 'paid' | 'featured'
   original_image_url?: string
   cropped_image_url?: string
+  existing_event_id?: string
+  is_upgrade?: boolean
+  upgrade_price?: number
 }
 
 export default function CheckoutPage() {
@@ -73,6 +76,11 @@ export default function CheckoutPage() {
   }
 
   const calculateItemPrice = (item: CartItem) => {
+    // Check if this is an upgrade promotion with special pricing
+    if (item.is_upgrade && item.upgrade_price) {
+      return item.upgrade_price
+    }
+
     if (item.placement_type === 'paid') return pricing.paidPlacement
     if (item.placement_type === 'featured') return pricing.featured
     return 0
@@ -229,7 +237,8 @@ export default function CheckoutPage() {
                     <p className="text-sm font-medium text-gray-900">
                       {item.placement_type === 'none' && 'Free Listing'}
                       {item.placement_type === 'paid' && 'Paid Placement'}
-                      {item.placement_type === 'featured' && 'Featured Event'}
+                      {item.placement_type === 'featured' && !item.is_upgrade && 'Featured Event'}
+                      {item.placement_type === 'featured' && item.is_upgrade && 'Upgrade to Featured'}
                     </p>
                     <p className="text-lg font-bold text-gray-900">
                       ${calculateItemPrice(item).toFixed(2)}

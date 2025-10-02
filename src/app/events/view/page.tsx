@@ -108,6 +108,9 @@ export default function ViewEventsPage() {
     const cartJson = sessionStorage.getItem('eventCart')
     const cart = cartJson ? JSON.parse(cartJson) : []
 
+    // Determine if this is an upgrade from paid to featured
+    const isUpgrade = promotingEvent.paid_placement && selectedPromotion === 'featured'
+
     // Create promotion cart item
     const promotionItem = {
       id: `promotion_${Date.now()}`,
@@ -134,7 +137,9 @@ export default function ViewEventsPage() {
       placement_type: selectedPromotion,
       original_image_url: promotingEvent.cropped_image_url || '',
       cropped_image_url: promotingEvent.cropped_image_url || '',
-      existing_event_id: promotingEvent.id
+      existing_event_id: promotingEvent.id,
+      is_upgrade: isUpgrade,
+      upgrade_price: isUpgrade ? 10 : undefined
     }
 
     cart.push(promotionItem)
@@ -415,7 +420,7 @@ export default function ViewEventsPage() {
                                   Learn More →
                                 </a>
                               )}
-                              {!event.featured && !event.paid_placement && (
+                              {!event.featured && (
                                 <button
                                   onClick={(e) => {
                                     e.stopPropagation()
@@ -423,7 +428,7 @@ export default function ViewEventsPage() {
                                   }}
                                   className="flex-1 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md text-sm font-medium"
                                 >
-                                  Promote This Event
+                                  {event.paid_placement ? 'Promote to Featured Event' : 'Promote This Event'}
                                 </button>
                               )}
                             </div>
@@ -496,36 +501,49 @@ export default function ViewEventsPage() {
               </div>
 
               <div className="space-y-4 mb-6">
-                <h4 className="font-medium text-gray-900">Select Promotion Type:</h4>
+                <h4 className="font-medium text-gray-900">
+                  {promotingEvent.paid_placement ? 'Upgrade to Featured:' : 'Select Promotion Type:'}
+                </h4>
 
-                {/* Paid Placement Option */}
-                <div
-                  onClick={() => setSelectedPromotion('paid')}
-                  className={`border-2 rounded-lg p-4 cursor-pointer transition-colors ${
-                    selectedPromotion === 'paid'
-                      ? 'border-blue-600 bg-blue-50'
-                      : 'border-gray-200 hover:border-blue-300'
-                  }`}
-                >
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <div className="flex items-center mb-2">
-                        <input
-                          type="radio"
-                          checked={selectedPromotion === 'paid'}
-                          onChange={() => setSelectedPromotion('paid')}
-                          className="mr-2"
-                        />
-                        <h5 className="font-semibold text-gray-900">Paid Placement - ${pricing.paidPlacement}</h5>
+                {/* Show upgrade info if already sponsored */}
+                {promotingEvent.paid_placement && (
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
+                    <p className="text-sm text-blue-800">
+                      This event is already sponsored. Upgrade to Featured Event for just $10 more to get premium placement!
+                    </p>
+                  </div>
+                )}
+
+                {/* Paid Placement Option - Only show for non-sponsored events */}
+                {!promotingEvent.paid_placement && (
+                  <div
+                    onClick={() => setSelectedPromotion('paid')}
+                    className={`border-2 rounded-lg p-4 cursor-pointer transition-colors ${
+                      selectedPromotion === 'paid'
+                        ? 'border-blue-600 bg-blue-50'
+                        : 'border-gray-200 hover:border-blue-300'
+                    }`}
+                  >
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <div className="flex items-center mb-2">
+                          <input
+                            type="radio"
+                            checked={selectedPromotion === 'paid'}
+                            onChange={() => setSelectedPromotion('paid')}
+                            className="mr-2"
+                          />
+                          <h5 className="font-semibold text-gray-900">Paid Placement - ${pricing.paidPlacement}</h5>
+                        </div>
+                        <ul className="text-sm text-gray-700 space-y-1 ml-6">
+                          <li>• Featured in paid section of newsletter</li>
+                          <li>• Reaches thousands of subscribers</li>
+                          <li>• Increased visibility on website</li>
+                        </ul>
                       </div>
-                      <ul className="text-sm text-gray-700 space-y-1 ml-6">
-                        <li>• Featured in paid section of newsletter</li>
-                        <li>• Reaches thousands of subscribers</li>
-                        <li>• Increased visibility on website</li>
-                      </ul>
                     </div>
                   </div>
-                </div>
+                )}
 
                 {/* Featured Event Option */}
                 <div
@@ -545,7 +563,14 @@ export default function ViewEventsPage() {
                           onChange={() => setSelectedPromotion('featured')}
                           className="mr-2"
                         />
-                        <h5 className="font-semibold text-gray-900">Featured Event - ${pricing.featured}</h5>
+                        <h5 className="font-semibold text-gray-900">
+                          Featured Event - ${promotingEvent.paid_placement ? '10' : pricing.featured}
+                          {promotingEvent.paid_placement && (
+                            <span className="ml-2 text-sm text-green-600 font-normal">
+                              (Upgrade price)
+                            </span>
+                          )}
+                        </h5>
                       </div>
                       <ul className="text-sm text-gray-700 space-y-1 ml-6">
                         <li>• Premium placement in Local Events section</li>

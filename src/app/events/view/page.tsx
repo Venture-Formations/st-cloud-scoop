@@ -32,11 +32,21 @@ export default function ViewEventsPage() {
   const [loading, setLoading] = useState(true)
   const [pricing, setPricing] = useState({ paidPlacement: 5, featured: 15 })
   const [expandedEventId, setExpandedEventId] = useState<string | null>(null)
+  const [promotingEvent, setPromotingEvent] = useState<Event | null>(null)
+  const [selectedPromotion, setSelectedPromotion] = useState<'paid' | 'featured' | null>(null)
+  const [cartItemCount, setCartItemCount] = useState(0)
 
   useEffect(() => {
     loadEvents()
     loadPricing()
+    updateCartCount()
   }, [selectedVenue])
+
+  const updateCartCount = () => {
+    const cartJson = sessionStorage.getItem('eventCart')
+    const cart = cartJson ? JSON.parse(cartJson) : []
+    setCartItemCount(cart.length)
+  }
 
   const loadEvents = async () => {
     try {
@@ -86,10 +96,60 @@ export default function ViewEventsPage() {
     }
   }
 
-  const promoteEvent = (eventId: string) => {
-    // Store the event ID and redirect to submit page with promotion
-    sessionStorage.setItem('promoteEventId', eventId)
-    router.push(`/events/submit?promote=${eventId}`)
+  const promoteEvent = (event: Event) => {
+    setPromotingEvent(event)
+    setSelectedPromotion(null)
+  }
+
+  const addPromotionToCart = (goToCheckout: boolean = false) => {
+    if (!promotingEvent || !selectedPromotion) return
+
+    // Get existing cart
+    const cartJson = sessionStorage.getItem('eventCart')
+    const cart = cartJson ? JSON.parse(cartJson) : []
+
+    // Create promotion cart item
+    const promotionItem = {
+      id: `promotion_${Date.now()}`,
+      title: promotingEvent.title,
+      description: promotingEvent.description,
+      start_date: promotingEvent.start_date.split('T')[0],
+      start_hour: new Date(promotingEvent.start_date).getHours().toString(),
+      start_minute: new Date(promotingEvent.start_date).getMinutes().toString().padStart(2, '0'),
+      start_ampm: new Date(promotingEvent.start_date).getHours() >= 12 ? 'PM' : 'AM',
+      end_hour: new Date(promotingEvent.end_date).getHours().toString(),
+      end_minute: new Date(promotingEvent.end_date).getMinutes().toString().padStart(2, '0'),
+      end_ampm: new Date(promotingEvent.end_date).getHours() >= 12 ? 'PM' : 'AM',
+      venue_id: '',
+      venue_name: promotingEvent.venue,
+      venue_street: promotingEvent.address.split(',')[0]?.trim() || '',
+      venue_city: '',
+      venue_state: '',
+      venue_zip: '',
+      submitter_first_name: '',
+      submitter_last_name: '',
+      submitter_email: '',
+      submitter_phone: '',
+      url: promotingEvent.url || '',
+      placement_type: selectedPromotion,
+      original_image_url: promotingEvent.cropped_image_url || '',
+      cropped_image_url: promotingEvent.cropped_image_url || '',
+      existing_event_id: promotingEvent.id
+    }
+
+    cart.push(promotionItem)
+    sessionStorage.setItem('eventCart', JSON.stringify(cart))
+
+    if (goToCheckout) {
+      // Redirect to checkout
+      router.push('/events/checkout')
+    } else {
+      // Close modal and show success message
+      setPromotingEvent(null)
+      setSelectedPromotion(null)
+      updateCartCount()
+      alert('Promotion added to cart! You can continue browsing or checkout when ready.')
+    }
   }
 
   const stripHtmlTags = (html: string) => {
@@ -151,10 +211,25 @@ export default function ViewEventsPage() {
       <div className="max-w-6xl mx-auto">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Local Events</h1>
-          <p className="text-gray-600 mb-4">
-            Browse upcoming events in the St. Cloud area. Promote your event to reach more people!
-          </p>
+          <div className="flex justify-between items-start mb-4">
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900 mb-2">Local Events</h1>
+              <p className="text-gray-600">
+                Browse upcoming events in the St. Cloud area. Promote your event to reach more people!
+              </p>
+            </div>
+            {cartItemCount > 0 && (
+              <button
+                onClick={() => router.push('/events/checkout')}
+                className="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-md font-medium flex items-center gap-2"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
+                </svg>
+                Cart ({cartItemCount})
+              </button>
+            )}
+          </div>
           <button
             onClick={() => router.push('/events/submit')}
             className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-md font-medium"
@@ -344,7 +419,7 @@ export default function ViewEventsPage() {
                                 <button
                                   onClick={(e) => {
                                     e.stopPropagation()
-                                    promoteEvent(event.id)
+                                    promoteEvent(event)
                                   }}
                                   className="flex-1 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md text-sm font-medium"
                                 >
@@ -394,6 +469,122 @@ export default function ViewEventsPage() {
           </button>
         </div>
       </div>
+
+      {/* Promotion Modal */}
+      {promotingEvent && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6">
+              <div className="flex justify-between items-start mb-4">
+                <h2 className="text-2xl font-bold text-gray-900">Promote Event</h2>
+                <button
+                  onClick={() => setPromotingEvent(null)}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+
+              <div className="mb-6">
+                <h3 className="font-semibold text-lg text-gray-900 mb-2">{promotingEvent.title}</h3>
+                <p className="text-sm text-gray-600">
+                  {formatDate(promotingEvent.start_date)} at {formatTime(promotingEvent.start_date)}
+                </p>
+                <p className="text-sm text-gray-600">{promotingEvent.venue}</p>
+              </div>
+
+              <div className="space-y-4 mb-6">
+                <h4 className="font-medium text-gray-900">Select Promotion Type:</h4>
+
+                {/* Paid Placement Option */}
+                <div
+                  onClick={() => setSelectedPromotion('paid')}
+                  className={`border-2 rounded-lg p-4 cursor-pointer transition-colors ${
+                    selectedPromotion === 'paid'
+                      ? 'border-blue-600 bg-blue-50'
+                      : 'border-gray-200 hover:border-blue-300'
+                  }`}
+                >
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <div className="flex items-center mb-2">
+                        <input
+                          type="radio"
+                          checked={selectedPromotion === 'paid'}
+                          onChange={() => setSelectedPromotion('paid')}
+                          className="mr-2"
+                        />
+                        <h5 className="font-semibold text-gray-900">Paid Placement - ${pricing.paidPlacement}</h5>
+                      </div>
+                      <ul className="text-sm text-gray-700 space-y-1 ml-6">
+                        <li>• Featured in paid section of newsletter</li>
+                        <li>• Reaches thousands of subscribers</li>
+                        <li>• Increased visibility on website</li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Featured Event Option */}
+                <div
+                  onClick={() => setSelectedPromotion('featured')}
+                  className={`border-2 rounded-lg p-4 cursor-pointer transition-colors ${
+                    selectedPromotion === 'featured'
+                      ? 'border-yellow-500 bg-yellow-50'
+                      : 'border-gray-200 hover:border-yellow-300'
+                  }`}
+                >
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <div className="flex items-center mb-2">
+                        <input
+                          type="radio"
+                          checked={selectedPromotion === 'featured'}
+                          onChange={() => setSelectedPromotion('featured')}
+                          className="mr-2"
+                        />
+                        <h5 className="font-semibold text-gray-900">Featured Event - ${pricing.featured}</h5>
+                      </div>
+                      <ul className="text-sm text-gray-700 space-y-1 ml-6">
+                        <li>• Premium placement in Local Events section</li>
+                        <li>• Highlighted with featured badge</li>
+                        <li>• Maximum visibility and engagement</li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => addPromotionToCart(false)}
+                    disabled={!selectedPromotion}
+                    className="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-md font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Add to Cart & Keep Browsing
+                  </button>
+                  <button
+                    onClick={() => addPromotionToCart(true)}
+                    disabled={!selectedPromotion}
+                    className="flex-1 bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-md font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Add to Cart & Checkout
+                  </button>
+                </div>
+                <button
+                  onClick={() => setPromotingEvent(null)}
+                  className="w-full bg-gray-200 hover:bg-gray-300 text-gray-800 px-6 py-2 rounded-md font-medium"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

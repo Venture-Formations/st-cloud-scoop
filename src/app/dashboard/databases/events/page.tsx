@@ -523,6 +523,10 @@ export default function EventsDatabasePage() {
                                 View
                               </a>
                             ) : '-'
+                          ) : col.key === 'title' ? (
+                            <span className={!event.active ? 'line-through text-gray-400' : ''}>
+                              {event[col.key] || '-'}
+                            </span>
                           ) : (
                             event[col.key] || '-'
                           )}

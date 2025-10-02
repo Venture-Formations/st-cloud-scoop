@@ -88,10 +88,25 @@ export default function ReviewSubmissionsPage() {
       })
 
       if (response.ok) {
+        const data = await response.json()
+
+        // Build user-friendly message
+        let message = 'Event rejected successfully!'
+
+        if (data.refund) {
+          if (data.refund.success) {
+            message += `\n\n✅ Refund processed: $${data.refund.amount}\nRefund ID: ${data.refund.refund_id}`
+          } else {
+            message += `\n\n❌ Refund failed: ${data.refund.error}`
+          }
+        }
+
+        alert(message)
         loadSubmissions()
       }
     } catch (error) {
       console.error('Failed to reject:', error)
+      alert('Failed to reject event')
     }
   }
 

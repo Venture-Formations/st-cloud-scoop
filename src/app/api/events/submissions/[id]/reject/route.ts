@@ -49,7 +49,11 @@ export async function POST(
             const paymentIntentId = checkoutSession.payment_intent
 
             if (paymentIntentId) {
-              // Create refund
+              // Create partial refund for only this event's amount
+              const refundAmount = Math.round(event.payment_amount * 100) // Convert to cents
+
+              console.log(`[Reject] Creating partial refund of $${event.payment_amount} (${refundAmount} cents)`)
+
               const refundResponse = await fetch('https://api.stripe.com/v1/refunds', {
                 method: 'POST',
                 headers: {
@@ -58,8 +62,10 @@ export async function POST(
                 },
                 body: new URLSearchParams({
                   'payment_intent': paymentIntentId,
+                  'amount': refundAmount.toString(), // Partial refund for just this event
                   'reason': 'requested_by_customer',
                   'metadata[event_id]': id,
+                  'metadata[event_title]': event.title,
                   'metadata[rejection_reason]': reason || 'Event rejected by admin'
                 })
               })

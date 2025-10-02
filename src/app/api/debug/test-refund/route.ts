@@ -5,11 +5,12 @@ export async function GET(request: NextRequest) {
   try {
     const testMode = request.nextUrl.searchParams.get('mode') || 'dry-run'
     const checkoutSessionId = request.nextUrl.searchParams.get('session_id')
+    const partialAmount = request.nextUrl.searchParams.get('amount') // Optional: specific amount to refund in dollars
 
     if (!checkoutSessionId) {
       return NextResponse.json({
         error: 'Missing session_id parameter',
-        usage: 'Add ?session_id=YOUR_STRIPE_SESSION_ID&mode=dry-run (or mode=live)'
+        usage: 'Add ?session_id=YOUR_STRIPE_SESSION_ID&mode=dry-run (or mode=live)&amount=5.00 (optional)'
       }, { status: 400 })
     }
 
@@ -77,6 +78,17 @@ export async function GET(request: NextRequest) {
       paymentIntentId
     })
 
+    // Determine refund amount (partial or full)
+    const refundAmountCents = partialAmount
+      ? Math.round(parseFloat(partialAmount) * 100)
+      : checkoutSession.amount_total
+
+    const refundAmountDollars = refundAmountCents / 100
+
+    results.refundType = partialAmount
+      ? `Partial refund of $${refundAmountDollars}`
+      : `Full refund of $${refundAmountDollars}`
+
     // Step 3: Check if this is a dry-run or live test
     if (testMode === 'dry-run') {
       results.steps.push({
@@ -85,7 +97,9 @@ export async function GET(request: NextRequest) {
         refundRequest: {
           payment_intent: paymentIntentId,
           reason: 'requested_by_customer',
-          amount: checkoutSession.amount_total,
+          amount: refundAmountCents,
+          amountDisplay: `$${refundAmountDollars}`,
+          isPartial: !!partialAmount,
           metadata: {
             event_id: 'test-event-id',
             rejection_reason: 'Test refund via debug endpoint'
@@ -99,6 +113,7 @@ export async function GET(request: NextRequest) {
         results,
         nextSteps: [
           'To create a real refund, use: ?session_id=YOUR_SESSION_ID&mode=live',
+          'For partial refund: add &amount=5.00 (or any amount)',
           'WARNING: mode=live will actually process a refund in Stripe!'
         ]
       })
@@ -107,8 +122,22 @@ export async function GET(request: NextRequest) {
     // Step 4: Create actual refund (LIVE mode)
     results.steps.push({
       step: 4,
-      action: '⚠️ LIVE MODE - Creating actual refund in Stripe...'
+      action: `⚠️ LIVE MODE - Creating ${partialAmount ? 'PARTIAL' : 'FULL'} refund in Stripe...`,
+      amount: `$${refundAmountDollars}`
     })
+
+    const refundParams: any = {
+      'payment_intent': paymentIntentId,
+      'reason': 'requested_by_customer',
+      'metadata[event_id]': 'test-event',
+      'metadata[rejection_reason]': 'Test refund via debug endpoint',
+      'metadata[test_mode]': 'true'
+    }
+
+    // Add amount for partial refund
+    if (partialAmount) {
+      refundParams['amount'] = refundAmountCents.toString()
+    }
 
     const refundResponse = await fetch('https://api.stripe.com/v1/refunds', {
       method: 'POST',
@@ -116,13 +145,7 @@ export async function GET(request: NextRequest) {
         'Authorization': `Bearer ${stripeSecretKey}`,
         'Content-Type': 'application/x-www-form-urlencoded',
       },
-      body: new URLSearchParams({
-        'payment_intent': paymentIntentId,
-        'reason': 'requested_by_customer',
-        'metadata[event_id]': 'test-event',
-        'metadata[rejection_reason]': 'Test refund via debug endpoint',
-        'metadata[test_mode]': 'true'
-      })
+      body: new URLSearchParams(refundParams)
     })
 
     if (!refundResponse.ok) {

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { supabaseAdmin } from '@/lib/supabase'
 import { authOptions } from '@/lib/auth'
-import { MailerLiteService } from '@/lib/mailerlite'
+import { GmailService } from '@/lib/gmail-service'
 
 export async function POST(
   request: NextRequest,
@@ -116,8 +116,8 @@ export async function POST(
 
     // Send rejection email
     if (event.submitter_email) {
-      const mailerLite = new MailerLiteService()
-      await mailerLite.sendEventRejectionEmail({
+      const gmail = new GmailService()
+      await gmail.sendEventRejectionEmail({
         title: event.title,
         description: event.description,
         start_date: event.start_date,

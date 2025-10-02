@@ -66,7 +66,8 @@
       "Bash(git stash:*)",
       "Bash(git restore:*)",
       "Bash(set STRIPE_API_KEY=your_key_here)",
-      "Bash(ls:*)"
+      "Bash(ls:*)",
+      "WebFetch(domain:www.mailerlite.com)"
     ],
     "deny": [],
     "ask": []

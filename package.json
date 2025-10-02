@@ -42,6 +42,7 @@
     "zod": "^3.22.4"
   },
   "devDependencies": {
+    "@types/nodemailer": "^7.0.2",
     "@types/uuid": "^9.0.8"
   }
 }

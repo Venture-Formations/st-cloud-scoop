@@ -273,6 +273,16 @@ export default function CheckoutPage() {
                     </p>
                   </div>
                 </div>
+                <button
+                  onClick={() => {
+                    const updatedCart = cart.filter(cartItem => cartItem.id !== item.id)
+                    setCart(updatedCart)
+                    sessionStorage.setItem('eventCart', JSON.stringify(updatedCart))
+                  }}
+                  className="text-red-600 hover:text-red-800 text-sm font-medium"
+                >
+                  Remove
+                </button>
               </div>
             ))}
           </div>
@@ -345,18 +355,27 @@ export default function CheckoutPage() {
             </div>
 
             {/* Buttons */}
-            <div className="flex space-x-4">
-              <button
-                onClick={() => router.push('/events/submit')}
-                disabled={loading}
-                className="flex-1 bg-gray-200 hover:bg-gray-300 disabled:bg-gray-100 text-gray-800 px-6 py-3 rounded-md font-medium"
-              >
-                Back to Edit
-              </button>
+            <div className="space-y-3">
+              <div className="flex space-x-4">
+                <button
+                  onClick={() => router.push('/events/view')}
+                  disabled={loading}
+                  className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-100 text-white px-6 py-3 rounded-md font-medium"
+                >
+                  Browse More Events
+                </button>
+                <button
+                  onClick={() => router.push('/events/submit')}
+                  disabled={loading}
+                  className="flex-1 bg-gray-200 hover:bg-gray-300 disabled:bg-gray-100 text-gray-800 px-6 py-3 rounded-md font-medium"
+                >
+                  Add New Event
+                </button>
+              </div>
               <button
                 onClick={handleCheckout}
                 disabled={loading}
-                className="flex-1 bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white px-6 py-3 rounded-md font-medium text-lg"
+                className="w-full bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white px-6 py-3 rounded-md font-medium text-lg"
               >
                 {loading ? 'Processing...' : calculateTotal() === 0 ? 'Submit Events' : 'Pay with Stripe'}
               </button>

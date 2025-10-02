@@ -962,9 +962,16 @@ function EventsManager({
                           {/* Event Details and Image */}
                           <div className="flex items-start">
                             <div className="flex-1">
-                              <h4 className="text-sm font-semibold text-gray-900 mb-2 leading-tight">
-                                {event.title}
-                              </h4>
+                              <div className="flex items-center gap-2 mb-2">
+                                <h4 className="text-sm font-semibold text-gray-900 leading-tight">
+                                  {event.title}
+                                </h4>
+                                {event.paid_placement && (
+                                  <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800 border border-green-200">
+                                    Sponsored
+                                  </span>
+                                )}
+                              </div>
                               <div className="text-xs text-gray-600 space-y-1">
                                 <div className="font-medium">{formatEventTime(event.start_date)}</div>
                                 {event.venue && <div>{event.venue}</div>}

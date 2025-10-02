@@ -42,10 +42,10 @@ export async function POST(request: NextRequest) {
       let price = 0
 
       if (event.paid_placement) {
-        name += ' - Paid Placement (3 days)'
+        name += ' - Paid Placement'
         price = 500 // $5.00 in cents
       } else if (event.featured) {
-        name += ' - Featured Event (3 days)'
+        name += ' - Featured Event'
         price = 1500 // $15.00 in cents
       }
 

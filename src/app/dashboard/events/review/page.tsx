@@ -63,22 +63,16 @@ export default function ReviewSubmissionsPage() {
   }
 
   const handleApprove = async (id: string) => {
-    if (!confirm('Approve this event submission?')) return
-
     try {
       const response = await fetch(`/api/events/submissions/${id}/approve`, {
         method: 'POST'
       })
 
       if (response.ok) {
-        alert('Event approved!')
         loadSubmissions()
-      } else {
-        alert('Failed to approve event')
       }
     } catch (error) {
       console.error('Failed to approve:', error)
-      alert('Failed to approve event')
     }
   }
 
@@ -94,26 +88,10 @@ export default function ReviewSubmissionsPage() {
       })
 
       if (response.ok) {
-        const data = await response.json()
-
-        // Show refund info if applicable
-        if (data.refund) {
-          if (data.refund.success) {
-            alert(`Event rejected and refund of $${data.refund.amount.toFixed(2)} processed successfully.`)
-          } else {
-            alert(`Event rejected but refund failed: ${data.refund.error}\n\nPlease process refund manually in Stripe Dashboard.`)
-          }
-        } else {
-          alert('Event rejected')
-        }
-
         loadSubmissions()
-      } else {
-        alert('Failed to reject event')
       }
     } catch (error) {
       console.error('Failed to reject:', error)
-      alert('Failed to reject event')
     }
   }
 

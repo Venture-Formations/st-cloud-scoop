@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { supabaseAdmin } from '@/lib/supabase'
 import { authOptions } from '@/lib/auth'
+import { MailerLiteService } from '@/lib/mailerlite'
 
 export async function POST(
   request: NextRequest,
@@ -112,6 +113,18 @@ export async function POST(
       .eq('id', id)
 
     if (error) throw error
+
+    // Send rejection email
+    if (event.submitter_email) {
+      const mailerLite = new MailerLiteService()
+      await mailerLite.sendEventRejectionEmail({
+        title: event.title,
+        description: event.description,
+        start_date: event.start_date,
+        submitter_email: event.submitter_email,
+        submitter_name: event.submitter_name || 'Event Submitter'
+      }, reason)
+    }
 
     // Log the rejection
     if (session.user?.email) {

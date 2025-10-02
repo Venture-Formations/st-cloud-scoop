@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { supabaseAdmin } from '@/lib/supabase'
 import { authOptions } from '@/lib/auth'
+import { MailerLiteService } from '@/lib/mailerlite'
 
 export async function POST(
   request: NextRequest,
@@ -15,6 +16,17 @@ export async function POST(
 
     const { id } = await context.params
 
+    // Get event details before updating
+    const { data: event } = await supabaseAdmin
+      .from('events')
+      .select('*')
+      .eq('id', id)
+      .single()
+
+    if (!event) {
+      return NextResponse.json({ error: 'Event not found' }, { status: 404 })
+    }
+
     const { error } = await supabaseAdmin
       .from('events')
       .update({
@@ -27,6 +39,22 @@ export async function POST(
       .eq('id', id)
 
     if (error) throw error
+
+    // Send approval email
+    if (event.submitter_email) {
+      const mailerLite = new MailerLiteService()
+      await mailerLite.sendEventApprovalEmail({
+        title: event.title,
+        description: event.description,
+        start_date: event.start_date,
+        end_date: event.end_date,
+        venue: event.venue,
+        address: event.address,
+        url: event.url,
+        submitter_email: event.submitter_email,
+        submitter_name: event.submitter_name || 'Event Submitter'
+      })
+    }
 
     // Log the approval
     if (session.user?.email) {

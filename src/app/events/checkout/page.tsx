@@ -119,11 +119,19 @@ export default function CheckoutPage() {
         const startDateTime = `${item.start_date}T${convertTime12to24(item.start_hour, item.start_minute, item.start_ampm)}`
         const endDateTime = `${item.start_date}T${convertTime12to24(item.end_hour, item.end_minute, item.end_ampm)}`
 
+        const startDate = new Date(startDateTime)
+        const endDate = new Date(endDateTime)
+
+        // Validate dates
+        if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+          throw new Error(`Invalid date for event "${item.title}". Please check the cart and try again.`)
+        }
+
         return {
           title: item.title,
           description: item.description,
-          start_date: new Date(startDateTime).toISOString(),
-          end_date: new Date(endDateTime).toISOString(),
+          start_date: startDate.toISOString(),
+          end_date: endDate.toISOString(),
           venue: item.venue_name,
           address: `${item.venue_street}, ${item.venue_city}, ${item.venue_state} ${item.venue_zip}`,
           url: item.url || null,

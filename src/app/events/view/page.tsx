@@ -111,18 +111,28 @@ export default function ViewEventsPage() {
     // Determine if this is an upgrade from paid to featured
     const isUpgrade = promotingEvent.paid_placement && selectedPromotion === 'featured'
 
+    // Parse dates and convert to 12-hour format
+    const startDate = new Date(promotingEvent.start_date)
+    const endDate = new Date(promotingEvent.end_date)
+
+    const startHour24 = startDate.getHours()
+    const endHour24 = endDate.getHours()
+
+    const startHour12 = startHour24 === 0 ? 12 : (startHour24 > 12 ? startHour24 - 12 : startHour24)
+    const endHour12 = endHour24 === 0 ? 12 : (endHour24 > 12 ? endHour24 - 12 : endHour24)
+
     // Create promotion cart item
     const promotionItem = {
       id: `promotion_${Date.now()}`,
       title: promotingEvent.title,
       description: promotingEvent.description,
       start_date: promotingEvent.start_date.split('T')[0],
-      start_hour: new Date(promotingEvent.start_date).getHours().toString(),
-      start_minute: new Date(promotingEvent.start_date).getMinutes().toString().padStart(2, '0'),
-      start_ampm: new Date(promotingEvent.start_date).getHours() >= 12 ? 'PM' : 'AM',
-      end_hour: new Date(promotingEvent.end_date).getHours().toString(),
-      end_minute: new Date(promotingEvent.end_date).getMinutes().toString().padStart(2, '0'),
-      end_ampm: new Date(promotingEvent.end_date).getHours() >= 12 ? 'PM' : 'AM',
+      start_hour: startHour12.toString(),
+      start_minute: startDate.getMinutes().toString().padStart(2, '0'),
+      start_ampm: startHour24 >= 12 ? 'PM' : 'AM',
+      end_hour: endHour12.toString(),
+      end_minute: endDate.getMinutes().toString().padStart(2, '0'),
+      end_ampm: endHour24 >= 12 ? 'PM' : 'AM',
       venue_id: '',
       venue_name: promotingEvent.venue,
       venue_street: promotingEvent.address.split(',')[0]?.trim() || '',

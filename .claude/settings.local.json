@@ -64,7 +64,9 @@
       "WebFetch(domain:gis.co.stearns.mn.us)",
       "Bash(cat:*)",
       "Bash(git stash:*)",
-      "Bash(git restore:*)"
+      "Bash(git restore:*)",
+      "Bash(set STRIPE_API_KEY=your_key_here)",
+      "Bash(ls:*)"
     ],
     "deny": [],
     "ask": []

@@ -90,7 +90,6 @@ function SuccessContent() {
               <li>• Your events are now active in our system</li>
               <li>• Our team will review your submission</li>
               <li>• You will receive a confirmation email</li>
-              {!isFree && <li>• Paid promotions will run for 3 days</li>}
               <li>• We may contact you if any changes are needed</li>
             </ul>
           </div>

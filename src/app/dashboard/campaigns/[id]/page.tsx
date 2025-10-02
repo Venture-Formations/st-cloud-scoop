@@ -795,11 +795,68 @@ function EventsManager({
     onUpdateEvents(date, newSelected, newFeatured)
   }
 
-  const handleFeaturedToggle = (date: string, eventId: string) => {
+  const handleFeaturedToggle = async (date: string, eventId: string) => {
     const currentSelected = getSelectedEventsForDate(date).map(ce => ce.event_id)
     const currentFeatured = getFeaturedEventForDate(date)
 
-    const newFeatured = currentFeatured === eventId ? undefined : eventId
+    // If unfeaturing, just do it
+    if (currentFeatured === eventId) {
+      onUpdateEvents(date, currentSelected, undefined)
+      return
+    }
+
+    // If featuring, check if event has an image
+    const event = availableEvents.find(e => e.id === eventId)
+    if (event && !event.cropped_image_url) {
+      // Show confirmation dialog
+      const result = await new Promise<'yes' | 'add-image' | 'cancel'>((resolve) => {
+        const dialog = document.createElement('div')
+        dialog.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50'
+        dialog.innerHTML = `
+          <div class="bg-white rounded-lg shadow-xl p-6 max-w-md mx-4">
+            <h3 class="text-lg font-semibold text-gray-900 mb-3">Featured Event Without Image</h3>
+            <p class="text-gray-600 mb-6">This event doesn't have an image. Featured events with images get better engagement. Would you like to add an image?</p>
+            <div class="flex space-x-3">
+              <button id="cancel-btn" class="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-800 px-4 py-2 rounded-md font-medium">Cancel</button>
+              <button id="yes-btn" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md font-medium">Yes, Continue</button>
+              <button id="add-image-btn" class="flex-1 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md font-medium">Add Image</button>
+            </div>
+          </div>
+        `
+        document.body.appendChild(dialog)
+
+        const cleanup = () => document.body.removeChild(dialog)
+
+        dialog.querySelector('#cancel-btn')?.addEventListener('click', () => {
+          cleanup()
+          resolve('cancel')
+        })
+
+        dialog.querySelector('#yes-btn')?.addEventListener('click', () => {
+          cleanup()
+          resolve('yes')
+        })
+
+        dialog.querySelector('#add-image-btn')?.addEventListener('click', () => {
+          cleanup()
+          resolve('add-image')
+        })
+      })
+
+      if (result === 'cancel') {
+        return
+      }
+
+      if (result === 'add-image') {
+        // Open event edit page in new tab
+        window.open(`/dashboard/databases/events?edit=${eventId}`, '_blank')
+        return
+      }
+
+      // If 'yes', continue with featuring
+    }
+
+    const newFeatured = eventId
     onUpdateEvents(date, currentSelected, newFeatured)
   }
 
@@ -902,17 +959,32 @@ function EventsManager({
                             )}
                           </div>
 
-
-                          {/* Event Details */}
-                          <div>
-                            <h4 className="text-sm font-semibold text-gray-900 mb-2 leading-tight">
-                              {event.title}
-                            </h4>
-                            <div className="text-xs text-gray-600 space-y-1">
-                              <div className="font-medium">{formatEventTime(event.start_date)}</div>
-                              {event.venue && <div>{event.venue}</div>}
-                              {event.address && <div className="text-gray-500">{event.address}</div>}
+                          {/* Event Details and Image */}
+                          <div className="flex items-start">
+                            <div className="flex-1">
+                              <h4 className="text-sm font-semibold text-gray-900 mb-2 leading-tight">
+                                {event.title}
+                              </h4>
+                              <div className="text-xs text-gray-600 space-y-1">
+                                <div className="font-medium">{formatEventTime(event.start_date)}</div>
+                                {event.venue && <div>{event.venue}</div>}
+                                {event.address && <div className="text-gray-500">{event.address}</div>}
+                              </div>
                             </div>
+
+                            {/* Featured Event Image */}
+                            {isFeatured && event.cropped_image_url && (
+                              <div className="ml-3 flex-shrink-0">
+                                <img
+                                  src={event.cropped_image_url}
+                                  alt={event.title}
+                                  className="w-24 h-20 object-cover rounded border border-blue-300"
+                                  onError={(e) => {
+                                    e.currentTarget.style.display = 'none'
+                                  }}
+                                />
+                              </div>
+                            )}
                           </div>
                         </div>
                       )

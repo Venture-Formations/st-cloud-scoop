@@ -369,7 +369,7 @@ export default function ViewEventsPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
             <div className="bg-white rounded-lg p-4">
               <h4 className="font-medium text-gray-900 mb-2">Paid Placement - ${pricing.paidPlacement}</h4>
-              <p className="text-sm text-gray-600 mb-2">3-day promotion includes:</p>
+              <p className="text-sm text-gray-600 mb-2">Promotion includes:</p>
               <ul className="text-sm text-gray-700 space-y-1">
                 <li>• Featured in paid section of newsletter</li>
                 <li>• Reaches thousands of subscribers</li>
@@ -378,7 +378,7 @@ export default function ViewEventsPage() {
             </div>
             <div className="bg-white rounded-lg p-4">
               <h4 className="font-medium text-gray-900 mb-2">Featured Event - ${pricing.featured}</h4>
-              <p className="text-sm text-gray-600 mb-2">3-day promotion includes:</p>
+              <p className="text-sm text-gray-600 mb-2">Promotion includes:</p>
               <ul className="text-sm text-gray-700 space-y-1">
                 <li>• Premium placement in Local Events section</li>
                 <li>• Highlighted with featured badge</li>

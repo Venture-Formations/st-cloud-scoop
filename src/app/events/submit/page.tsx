@@ -197,11 +197,6 @@ export default function SubmitEventPage() {
       return
     }
 
-    if (!formData.submitter_first_name || !formData.submitter_last_name || !formData.submitter_email) {
-      alert('Please provide your first name, last name, and email')
-      return
-    }
-
     if (!selectedImage && formData.placement_type !== 'none') {
       alert('Image required for paid placement or featured events')
       return
@@ -362,10 +357,10 @@ export default function SubmitEventPage() {
       venue_city: formData.venue_city,
       venue_state: formData.venue_state,
       venue_zip: formData.venue_zip,
-      submitter_first_name: formData.submitter_first_name, // Keep contact info
-      submitter_last_name: formData.submitter_last_name,
-      submitter_email: formData.submitter_email,
-      submitter_phone: formData.submitter_phone,
+      submitter_first_name: '', // Will be filled at checkout
+      submitter_last_name: '',
+      submitter_email: '',
+      submitter_phone: '',
       url: '',
       placement_type: 'none'
     })
@@ -719,63 +714,6 @@ export default function SubmitEventPage() {
                   />
                   <span>Featured Event - ${pricing.featured}</span>
                 </label>
-              </div>
-            </div>
-
-            {/* Contact Information */}
-            <div className="bg-blue-50 p-4 rounded-lg">
-              <h3 className="font-medium text-gray-900 mb-3">Your Contact Information</h3>
-              <div className="space-y-3">
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      First Name <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      value={formData.submitter_first_name}
-                      onChange={(e) => setFormData(prev => ({ ...prev, submitter_first_name: e.target.value }))}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      placeholder="First name"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Last Name <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      value={formData.submitter_last_name}
-                      onChange={(e) => setFormData(prev => ({ ...prev, submitter_last_name: e.target.value }))}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      placeholder="Last name"
-                    />
-                  </div>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Email <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="email"
-                    value={formData.submitter_email}
-                    onChange={(e) => setFormData(prev => ({ ...prev, submitter_email: e.target.value }))}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="your@email.com"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Phone (optional)
-                  </label>
-                  <input
-                    type="tel"
-                    value={formData.submitter_phone}
-                    onChange={(e) => setFormData(prev => ({ ...prev, submitter_phone: e.target.value }))}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="(555) 123-4567"
-                  />
-                </div>
               </div>
             </div>
 

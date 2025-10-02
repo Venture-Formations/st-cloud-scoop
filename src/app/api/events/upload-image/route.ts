@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
+import { GitHubImageStorage } from '@/lib/github-storage'
 
 export async function POST(request: NextRequest) {
   try {
@@ -33,6 +34,9 @@ export async function POST(request: NextRequest) {
       }, { status: 400 })
     }
 
+    // Initialize GitHub storage
+    const githubStorage = new GitHubImageStorage()
+
     // Create safe filename from event title
     const timestamp = Date.now()
     const safeTitle = eventTitle
@@ -41,10 +45,11 @@ export async function POST(request: NextRequest) {
       .replace(/^-+|-+$/g, '')
       .substring(0, 50)
 
-    const originalPath = `public-events/originals/${safeTitle}-${timestamp}.jpg`
-    const croppedPath = `public-events/cropped/${safeTitle}-${timestamp}.jpg`
+    // Generate unique ID for this event image
+    const eventImageId = `${safeTitle}-${timestamp}`
+    const originalPath = `public-events/originals/${eventImageId}.jpg`
 
-    console.log('Uploading to Supabase Storage...')
+    console.log('Uploading original to Supabase Storage...')
 
     // Upload original image to Supabase Storage
     const { data: originalData, error: originalError } = await supabaseAdmin.storage
@@ -64,35 +69,38 @@ export async function POST(request: NextRequest) {
       .from('images')
       .getPublicUrl(originalPath)
 
-    // Upload cropped image to Supabase Storage
-    const { data: croppedData, error: croppedError } = await supabaseAdmin.storage
-      .from('images')
-      .upload(croppedPath, croppedBlob, {
-        contentType: 'image/jpeg',
-        upsert: false
-      })
+    console.log('Uploading cropped variant to GitHub...')
 
-    if (croppedError) {
-      console.error('Cropped upload error:', croppedError)
-      // Try to clean up original image
+    // Convert cropped Blob to Buffer for GitHub upload
+    const croppedBuffer = Buffer.from(await croppedBlob.arrayBuffer())
+
+    // Upload cropped image to GitHub as variant
+    const githubUrl = await githubStorage.uploadImageVariant(
+      croppedBuffer,
+      eventImageId,
+      '900x720',
+      `Event image for: ${eventTitle}`
+    )
+
+    if (!githubUrl) {
+      console.error('GitHub upload failed')
+      // Try to clean up original image from Supabase
       await supabaseAdmin.storage.from('images').remove([originalPath])
-      throw new Error(`Failed to upload cropped image: ${croppedError.message}`)
+      throw new Error('Failed to upload cropped image to GitHub')
     }
 
-    // Get public URL for cropped
-    const { data: croppedUrlData } = supabaseAdmin.storage
-      .from('images')
-      .getPublicUrl(croppedPath)
+    // Get CDN URL for cropped variant
+    const croppedCdnUrl = githubStorage.getCdnUrl(eventImageId, '900x720')
 
     console.log('Upload successful:', {
       originalUrl: originalUrlData.publicUrl,
-      croppedUrl: croppedUrlData.publicUrl
+      croppedUrl: croppedCdnUrl
     })
 
     // Return the public URLs
     return NextResponse.json({
       original_url: originalUrlData.publicUrl,
-      cropped_url: croppedUrlData.publicUrl,
+      cropped_url: croppedCdnUrl,
     })
 
   } catch (error) {

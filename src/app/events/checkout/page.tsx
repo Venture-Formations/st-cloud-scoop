@@ -36,6 +36,12 @@ export default function CheckoutPage() {
   const [pricing, setPricing] = useState({ paidPlacement: 5, featured: 15 })
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [contactInfo, setContactInfo] = useState({
+    first_name: '',
+    last_name: '',
+    email: '',
+    phone: ''
+  })
 
   useEffect(() => {
     loadCart()
@@ -84,6 +90,18 @@ export default function CheckoutPage() {
   }
 
   const handleCheckout = async () => {
+    // Validate contact information
+    if (!contactInfo.first_name || !contactInfo.last_name || !contactInfo.email) {
+      setError('Please provide your first name, last name, and email')
+      return
+    }
+
+    // Basic email validation
+    if (!contactInfo.email.includes('@')) {
+      setError('Please provide a valid email address')
+      return
+    }
+
     setLoading(true)
     setError('')
 
@@ -103,9 +121,9 @@ export default function CheckoutPage() {
           url: item.url || null,
           original_image_url: item.original_image_url || null,
           cropped_image_url: item.cropped_image_url || null,
-          submitter_name: `${item.submitter_first_name} ${item.submitter_last_name}`,
-          submitter_email: item.submitter_email,
-          submitter_phone: item.submitter_phone || null,
+          submitter_name: `${contactInfo.first_name} ${contactInfo.last_name}`,
+          submitter_email: contactInfo.email,
+          submitter_phone: contactInfo.phone || null,
           paid_placement: item.placement_type === 'paid',
           featured: item.placement_type === 'featured',
           active: true,
@@ -228,14 +246,65 @@ export default function CheckoutPage() {
               <span className="text-3xl font-bold text-blue-600">${calculateTotal().toFixed(2)}</span>
             </div>
 
-            {/* Contact Information */}
-            <div className="bg-gray-50 p-4 rounded-lg mb-6">
-              <h3 className="font-medium text-gray-900 mb-2">Contact Information</h3>
-              <p className="text-sm text-gray-700">Name: {cart[0]?.submitter_first_name} {cart[0]?.submitter_last_name}</p>
-              <p className="text-sm text-gray-700">Email: {cart[0]?.submitter_email}</p>
-              {cart[0]?.submitter_phone && (
-                <p className="text-sm text-gray-700">Phone: {cart[0]?.submitter_phone}</p>
-              )}
+            {/* Contact Information Form */}
+            <div className="bg-blue-50 p-4 rounded-lg mb-6">
+              <h3 className="font-medium text-gray-900 mb-3">Your Contact Information</h3>
+              <div className="space-y-3">
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      First Name <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={contactInfo.first_name}
+                      onChange={(e) => setContactInfo(prev => ({ ...prev, first_name: e.target.value }))}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder="First name"
+                      disabled={loading}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Last Name <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={contactInfo.last_name}
+                      onChange={(e) => setContactInfo(prev => ({ ...prev, last_name: e.target.value }))}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder="Last name"
+                      disabled={loading}
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Email <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="email"
+                    value={contactInfo.email}
+                    onChange={(e) => setContactInfo(prev => ({ ...prev, email: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="your@email.com"
+                    disabled={loading}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Phone (optional)
+                  </label>
+                  <input
+                    type="tel"
+                    value={contactInfo.phone}
+                    onChange={(e) => setContactInfo(prev => ({ ...prev, phone: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="(555) 123-4567"
+                    disabled={loading}
+                  />
+                </div>
+              </div>
             </div>
 
             {/* Buttons */}
@@ -264,9 +333,8 @@ export default function CheckoutPage() {
           <ul className="space-y-1 text-sm text-blue-800">
             <li>• {calculateTotal() > 0 ? 'You will be redirected to Stripe for secure payment' : 'Your events will be submitted for review'}</li>
             <li>• {calculateTotal() > 0 ? 'Events activate automatically upon successful payment' : 'Events will be reviewed by our team'}</li>
-            <li>• You will receive a confirmation email at {cart[0]?.submitter_email}</li>
+            <li>• You will receive a confirmation email at {contactInfo.email}</li>
             <li>• Our team may contact you if any changes are needed</li>
-            <li>• Paid placements and featured events run for 3 days</li>
           </ul>
         </div>
       </div>

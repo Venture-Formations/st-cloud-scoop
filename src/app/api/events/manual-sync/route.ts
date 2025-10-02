@@ -141,10 +141,10 @@ export async function GET(request: NextRequest) {
           updated_at: new Date().toISOString()
         }
 
-        // Check if event already exists and get its event_summary status
+        // Check if event already exists and get its status
         const { data: existingEvent } = await supabaseAdmin
           .from('events')
-          .select('id, updated_at, event_summary')
+          .select('id, updated_at, event_summary, featured, paid_placement')
           .eq('external_id', eventData.external_id)
           .single()
 
@@ -166,10 +166,17 @@ export async function GET(request: NextRequest) {
         }
 
         if (existingEvent) {
+          // Preserve manual settings (featured, paid_placement) from existing event
+          const updateData = {
+            ...eventData,
+            featured: existingEvent.featured, // Preserve manual featured status
+            paid_placement: existingEvent.paid_placement // Preserve manual paid_placement status
+          }
+
           // Update existing event (including new summary if generated)
           const { error: updateError } = await supabaseAdmin
             .from('events')
-            .update(eventData)
+            .update(updateData)
             .eq('id', existingEvent.id)
 
           if (updateError) {

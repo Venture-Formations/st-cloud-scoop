@@ -34,20 +34,33 @@ export function formatEventTime(startDate: string, endDate: string): string {
 }
 
 export function getEventEmoji(title: string, venue: string): string {
-  const text = `${title} ${venue}`.toLowerCase()
+  const titleLower = title.toLowerCase()
+  const venueLower = venue ? venue.toLowerCase() : ''
 
-  if (text.includes('music') || text.includes('concert') || text.includes('band')) return '🎵'
-  if (text.includes('art') || text.includes('gallery') || text.includes('exhibit')) return '🎨'
-  if (text.includes('food') || text.includes('dinner') || text.includes('lunch') || text.includes('breakfast')) return '🍽️'
-  if (text.includes('kids') || text.includes('children') || text.includes('family')) return '👨‍👩‍👧‍👦'
-  if (text.includes('beer') || text.includes('wine') || text.includes('brewery') || text.includes('winery')) return '🍺'
-  if (text.includes('sport') || text.includes('game') || text.includes('hockey') || text.includes('baseball')) return '⚽'
-  if (text.includes('theater') || text.includes('theatre') || text.includes('play') || text.includes('musical')) return '🎭'
-  if (text.includes('festival') || text.includes('fair')) return '🎪'
-  if (text.includes('market') || text.includes('farmers')) return '🛍️'
-  if (text.includes('outdoor') || text.includes('nature') || text.includes('park')) return '🌳'
+  if (titleLower.includes('harvest') || titleLower.includes('corn maze') || titleLower.includes('farm')) return '🌽'
+  if (titleLower.includes('art') || titleLower.includes('exhibition') || titleLower.includes('ceramic')) return '🎨'
+  if (titleLower.includes('blacklight') || titleLower.includes('adventure')) return '🎯'
+  if (titleLower.includes('farmers') || titleLower.includes('market')) return '🥕'
+  if (titleLower.includes('skate') || titleLower.includes('skating')) return '🛼'
+  if (titleLower.includes('carnival')) return '🎡'
+  if (titleLower.includes('music') || titleLower.includes('concert') || venueLower.includes('amphitheater')) return '🎶'
+  if (titleLower.includes('magic') || titleLower.includes('gathering') || titleLower.includes('commander')) return '🎲'
+  if (titleLower.includes('run') || titleLower.includes('5k') || titleLower.includes('race')) return '🏃‍♂️'
+  if (titleLower.includes('fall') || titleLower.includes('festival')) return '🍂'
+  if (titleLower.includes('hockey')) return '🏒'
+  if (titleLower.includes('pride')) return '🏳️‍🌈'
+  if (titleLower.includes('beer') || titleLower.includes('oktoberfest') || titleLower.includes('brewing')) return '🍺'
+  if (titleLower.includes('sensory') || titleLower.includes('kids') || titleLower.includes('children')) return '🧒'
+  if (titleLower.includes('dungeons') || titleLower.includes('dragons')) return '🐉'
+  if (titleLower.includes('theater') || titleLower.includes('play') || titleLower.includes('piggie')) return '🎭'
+  if (titleLower.includes('bluegrass') || titleLower.includes('brews')) return '🎶'
+  if (titleLower.includes('food') || titleLower.includes('dinner') || titleLower.includes('lunch') || titleLower.includes('breakfast')) return '🍽️'
+  if (titleLower.includes('wine') || titleLower.includes('winery')) return '🍷'
+  if (titleLower.includes('sport') || titleLower.includes('game') || titleLower.includes('baseball')) return '⚽'
+  if (titleLower.includes('fair')) return '🎪'
+  if (titleLower.includes('outdoor') || titleLower.includes('nature') || titleLower.includes('park')) return '🌳'
 
-  return '📅'
+  return '🎉'
 }
 
 // ==================== HEADER ====================

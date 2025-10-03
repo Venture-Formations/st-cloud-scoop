@@ -319,6 +319,21 @@ export class RSSProcessor {
     console.log(`=== PROCESSING FEED: ${feed.name} ===`)
 
     try {
+      // Get excluded RSS sources from settings
+      const { data: excludedSettings } = await supabaseAdmin
+        .from('app_settings')
+        .select('value')
+        .eq('key', 'excluded_rss_sources')
+        .single()
+
+      const excludedSources: string[] = excludedSettings?.value
+        ? JSON.parse(excludedSettings.value)
+        : []
+
+      if (excludedSources.length > 0) {
+        console.log(`Excluded sources: ${excludedSources.join(', ')}`)
+      }
+
       const rssFeed = await parser.parseURL(feed.url)
       const now = new Date()
       const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000)
@@ -333,6 +348,12 @@ export class RSSProcessor {
 
       for (const item of recentPosts) {
         try {
+          // Check if author is excluded
+          const author = item.creator || (item as any)['dc:creator'] || '(No Author)'
+          if (excludedSources.includes(author)) {
+            console.log(`Skipping post from excluded source: "${author}" - "${item.title}"`)
+            continue
+          }
           console.log(`\n=== DEBUGGING ITEM: "${item.title}" ===`)
           console.log('Raw item keys:', Object.keys(item))
           console.log('media:content:', JSON.stringify(item['media:content'], null, 2))

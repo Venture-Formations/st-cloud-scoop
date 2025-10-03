@@ -521,17 +521,13 @@ export default function ViewEventsPage() {
 
                             {/* Action Buttons */}
                             <div className="flex gap-2">
-                              {event.url && (
-                                <a
-                                  href={ensureHttps(event.url) || '#'}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium text-center"
-                                  onClick={(e) => e.stopPropagation()}
-                                >
-                                  Learn More →
-                                </a>
-                              )}
+                              <a
+                                href={`/events/${event.id}`}
+                                className="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium text-center"
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                Learn More →
+                              </a>
                               {!event.featured && (
                                 <button
                                   onClick={(e) => {

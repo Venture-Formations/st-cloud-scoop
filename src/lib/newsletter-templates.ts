@@ -327,9 +327,9 @@ export async function generateLocalEventsSection(campaign: any): Promise<string>
 
     // Generate featured events HTML (can be multiple)
     const featuredHtml = featuredEvents.map(featuredEvent => {
-      const eventUrl = featuredEvent.url && featuredEvent.url !== '#'
-        ? wrapTrackingUrl(featuredEvent.url, 'Local Events', campaign.date, campaign.mailerlite_campaign_id)
-        : '#'
+      // Link to our individual event page with tracking
+      const eventPageUrl = `https://st-cloud-scoop.vercel.app/events/${featuredEvent.id}`
+      const eventUrl = wrapTrackingUrl(eventPageUrl, 'Local Events', campaign.date, campaign.mailerlite_campaign_id)
 
       return `
     <tr>
@@ -350,9 +350,9 @@ export async function generateLocalEventsSection(campaign: any): Promise<string>
 
     // Generate regular events HTML
     const regularEventsHtml = regularEvents.map((event: any) => {
-      const eventUrl = event.url && event.url !== '#'
-        ? wrapTrackingUrl(event.url, 'Local Events', campaign.date, campaign.mailerlite_campaign_id)
-        : '#'
+      // Link to our individual event page with tracking
+      const eventPageUrl = `https://st-cloud-scoop.vercel.app/events/${event.id}`
+      const eventUrl = wrapTrackingUrl(eventPageUrl, 'Local Events', campaign.date, campaign.mailerlite_campaign_id)
 
       return `
     <tr>

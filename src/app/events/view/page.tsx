@@ -654,12 +654,13 @@ export default function ViewEventsPage() {
                             onChange={() => setSelectedPromotion('paid')}
                             className="mr-2"
                           />
-                          <h5 className="font-semibold text-gray-900">Paid Placement - ${pricing.paidPlacement}</h5>
+                          <h5 className="font-semibold text-gray-900">Guaranteed Placement – ${pricing.paidPlacement}</h5>
                         </div>
+                        <p className="text-xs text-gray-600 mb-2 ml-6">Promotion includes:</p>
                         <ul className="text-sm text-gray-700 space-y-1 ml-6">
-                          <li>• Featured in paid section of newsletter</li>
-                          <li>• Reaches thousands of subscribers</li>
-                          <li>• Increased visibility on website</li>
+                          <li>• Guaranteed spot in the newsletter's daily list of 8 events</li>
+                          <li>• Standard placement without description or image</li>
+                          <li>• Event also listed on the public events page</li>
                         </ul>
                       </div>
                     </div>
@@ -685,7 +686,7 @@ export default function ViewEventsPage() {
                           className="mr-2"
                         />
                         <h5 className="font-semibold text-gray-900">
-                          Featured Event - ${promotingEvent.paid_placement ? '10' : pricing.featured}
+                          Featured Event – ${promotingEvent.paid_placement ? '10' : pricing.featured}
                           {promotingEvent.paid_placement && (
                             <span className="ml-2 text-sm text-green-600 font-normal">
                               (Upgrade price)
@@ -693,13 +694,21 @@ export default function ViewEventsPage() {
                           )}
                         </h5>
                       </div>
+                      <p className="text-xs text-gray-600 mb-2 ml-6">Promotion includes:</p>
                       <ul className="text-sm text-gray-700 space-y-1 ml-6">
-                        <li>• Premium placement in Local Events section</li>
-                        <li>• Highlighted with featured badge</li>
+                        <li>• Guaranteed top placement in the newsletter</li>
+                        <li>• Event description and image (if provided) included</li>
                         <li>• Maximum visibility and engagement</li>
                       </ul>
                     </div>
                   </div>
+                </div>
+
+                {/* Newsletter Information */}
+                <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 mt-4">
+                  <p className="text-xs text-gray-600">
+                    Each newsletter features 8 events for today, 8 for tomorrow, and 8 for the following day. Events are only eligible to appear in the newsletter on the day they take place. Free events may be randomly selected if space allows, while promoted events are guaranteed placement. Featured events receive top visibility with added details to help them stand out.
+                  </p>
                 </div>
               </div>
 

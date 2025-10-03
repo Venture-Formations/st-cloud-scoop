@@ -549,23 +549,40 @@ export default function ViewEventsPage() {
 
         {/* Promotion Info */}
         <div className="mt-8 bg-blue-50 border border-blue-200 rounded-lg p-6">
-          <h3 className="text-lg font-semibold text-blue-900 mb-3">Want to Promote Your Event?</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-            <div className="bg-white rounded-lg p-4">
-              <h4 className="font-medium text-gray-900 mb-2">Paid Placement - ${pricing.paidPlacement}</h4>
+          <h3 className="text-xl font-semibold text-blue-900 mb-3">Do You Have an Event Coming Up?</h3>
+          <p className="text-sm text-gray-700 mb-6">
+            Each newsletter features 8 events for today, 8 for tomorrow, and 8 for the following day. Events are only eligible to appear in the newsletter on the day they take place. Free events may be randomly selected if space allows, while promoted events are guaranteed placement. Featured events receive top visibility with added details to help them stand out.
+          </p>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+            {/* Free Listing */}
+            <div className="bg-white rounded-lg p-4 border border-gray-200">
+              <h4 className="font-semibold text-gray-900 mb-2">Free Listing – $0</h4>
               <p className="text-sm text-gray-600 mb-2">Promotion includes:</p>
               <ul className="text-sm text-gray-700 space-y-1">
-                <li>• Featured in paid section of newsletter</li>
-                <li>• Reaches thousands of subscribers</li>
-                <li>• Increased visibility on website</li>
+                <li>• Event added to the public events page</li>
+                <li>• Eligible to appear in the newsletter (random selection if space is available)</li>
+                <li>• No guarantee of email placement</li>
               </ul>
             </div>
-            <div className="bg-white rounded-lg p-4">
-              <h4 className="font-medium text-gray-900 mb-2">Featured Event - ${pricing.featured}</h4>
+
+            {/* Guaranteed Placement */}
+            <div className="bg-white rounded-lg p-4 border-2 border-blue-500">
+              <h4 className="font-semibold text-gray-900 mb-2">Guaranteed Placement – ${pricing.paidPlacement}</h4>
               <p className="text-sm text-gray-600 mb-2">Promotion includes:</p>
               <ul className="text-sm text-gray-700 space-y-1">
-                <li>• Premium placement in Local Events section</li>
-                <li>• Highlighted with featured badge</li>
+                <li>• Guaranteed spot in the newsletter's daily list of 8 events</li>
+                <li>• Standard placement without description or image</li>
+                <li>• Event also listed on the public events page</li>
+              </ul>
+            </div>
+
+            {/* Featured Event */}
+            <div className="bg-yellow-50 rounded-lg p-4 border-2 border-yellow-500">
+              <h4 className="font-semibold text-gray-900 mb-2">Featured Event – ${pricing.featured}</h4>
+              <p className="text-sm text-gray-600 mb-2">Promotion includes:</p>
+              <ul className="text-sm text-gray-700 space-y-1">
+                <li>• Guaranteed top placement in the newsletter</li>
+                <li>• Event description and image (if provided) included</li>
                 <li>• Maximum visibility and engagement</li>
               </ul>
             </div>
@@ -574,7 +591,7 @@ export default function ViewEventsPage() {
             onClick={() => router.push('/events/submit')}
             className="w-full bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-md font-medium"
           >
-            Submit and Promote Your Event
+            Submit Your Event
           </button>
         </div>
       </div>

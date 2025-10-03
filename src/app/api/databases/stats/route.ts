@@ -46,6 +46,15 @@ export async function GET(request: NextRequest) {
       // Don't fail the request if table doesn't exist yet
     }
 
+    // Get unique RSS sources count
+    const { data: rssPosts, error: rssError } = await supabaseAdmin
+      .from('rss_posts')
+      .select('author')
+
+    const uniqueSources = rssPosts
+      ? new Set(rssPosts.map(p => p.author || '(No Author)')).size
+      : 0
+
     const databases = [
       {
         name: 'Local Events',
@@ -70,6 +79,12 @@ export async function GET(request: NextRequest) {
         description: 'AI-tagged image library with crop and tag management',
         count: imagesCount?.length || 0,
         href: '/dashboard/databases/images'
+      },
+      {
+        name: 'RSS Sources',
+        description: 'Manage excluded RSS post sources and authors',
+        count: uniqueSources,
+        href: '/dashboard/databases/rss-sources'
       }
     ]
 

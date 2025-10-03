@@ -64,7 +64,7 @@ export function generateNewsletterHeader(formattedDate: string): string {
   <div style="background-color: #f4f4f4; padding: 20px 10px;">
     <div style="max-width: 990px; margin: 0 auto;">
       <div style="text-align: center; padding: 20px; background-color: #ffffff; border-radius: 10px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);">
-        <img src="https://raw.githubusercontent.com/VFDavid/STCScoop/refs/heads/main/logo_light.png" alt="St. Cloud Scoop" style="max-width: 150px; height: auto; margin-bottom: 10px;">
+        <img src="https://raw.githubusercontent.com/VFDavid/STCScoop/refs/heads/main/STCSCOOP_Logo_824X148_clear.png" alt="St. Cloud Scoop" style="width: 100%; max-width: 500px; height: auto; margin-bottom: 2px;">
         <p style="font-size: 20px; color: #333; margin: 10px 0 0;">${formattedDate}</p>
       </div>
 `
@@ -233,14 +233,14 @@ export async function generateLocalEventsSection(campaign: any): Promise<string>
       return `
     <tr>
       <td style='padding:0; border-top: 1px solid #eee;'>
-        <div style='padding:8px 16px; background:#E8F0FE; border:2px solid #1877F2; border-radius:6px; margin-bottom:8px;'>
+        <div style='padding:8px 16px; background:#E8F0FE; border:2px solid #1877F2; border-radius:6px;'>
           ${featuredEvent.cropped_image_url ? `
           <img src='${featuredEvent.cropped_image_url}' alt='${featuredEvent.title}' style='width:100%; max-width:400px; height:auto; object-fit:cover; border-radius:4px; border:1px solid #1877F2; display:block; margin-bottom:8px;' />
           <span style='font-size: 16px;'>${getEventEmoji(featuredEvent.title, featuredEvent.venue)} <strong>${featuredEvent.title}</strong></span><br>
-          <span style='font-size:14px;'><a href='${eventUrl}' style='color: #000; text-decoration: underline;'>${formatEventTime(featuredEvent.start_date, featuredEvent.end_date)}</a>  | ${featuredEvent.venue || 'TBA'}</span>${(featuredEvent.event_summary || featuredEvent.description) ? `<br><span style='font-size:13px;'>${featuredEvent.event_summary || featuredEvent.description}</span>` : ''}
+          <span style='font-size:14px;'><a href='${eventUrl}' style='color: #000; text-decoration: underline;'>${formatEventTime(featuredEvent.start_date, featuredEvent.end_date)}</a>  | ${featuredEvent.venue || 'TBA'}</span>${(featuredEvent.event_summary || featuredEvent.description) ? `<br><span style='font-size:13px;'>${featuredEvent.event_summary || featuredEvent.description}</span>` : ''}<br><br>
           ` : `
           <span style='font-size: 16px;'>${getEventEmoji(featuredEvent.title, featuredEvent.venue)} <strong>${featuredEvent.title}</strong></span><br>
-          <span style='font-size:14px;'><a href='${eventUrl}' style='color: #000; text-decoration: underline;'>${formatEventTime(featuredEvent.start_date, featuredEvent.end_date)}</a>  | ${featuredEvent.venue || 'TBA'}</span>${(featuredEvent.event_summary || featuredEvent.description) ? `<br><span style='font-size:13px;'>${featuredEvent.event_summary || featuredEvent.description}</span>` : ''}
+          <span style='font-size:14px;'><a href='${eventUrl}' style='color: #000; text-decoration: underline;'>${formatEventTime(featuredEvent.start_date, featuredEvent.end_date)}</a>  | ${featuredEvent.venue || 'TBA'}</span>${(featuredEvent.event_summary || featuredEvent.description) ? `<br><span style='font-size:13px;'>${featuredEvent.event_summary || featuredEvent.description}</span>` : ''}<br><br>
           `}
         </div>
       </td>

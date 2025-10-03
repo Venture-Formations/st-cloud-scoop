@@ -227,6 +227,20 @@ export interface AppSetting {
   updated_at: string
 }
 
+export interface LinkClick {
+  id: string
+  campaign_date: string
+  campaign_id: string | null
+  subscriber_email: string
+  subscriber_id: string | null
+  link_url: string
+  link_section: string
+  clicked_at: string
+  user_agent: string | null
+  ip_address: string | null
+  created_at: string
+}
+
 // Combined types for API responses
 export interface ArticleWithPost extends Article {
   rss_post: RssPost & {

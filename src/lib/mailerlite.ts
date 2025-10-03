@@ -267,7 +267,8 @@ export class MailerLiteService {
     if (sections && sections.length > 0) {
       for (const section of sections) {
         if (section.name === 'The Local Scoop' && activeArticles.length > 0) {
-          sectionsHtml += generateLocalScoopSection(activeArticles)
+          // Note: mailerlite_campaign_id is undefined during preview, only available after sending
+          sectionsHtml += generateLocalScoopSection(activeArticles, campaign.date, undefined)
         } else if (section.name === 'Local Events') {
           sectionsHtml += eventsHtml
           // Add feedback section after Local Events
@@ -302,7 +303,7 @@ export class MailerLiteService {
     } else {
       // Fallback to default order if no sections configured
       console.log('MailerLite - No sections found, using default order')
-      sectionsHtml = generateLocalScoopSection(activeArticles) + eventsHtml
+      sectionsHtml = generateLocalScoopSection(activeArticles, campaign.date, undefined) + eventsHtml
     }
 
     // Use exact same template as preview with review banner at top and global email rules

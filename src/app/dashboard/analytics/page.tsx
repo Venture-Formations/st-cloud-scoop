@@ -8,14 +8,42 @@ interface CampaignWithMetrics extends NewsletterCampaign {
   email_metrics?: EmailMetrics
 }
 
+interface FeedbackAnalytics {
+  totalResponses: number
+  successfulSyncs: number
+  syncSuccessRate: number
+  sectionCounts: { [key: string]: number }
+  dailyResponses: { [key: string]: number }
+  recentResponses: any[]
+  dateRange: { start: string; end: string }
+}
+
+interface LinkClickAnalytics {
+  totalClicks: number
+  uniqueUsers: number
+  clicksBySection: { [key: string]: number }
+  uniqueUsersBySection: { [key: string]: number }
+  dailyClicks: { [key: string]: number }
+  topUrls: { url: string; section: string; clicks: number }[]
+  clicksByCampaign: { [key: string]: number }
+  recentClicks: any[]
+  dateRange: { start: string; end: string }
+}
+
 export default function AnalyticsPage() {
   const [campaigns, setCampaigns] = useState<CampaignWithMetrics[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [selectedTimeframe, setSelectedTimeframe] = useState('30')
+  const [feedbackAnalytics, setFeedbackAnalytics] = useState<FeedbackAnalytics | null>(null)
+  const [feedbackLoading, setFeedbackLoading] = useState(true)
+  const [linkClickAnalytics, setLinkClickAnalytics] = useState<LinkClickAnalytics | null>(null)
+  const [linkClickLoading, setLinkClickLoading] = useState(true)
 
   useEffect(() => {
     fetchAnalytics()
+    fetchFeedbackAnalytics()
+    fetchLinkClickAnalytics()
   }, [selectedTimeframe])
 
   const fetchAnalytics = async () => {
@@ -30,6 +58,36 @@ export default function AnalyticsPage() {
       setError(error instanceof Error ? error.message : 'Unknown error')
     } finally {
       setLoading(false)
+    }
+  }
+
+  const fetchFeedbackAnalytics = async () => {
+    try {
+      setFeedbackLoading(true)
+      const response = await fetch(`/api/feedback/analytics?days=${selectedTimeframe}`)
+      if (response.ok) {
+        const data = await response.json()
+        setFeedbackAnalytics(data.analytics)
+      }
+    } catch (error) {
+      console.error('Failed to fetch feedback analytics:', error)
+    } finally {
+      setFeedbackLoading(false)
+    }
+  }
+
+  const fetchLinkClickAnalytics = async () => {
+    try {
+      setLinkClickLoading(true)
+      const response = await fetch(`/api/link-tracking/analytics?days=${selectedTimeframe}`)
+      if (response.ok) {
+        const data = await response.json()
+        setLinkClickAnalytics(data.analytics)
+      }
+    } catch (error) {
+      console.error('Failed to fetch link click analytics:', error)
+    } finally {
+      setLinkClickLoading(false)
     }
   }
 
@@ -261,6 +319,218 @@ export default function AnalyticsPage() {
                 </div>
               )}
             </div>
+
+            {/* Feedback Analytics */}
+            {feedbackLoading ? (
+              <div className="mt-8 bg-white shadow rounded-lg p-6">
+                <h3 className="text-lg font-medium text-gray-900 mb-4">
+                  Section Feedback Analytics
+                </h3>
+                <div className="flex items-center justify-center h-32">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-primary"></div>
+                </div>
+              </div>
+            ) : feedbackAnalytics && feedbackAnalytics.totalResponses > 0 ? (
+              <div className="mt-8 bg-white shadow rounded-lg p-6">
+                <h3 className="text-lg font-medium text-gray-900 mb-4">
+                  Section Feedback Analytics
+                </h3>
+
+                {/* Summary Stats */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                  <div className="bg-blue-50 p-4 rounded-lg">
+                    <div className="text-2xl font-bold text-blue-600 mb-1">
+                      {feedbackAnalytics.totalResponses}
+                    </div>
+                    <div className="text-sm text-gray-600">Total Responses</div>
+                  </div>
+                  <div className="bg-green-50 p-4 rounded-lg">
+                    <div className="text-2xl font-bold text-green-600 mb-1">
+                      {feedbackAnalytics.syncSuccessRate.toFixed(1)}%
+                    </div>
+                    <div className="text-sm text-gray-600">MailerLite Sync Rate</div>
+                  </div>
+                  <div className="bg-purple-50 p-4 rounded-lg">
+                    <div className="text-2xl font-bold text-purple-600 mb-1">
+                      {Object.entries(feedbackAnalytics.sectionCounts).sort((a, b) => b[1] - a[1])[0]?.[0] || 'N/A'}
+                    </div>
+                    <div className="text-sm text-gray-600">Most Popular Section</div>
+                  </div>
+                </div>
+
+                {/* Section Popularity */}
+                <div className="mb-6">
+                  <h4 className="font-medium text-gray-900 mb-3">Section Popularity</h4>
+                  <div className="space-y-2">
+                    {Object.entries(feedbackAnalytics.sectionCounts)
+                      .sort((a, b) => b[1] - a[1])
+                      .map(([section, count]) => {
+                        const percentage = (count / feedbackAnalytics.totalResponses) * 100
+                        return (
+                          <div key={section}>
+                            <div className="flex justify-between text-sm mb-1">
+                              <span className="font-medium text-gray-700">{section}</span>
+                              <span className="text-gray-600">{count} ({percentage.toFixed(1)}%)</span>
+                            </div>
+                            <div className="w-full bg-gray-200 rounded-full h-2">
+                              <div
+                                className="bg-brand-primary rounded-full h-2"
+                                style={{ width: `${percentage}%` }}
+                              />
+                            </div>
+                          </div>
+                        )
+                      })}
+                  </div>
+                </div>
+
+                {/* Recent Responses */}
+                {feedbackAnalytics.recentResponses.length > 0 && (
+                  <div>
+                    <h4 className="font-medium text-gray-900 mb-3">Recent Responses</h4>
+                    <div className="overflow-x-auto">
+                      <table className="min-w-full divide-y divide-gray-200">
+                        <thead className="bg-gray-50">
+                          <tr>
+                            <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
+                            <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Section</th>
+                            <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Synced</th>
+                          </tr>
+                        </thead>
+                        <tbody className="bg-white divide-y divide-gray-200">
+                          {feedbackAnalytics.recentResponses.map((response, idx) => (
+                            <tr key={idx}>
+                              <td className="px-4 py-2 text-sm text-gray-900">
+                                {formatDate(response.campaign_date)}
+                              </td>
+                              <td className="px-4 py-2 text-sm text-gray-900">
+                                {response.section_choice}
+                              </td>
+                              <td className="px-4 py-2 text-sm">
+                                {response.mailerlite_updated ? (
+                                  <span className="text-green-600">✓</span>
+                                ) : (
+                                  <span className="text-red-600">✗</span>
+                                )}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
+              </div>
+            ) : null}
+
+            {/* Link Click Analytics */}
+            {linkClickLoading ? (
+              <div className="mt-8 bg-white shadow rounded-lg p-6">
+                <h3 className="text-lg font-medium text-gray-900 mb-4">
+                  Link Click Analytics
+                </h3>
+                <div className="flex items-center justify-center h-32">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-primary"></div>
+                </div>
+              </div>
+            ) : linkClickAnalytics && linkClickAnalytics.totalClicks > 0 ? (
+              <div className="mt-8 bg-white shadow rounded-lg p-6">
+                <h3 className="text-lg font-medium text-gray-900 mb-4">
+                  Link Click Analytics
+                </h3>
+
+                {/* Summary Stats */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                  <div className="bg-indigo-50 p-4 rounded-lg">
+                    <div className="text-2xl font-bold text-indigo-600 mb-1">
+                      {linkClickAnalytics.totalClicks.toLocaleString()}
+                    </div>
+                    <div className="text-sm text-gray-600">Total Clicks</div>
+                  </div>
+                  <div className="bg-teal-50 p-4 rounded-lg">
+                    <div className="text-2xl font-bold text-teal-600 mb-1">
+                      {linkClickAnalytics.uniqueUsers.toLocaleString()}
+                    </div>
+                    <div className="text-sm text-gray-600">Unique Clickers</div>
+                  </div>
+                  <div className="bg-orange-50 p-4 rounded-lg">
+                    <div className="text-2xl font-bold text-orange-600 mb-1">
+                      {Object.entries(linkClickAnalytics.clicksBySection).sort((a, b) => b[1] - a[1])[0]?.[0] || 'N/A'}
+                    </div>
+                    <div className="text-sm text-gray-600">Most Clicked Section</div>
+                  </div>
+                </div>
+
+                {/* Section Click Breakdown */}
+                <div className="mb-6">
+                  <h4 className="font-medium text-gray-900 mb-3">Clicks by Section</h4>
+                  <div className="space-y-2">
+                    {Object.entries(linkClickAnalytics.clicksBySection)
+                      .sort((a, b) => b[1] - a[1])
+                      .map(([section, count]) => {
+                        const percentage = (count / linkClickAnalytics.totalClicks) * 100
+                        const uniqueUsers = linkClickAnalytics.uniqueUsersBySection[section] || 0
+                        return (
+                          <div key={section}>
+                            <div className="flex justify-between text-sm mb-1">
+                              <span className="font-medium text-gray-700">{section}</span>
+                              <span className="text-gray-600">
+                                {count} clicks ({uniqueUsers} unique) - {percentage.toFixed(1)}%
+                              </span>
+                            </div>
+                            <div className="w-full bg-gray-200 rounded-full h-2">
+                              <div
+                                className="bg-indigo-600 rounded-full h-2"
+                                style={{ width: `${percentage}%` }}
+                              />
+                            </div>
+                          </div>
+                        )
+                      })}
+                  </div>
+                </div>
+
+                {/* Top URLs */}
+                {linkClickAnalytics.topUrls.length > 0 && (
+                  <div className="mb-6">
+                    <h4 className="font-medium text-gray-900 mb-3">Top 10 Clicked Links</h4>
+                    <div className="overflow-x-auto">
+                      <table className="min-w-full divide-y divide-gray-200">
+                        <thead className="bg-gray-50">
+                          <tr>
+                            <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">URL</th>
+                            <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Section</th>
+                            <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Clicks</th>
+                          </tr>
+                        </thead>
+                        <tbody className="bg-white divide-y divide-gray-200">
+                          {linkClickAnalytics.topUrls.map((urlData, idx) => (
+                            <tr key={idx}>
+                              <td className="px-4 py-2 text-sm text-gray-900 max-w-xs truncate">
+                                <a
+                                  href={urlData.url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="text-blue-600 hover:text-blue-800 underline"
+                                >
+                                  {urlData.url}
+                                </a>
+                              </td>
+                              <td className="px-4 py-2 text-sm text-gray-900">
+                                {urlData.section}
+                              </td>
+                              <td className="px-4 py-2 text-sm text-gray-900">
+                                {urlData.clicks}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
+              </div>
+            ) : null}
 
             {/* Performance Insights */}
             {averages && (

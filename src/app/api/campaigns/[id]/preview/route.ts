@@ -182,7 +182,7 @@ async function generateNewsletterHtml(campaign: any): Promise<string> {
     if (sections && sections.length > 0) {
       for (const section of sections) {
         if (section.name === 'The Local Scoop' && activeArticles.length > 0) {
-          sectionsHtml += generateLocalScoopSection(activeArticles)
+          sectionsHtml += generateLocalScoopSection(activeArticles, campaign.date)
         } else if (section.name === 'Local Events') {
           sectionsHtml += await generateLocalEventsSection(campaign)
           // Add feedback section after Local Events
@@ -219,7 +219,7 @@ async function generateNewsletterHtml(campaign: any): Promise<string> {
       console.log('No sections found, using default order')
       const wordleHtml = await generateWordleSection(campaign)
       const getawaysHtml = await generateMinnesotaGetawaysSection(campaign)
-      sectionsHtml = generateLocalScoopSection(activeArticles) + await generateLocalEventsSection(campaign) + (wordleHtml || '') + (getawaysHtml || '')
+      sectionsHtml = generateLocalScoopSection(activeArticles, campaign.date) + await generateLocalEventsSection(campaign) + (wordleHtml || '') + (getawaysHtml || '')
     }
 
     // Combine all sections

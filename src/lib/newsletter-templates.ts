@@ -5,6 +5,7 @@ import { supabaseAdmin } from './supabase'
 import { selectPropertiesForCampaign, getSelectedPropertiesForCampaign } from './vrbo-selector'
 import { selectDiningDealsForCampaign } from './dining-selector'
 import { generateDailyRoadWork, getSelectedRoadWorkItemsForCampaign, storeRoadWorkItems, generateRoadWorkHTML } from './road-work-manager'
+import { wrapTrackingUrl } from './url-tracking'
 
 // ==================== UTILITY FUNCTIONS ====================
 
@@ -71,7 +72,7 @@ export function generateNewsletterHeader(formattedDate: string): string {
 
 // ==================== LOCAL SCOOP (ARTICLES) ====================
 
-export function generateLocalScoopSection(articles: any[]): string {
+export function generateLocalScoopSection(articles: any[], campaignDate: string, campaignId?: string): string {
   if (!articles || articles.length === 0) {
     return '<p style="text-align: center; color: #666;">No articles available</p>'
   }
@@ -86,12 +87,15 @@ export function generateLocalScoopSection(articles: any[]): string {
     const rank = index + 1
     const rankEmoji = rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : `${rank}.`
 
+    // Wrap URL with tracking
+    const trackedUrl = sourceUrl !== '#' ? wrapTrackingUrl(sourceUrl, 'Local Scoop', campaignDate, campaignId) : '#'
+
     return `
       <div style="background: #fff; border-radius: 8px; padding: 15px; margin-bottom: 15px; box-shadow: 0 4px 12px rgba(0,0,0,.15);">
         <h3 style="color: #1877F2; margin: 0 0 10px; font-size: 18px;">${rankEmoji} ${headline}</h3>
         ${imageUrl ? `<img src="${imageUrl}" alt="${headline}" style="width: 100%; max-width: 400px; height: auto; border-radius: 8px; margin-bottom: 10px; display: block;" />` : ''}
         <p style="color: #666; margin: 10px 0; font-size: 14px; line-height: 1.6;">${content.substring(0, 200)}...</p>
-        <a href="${sourceUrl}" style="color: #1877F2; text-decoration: underline; font-weight: bold;">Read more</a>
+        <a href="${trackedUrl}" style="color: #1877F2; text-decoration: underline; font-weight: bold;">Read more</a>
         <p style="color: #999; font-size: 12px; margin: 10px 0 0;">Source: ${source}</p>
       </div>
     `
@@ -216,30 +220,42 @@ export async function generateLocalEventsSection(campaign: any): Promise<string>
     const regularEvents = events.filter(event => !event.is_featured)
 
     // Generate featured events HTML (can be multiple)
-    const featuredHtml = featuredEvents.map(featuredEvent => `
+    const featuredHtml = featuredEvents.map(featuredEvent => {
+      const eventUrl = featuredEvent.url && featuredEvent.url !== '#'
+        ? wrapTrackingUrl(featuredEvent.url, 'Local Events', campaign.date, campaign.mailerlite_campaign_id)
+        : '#'
+
+      return `
     <tr>
       <td style='padding:0; border-top: 1px solid #eee;'>
         <div style='padding:8px 16px; background:#E8F0FE; border:2px solid #1877F2; border-radius:6px;'>
           ${featuredEvent.cropped_image_url ? `
           <img src='${featuredEvent.cropped_image_url}' alt='${featuredEvent.title}' style='width:100%; max-width:400px; height:auto; object-fit:cover; border-radius:4px; border:1px solid #1877F2; display:block; margin-bottom:8px;' />
           <span style='font-size: 16px;'>${getEventEmoji(featuredEvent.title, featuredEvent.venue)} <strong>${featuredEvent.title}</strong></span><br>
-          <span style='font-size:14px;'><a href='${featuredEvent.url || '#'}' style='color: #000; text-decoration: underline;'>${formatEventTime(featuredEvent.start_date, featuredEvent.end_date)}</a>  | ${featuredEvent.venue || 'TBA'}</span>${(featuredEvent.event_summary || featuredEvent.description) ? `<br><span style='font-size:13px;'>${featuredEvent.event_summary || featuredEvent.description}</span>` : ''}
+          <span style='font-size:14px;'><a href='${eventUrl}' style='color: #000; text-decoration: underline;'>${formatEventTime(featuredEvent.start_date, featuredEvent.end_date)}</a>  | ${featuredEvent.venue || 'TBA'}</span>${(featuredEvent.event_summary || featuredEvent.description) ? `<br><span style='font-size:13px;'>${featuredEvent.event_summary || featuredEvent.description}</span>` : ''}
           ` : `
           <span style='font-size: 16px;'>${getEventEmoji(featuredEvent.title, featuredEvent.venue)} <strong>${featuredEvent.title}</strong></span><br>
-          <span style='font-size:14px;'><a href='${featuredEvent.url || '#'}' style='color: #000; text-decoration: underline;'>${formatEventTime(featuredEvent.start_date, featuredEvent.end_date)}</a>  | ${featuredEvent.venue || 'TBA'}</span>${(featuredEvent.event_summary || featuredEvent.description) ? `<br><span style='font-size:13px;'>${featuredEvent.event_summary || featuredEvent.description}</span>` : ''}
+          <span style='font-size:14px;'><a href='${eventUrl}' style='color: #000; text-decoration: underline;'>${formatEventTime(featuredEvent.start_date, featuredEvent.end_date)}</a>  | ${featuredEvent.venue || 'TBA'}</span>${(featuredEvent.event_summary || featuredEvent.description) ? `<br><span style='font-size:13px;'>${featuredEvent.event_summary || featuredEvent.description}</span>` : ''}
           `}
         </div>
       </td>
-    </tr>`).join('')
+    </tr>`
+    }).join('')
 
     // Generate regular events HTML
-    const regularEventsHtml = regularEvents.map((event: any) => `
+    const regularEventsHtml = regularEvents.map((event: any) => {
+      const eventUrl = event.url && event.url !== '#'
+        ? wrapTrackingUrl(event.url, 'Local Events', campaign.date, campaign.mailerlite_campaign_id)
+        : '#'
+
+      return `
     <tr>
       <td style='padding: 8px 16px; border-top: 1px solid #eee;'>
         <span style='font-size: 16px;'>${getEventEmoji(event.title, event.venue)} <strong>${event.title}</strong></span><br>
-        <span style='font-size:14px;'><a href='${event.url || '#'}' style='color: #000; text-decoration: underline;'>${formatEventTime(event.start_date, event.end_date)}</a>  | ${event.venue || 'TBA'}</span>
+        <span style='font-size:14px;'><a href='${eventUrl}' style='color: #000; text-decoration: underline;'>${formatEventTime(event.start_date, event.end_date)}</a>  | ${event.venue || 'TBA'}</span>
       </td>
-    </tr>`).join('')
+    </tr>`
+    }).join('')
 
     return `
 <td class='column' style='padding:8px; vertical-align: top;'>
@@ -366,6 +382,9 @@ export async function generateMinnesotaGetawaysSection(campaign: any): Promise<s
         return
       }
 
+      // Wrap URL with tracking
+      const trackedLink = wrapTrackingUrl(link, 'Minnesota Getaways', campaign.date, campaign.mailerlite_campaign_id)
+
       propertyCards += `
     <!-- CARD ${index + 1} -->
     <td class="column" width="33.33%" style="padding:8px;vertical-align:top;">
@@ -375,7 +394,7 @@ export async function generateMinnesotaGetawaysSection(campaign: any): Promise<s
         <tr>
           <!-- remove any gap above image -->
           <td style="padding:0;line-height:0;font-size:0;mso-line-height-rule:exactly;border-top-left-radius:8px;border-top-right-radius:8px;">
-            <a href="${link}" style="display:block;text-decoration:none;">
+            <a href="${trackedLink}" style="display:block;text-decoration:none;">
               <img src="${imageUrl}"
                    alt="${title}, ${city}" border="0"
                    style="display:block;width:100%;height:auto;border:0;outline:none;text-decoration:none;border-top-left-radius:8px;border-top-right-radius:8px;">
@@ -387,7 +406,7 @@ export async function generateMinnesotaGetawaysSection(campaign: any): Promise<s
           <td style="padding:6px 10px 6px;">
             <!-- 2-line clamp on desktop; mobile unlocks below -->
             <div class="vrbo-title" style="font-size:16px;line-height:20px;height:auto;overflow:hidden;font-weight:bold;margin:0 0 4px;">
-              <a href="${link}" style="color:#0A66C2;text-decoration:none;">${title}</a>
+              <a href="${trackedLink}" style="color:#0A66C2;text-decoration:none;">${title}</a>
             </div>
             <div style="font-size:13px;line-height:18px;color:#555;margin:0 0 8px;">${city}</div>
             <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-top:1px solid #eee;table-layout:fixed;">
@@ -434,6 +453,8 @@ export async function generateMinnesotaGetawaysSection(campaign: any): Promise<s
 // ==================== FEEDBACK CARD ====================
 
 export function generateFeedbackSection(campaignDate: string): string {
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://st-cloud-scoop.vercel.app'
+
   return `
 <!-- Feedback card -->
 <table width="100%" cellpadding="0" cellspacing="0" border="0" role="presentation">
@@ -456,42 +477,42 @@ export function generateFeedbackSection(campaignDate: string): string {
             <table cellpadding="0" cellspacing="0" border="0" role="presentation" align="center" style="margin:0 auto; width:100%; max-width:350px;">
               <tr>
                 <td style="padding:0 0 8px 0;">
-                  <a href="https://hook.us1.make.com/5tbml34rikusa9z5cg9t68qkmd1x7uu8?date=${campaignDate}&amp;choice=Weather&amp;email={$email}"
+                  <a href="${baseUrl}/api/feedback/track?date=${campaignDate}&amp;choice=Weather&amp;email={$email}"
                      style="display:block; text-decoration:none; background:#1877F2; color:#ffffff; font-weight:bold;
                             font-size:16px; line-height:20px; padding:12px; border-radius:8px; text-align:center;">Weather</a>
                 </td>
               </tr>
               <tr>
                 <td style="padding:0 0 8px 0;">
-                  <a href="https://hook.us1.make.com/5tbml34rikusa9z5cg9t68qkmd1x7uu8?date=${campaignDate}&amp;choice=The%20Local%20Scoop&amp;email={$email}"
+                  <a href="${baseUrl}/api/feedback/track?date=${campaignDate}&amp;choice=The%20Local%20Scoop&amp;email={$email}"
                      style="display:block; text-decoration:none; background:#1877F2; color:#ffffff; font-weight:bold;
                             font-size:16px; line-height:20px; padding:12px; border-radius:8px; text-align:center;">The Local Scoop</a>
                 </td>
               </tr>
               <tr>
                 <td style="padding:0 0 8px 0;">
-                  <a href="https://hook.us1.make.com/5tbml34rikusa9z5cg9t68qkmd1x7uu8?date=${campaignDate}&amp;choice=Local%20Events&amp;email={$email}"
+                  <a href="${baseUrl}/api/feedback/track?date=${campaignDate}&amp;choice=Local%20Events&amp;email={$email}"
                      style="display:block; text-decoration:none; background:#1877F2; color:#ffffff; font-weight:bold;
                             font-size:16px; line-height:20px; padding:12px; border-radius:8px; text-align:center;">Local Events</a>
                 </td>
               </tr>
               <tr>
                 <td style="padding:0 0 8px 0;">
-                  <a href="https://hook.us1.make.com/5tbml34rikusa9z5cg9t68qkmd1x7uu8?date=${campaignDate}&amp;choice=Dining%20Deals&amp;email={$email}"
+                  <a href="${baseUrl}/api/feedback/track?date=${campaignDate}&amp;choice=Dining%20Deals&amp;email={$email}"
                      style="display:block; text-decoration:none; background:#1877F2; color:#ffffff; font-weight:bold;
                             font-size:16px; line-height:20px; padding:12px; border-radius:8px; text-align:center;">Dining Deals</a>
                 </td>
               </tr>
               <tr>
                 <td style="padding:0 0 8px 0;">
-                  <a href="https://hook.us1.make.com/5tbml34rikusa9z5cg9t68qkmd1x7uu8?date=${campaignDate}&amp;choice=Yesterdays%20Wordle&amp;email={$email}"
+                  <a href="${baseUrl}/api/feedback/track?date=${campaignDate}&amp;choice=Yesterdays%20Wordle&amp;email={$email}"
                      style="display:block; text-decoration:none; background:#1877F2; color:#ffffff; font-weight:bold;
                             font-size:16px; line-height:20px; padding:12px; border-radius:8px; text-align:center;">Yesterday's Wordle</a>
                 </td>
               </tr>
               <tr>
                 <td style="padding:0;">
-                  <a href="https://hook.us1.make.com/5tbml34rikusa9z5cg9t68qkmd1x7uu8?date=${campaignDate}&amp;choice=Road%20Work&amp;email={$email}"
+                  <a href="${baseUrl}/api/feedback/track?date=${campaignDate}&amp;choice=Road%20Work&amp;email={$email}"
                      style="display:block; text-decoration:none; background:#1877F2; color:#ffffff; font-weight:bold;
                             font-size:16px; line-height:20px; padding:12px; border-radius:8px; text-align:center;">Road Work</a>
                 </td>
@@ -547,20 +568,25 @@ export async function generateDiningDealsSection(campaign: any): Promise<string>
       const specialTime = deal.special_time || ''
       const googleProfile = deal.google_profile || '#'
 
+      // Wrap URL with tracking
+      const trackedProfile = googleProfile !== '#'
+        ? wrapTrackingUrl(googleProfile, 'Dining Deals', campaign.date, campaign.mailerlite_campaign_id)
+        : '#'
+
       if (isFeatured) {
         // Featured deal format (first_special)
         dealsHtml += `
           <tr><td style='padding: 8px 16px; background:#E8F0FE; border:2px solid #1877F2; border-radius:6px;'>
             <div style='font-weight: bold;'>${businessName}</div>
             <div>${specialDescription}</div>
-            <div style='font-size: 14px;'><a href='${googleProfile}' style='text-decoration: underline; color: inherit;'>${specialTime}</a></div>
+            <div style='font-size: 14px;'><a href='${trackedProfile}' style='text-decoration: underline; color: inherit;'>${specialTime}</a></div>
           </td></tr>`
       } else {
         // Subsequent deals format
         dealsHtml += `
           <tr><td style='padding: 8px 16px 4px; font-weight: bold; border-top: 1px solid #eee;'>${businessName}</td></tr>
           <tr><td style='padding: 0 16px 2px;'>${specialDescription}</td></tr>
-          <tr><td style='padding: 0 16px 8px; font-size: 14px;'><a href='${googleProfile}' style='text-decoration: underline; color: inherit;'>${specialTime}</a></td></tr>`
+          <tr><td style='padding: 0 16px 8px; font-size: 14px;'><a href='${trackedProfile}' style='text-decoration: underline; color: inherit;'>${specialTime}</a></td></tr>`
       }
     })
 
@@ -616,7 +642,7 @@ export async function generateRoadWorkSection(campaign: any): Promise<string> {
         expected_reopen: item.expected_reopen || '',
         source_url: item.source_url || ''
       }))
-      return generateRoadWorkHTML(itemsForHtml)
+      return generateRoadWorkHTML(itemsForHtml, campaign.date, campaign.mailerlite_campaign_id)
     }
 
     // If no existing normalized data, check legacy road_work_data table

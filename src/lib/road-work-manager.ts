@@ -3,6 +3,7 @@
 import { supabaseAdmin } from './supabase'
 import { AI_PROMPTS, callOpenAI } from './openai'
 import type { RoadWorkData, RoadWorkItem } from '@/types/database'
+import { wrapTrackingUrl } from './url-tracking'
 
 // Create a function to search for real road work data
 async function searchRealRoadWorkData(targetDate: string): Promise<string> {
@@ -53,7 +54,7 @@ type RoadWorkItemForHTML = {
 /**
  * Generate HTML content for Road Work section
  */
-export function generateRoadWorkHTML(roadWorkItems: RoadWorkItemForHTML[]): string {
+export function generateRoadWorkHTML(roadWorkItems: RoadWorkItemForHTML[], campaignDate?: string, campaignId?: string): string {
   // Handle empty or no road work data
   if (!roadWorkItems || roadWorkItems.length === 0) {
     return `
@@ -74,7 +75,13 @@ export function generateRoadWorkHTML(roadWorkItems: RoadWorkItemForHTML[]): stri
   for (let i = 0; i < roadWorkItems.length; i += 3) {
     const rowItems = roadWorkItems.slice(i, i + 3)
 
-    const rowHTML = `<tr class='row'>${rowItems.map(item => `
+    const rowHTML = `<tr class='row'>${rowItems.map(item => {
+      // Wrap source URL with tracking if campaignDate is provided
+      const sourceUrl = item.source_url && item.source_url !== '#' && campaignDate
+        ? wrapTrackingUrl(item.source_url, 'Road Work', campaignDate, campaignId)
+        : (item.source_url || '#')
+
+      return `
       <td class='column' style='padding:8px; vertical-align: top;'>
         <table width='100%' cellpadding='0' cellspacing='0' style='font-size: 16px; line-height: 24px; border: 1px solid #ddd; border-radius: 12px; background-color: #fff; box-shadow:0 4px 12px rgba(0,0,0,.15); overflow: hidden; font-family: Arial, sans-serif;'>
           <tr>
@@ -86,7 +93,7 @@ export function generateRoadWorkHTML(roadWorkItems: RoadWorkItemForHTML[]): stri
             <td style='padding: 16px; font-size: 16px; line-height: 26px; text-align: center;'>
               <div style='text-align: center;'>${item.road_range || 'N/A'}</div>
               <div style='font-size: 15px; line-height: 20px; text-align: center;'>
-                ${item.reason || 'Road work'} (<a href='${item.source_url || '#'}' style='color:#000; text-decoration: underline;'>link</a>)
+                ${item.reason || 'Road work'} (<a href='${sourceUrl}' style='color:#000; text-decoration: underline;'>link</a>)
               </div>
               <div style='margin-top: 8px; font-size: 14px; text-align: center;'>
                 ${item.start_date || 'TBD'} → ${item.expected_reopen || 'TBD'}   📍 ${item.city_or_township || 'Area'}
@@ -94,7 +101,8 @@ export function generateRoadWorkHTML(roadWorkItems: RoadWorkItemForHTML[]): stri
             </td>
           </tr>
         </table>
-      </td>`).join('')}</tr>`
+      </td>`
+    }).join('')}</tr>`
 
     rows.push(rowHTML)
   }

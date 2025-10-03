@@ -202,6 +202,14 @@ export default function ViewEventsPage() {
     return tmp.textContent || tmp.innerText || ''
   }
 
+  const ensureHttps = (url: string | null) => {
+    if (!url) return null
+    // If URL already has protocol, return as-is
+    if (url.match(/^https?:\/\//i)) return url
+    // Otherwise, add https://
+    return `https://${url}`
+  }
+
   // Group events by date
   const groupEventsByDate = (events: Event[]) => {
     const groups = new Map<string, Event[]>()
@@ -515,7 +523,7 @@ export default function ViewEventsPage() {
                             <div className="flex gap-2">
                               {event.url && (
                                 <a
-                                  href={event.url}
+                                  href={ensureHttps(event.url) || '#'}
                                   target="_blank"
                                   rel="noopener noreferrer"
                                   className="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium text-center"

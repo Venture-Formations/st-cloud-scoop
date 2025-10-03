@@ -492,17 +492,6 @@ export default function ViewEventsPage() {
                         {/* Expanded View */}
                         {isExpanded && (
                           <div className="px-4 pb-4 border-t border-gray-100">
-                            {/* Large Image - only show for non-featured events */}
-                            {event.cropped_image_url && !event.featured && (
-                              <div className="mb-4 mt-4">
-                                <img
-                                  src={event.cropped_image_url}
-                                  alt={event.title}
-                                  className="w-full max-h-96 object-cover rounded-lg"
-                                />
-                              </div>
-                            )}
-
                             {/* Full Details */}
                             <div className="space-y-3 mb-4">
                               <div className="flex items-start text-sm">

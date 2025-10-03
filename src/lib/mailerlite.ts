@@ -3,8 +3,17 @@ import { supabaseAdmin } from './supabase'
 import { ErrorHandler, SlackNotificationService } from './slack'
 import type { CampaignWithArticles, CampaignWithEvents, Article } from '@/types/database'
 import { getWeatherForCampaign } from './weather-manager'
-import { selectPropertiesForCampaign, getSelectedPropertiesForCampaign } from './vrbo-selector'
-import { selectDiningDealsForCampaign, getDiningDealsForCampaign } from './dining-selector'
+import {
+  generateNewsletterHeader,
+  generateNewsletterFooter,
+  generateLocalScoopSection,
+  generateLocalEventsSection,
+  generateWordleSection,
+  generateMinnesotaGetawaysSection,
+  generateDiningDealsSection,
+  generateRoadWorkSection,
+  generateFeedbackSection
+} from './newsletter-templates'
 
 const MAILERLITE_API_BASE = 'https://connect.mailerlite.com/api'
 
@@ -216,7 +225,7 @@ export class MailerLiteService {
     console.log('MAILERLITE - Raw article data:', activeArticles.map(a => `ID: ${a.id}, Rank: ${a.rank}, Active: ${a.is_active}`).join(' | '))
 
     // Generate events using the same logic as preview
-    const eventsHtml = await this.generateLocalEventsSection(campaign)
+    const eventsHtml = await generateLocalEventsSection(campaign)
 
     console.log('MailerLite - Events HTML generated, length:', eventsHtml.length)
 
@@ -253,55 +262,6 @@ export class MailerLiteService {
 </table>
 <br>` : ''
 
-    // Generate Local Scoop section HTML
-    const generateLocalScoopSection = (articles: any[]) => {
-      if (!articles || articles.length === 0) {
-        return ''
-      }
-
-      const articlesHtml = articles.map((article: any) => {
-        // Handle image URLs same as preview
-        const hasImage = article.rss_post?.image_url
-        const isLegacyHostedImage = hasImage && article.rss_post.image_url.startsWith('/images/')
-        const isGithubImage = hasImage && (article.rss_post.image_url.includes('github.com') || article.rss_post.image_url.includes('githubusercontent.com'))
-
-        const imageUrl = isGithubImage
-          ? article.rss_post.image_url
-          : isLegacyHostedImage
-            ? `https://stcscoop.com${article.rss_post.image_url}`
-            : hasImage
-              ? article.rss_post.image_url
-              : null
-
-        const imageHtml = imageUrl
-          ? `<tr><td style='padding: 0 12px; text-align: center;'><img src='${imageUrl}' alt='${article.headline}' style='max-width: 100%; max-height: 500px; border-radius: 4px;'></td></tr>${article.rss_post?.author ? `
-<tr><td style='padding: 0 12px 12px; text-align: center; font-size: 12px; color: #555; font-style: italic;'>Photo by ${article.rss_post.author}</td></tr>` : ''}`
-          : ''
-
-        return `
-<tr class='row'>
- <td class='column' style='padding:8px; vertical-align: top;'>
- <table width='100%' cellpadding='0' cellspacing='0' style='border: 1px solid #ddd; border-radius: 8px; background: #fff; font-family: Arial, sans-serif; font-size: 16px; line-height: 26px; box-shadow:0 4px 12px rgba(0,0,0,.15);'>
- <tr><td style='padding: 12px 12px 4px; font-size: 20px; font-weight: bold;'>${article.headline}</td></tr>
- ${imageHtml}
- <tr><td style='padding: 0 12px 20px;'>${article.content} ${article.rss_post?.source_url ? `(<a href='${article.rss_post.source_url}' style='color: #0080FE; text-decoration: none;'>read more</a>)` : ''}</td></tr>
- </table>
- </td>
-</tr>`
-      }).join('')
-
-      return `
-<table width="100%" cellpadding="0" cellspacing="0" style="border: 1px solid #f7f7f7; border-radius: 10px; margin-top: 10px; max-width: 990px; margin: 0 auto; background-color: #f7f7f7; font-family: Arial, sans-serif;">
-  <tr>
-    <td style="padding: 5px;">
-      <h2 style="font-size: 1.625em; line-height: 1.16em; font-family: Arial, sans-serif; color: #1877F2; margin: 0; padding: 0;">The Local Scoop</h2>
-    </td>
-  </tr>
-  ${articlesHtml}
-</table>
-<br>`
-    }
-
     // Generate sections in order based on database configuration
     let sectionsHtml = ''
     if (sections && sections.length > 0) {
@@ -310,28 +270,30 @@ export class MailerLiteService {
           sectionsHtml += generateLocalScoopSection(activeArticles)
         } else if (section.name === 'Local Events') {
           sectionsHtml += eventsHtml
+          // Add feedback section after Local Events
+          sectionsHtml += generateFeedbackSection(campaign.date)
         } else if (section.name === 'Local Weather') {
           const weatherHtml = await getWeatherForCampaign(campaign.id)
           if (weatherHtml) {
             sectionsHtml += weatherHtml
           }
         } else if (section.name === "Yesterday's Wordle") {
-          const wordleHtml = await this.generateWordleSection(campaign)
+          const wordleHtml = await generateWordleSection(campaign)
           if (wordleHtml) {
             sectionsHtml += wordleHtml
           }
         } else if (section.name === 'Minnesota Getaways') {
-          const getawaysHtml = await this.generateMinnesotaGetawaysSection(campaign)
+          const getawaysHtml = await generateMinnesotaGetawaysSection(campaign)
           if (getawaysHtml) {
             sectionsHtml += getawaysHtml
           }
         } else if (section.name === 'Dining Deals') {
-          const diningHtml = await this.generateDiningDealsSection(campaign)
+          const diningHtml = await generateDiningDealsSection(campaign)
           if (diningHtml) {
             sectionsHtml += diningHtml
           }
         } else if (section.name === 'Road Work') {
-          const roadWorkHtml = await this.generateRoadWorkSection(campaign)
+          const roadWorkHtml = await generateRoadWorkSection(campaign)
           if (roadWorkHtml) {
             sectionsHtml += roadWorkHtml
           }
@@ -702,521 +664,6 @@ ${sectionsHtml}
       }])
   }
 
-  private async generateLocalEventsSection(campaign: any): Promise<string> {
-    // Calculate 3-day range starting from the newsletter date (campaign.date)
-    // Day 1: Newsletter date, Day 2: Next day, Day 3: Day after that
-    const newsletterDate = new Date(campaign.date + 'T00:00:00') // Parse as local date
-
-    const dates = []
-    for (let i = 0; i <= 2; i++) {
-      const date = new Date(newsletterDate)
-      date.setDate(newsletterDate.getDate() + i)
-      dates.push(date.toISOString().split('T')[0])
-    }
-
-    console.log('MailerLite - HTML generation - calculated dates:', dates)
-
-    // Fetch events for the calculated date range
-    const startDate = dates[0]
-    const endDate = dates[dates.length - 1]
-
-    const { data: availableEvents } = await supabaseAdmin
-      .from('events')
-      .select('*')
-      .gte('start_date', startDate)
-      .lte('start_date', endDate + 'T23:59:59')
-      .eq('active', true)
-      .order('start_date', { ascending: true })
-
-    if (!availableEvents || availableEvents.length === 0) {
-      return '' // Don't include section if no events
-    }
-
-    console.log(`MailerLite - HTML generation - found ${availableEvents.length} events for date range ${startDate} to ${endDate}`)
-
-    // Get the campaign events to determine which are selected and featured
-    const { data: campaignEvents } = await supabaseAdmin
-      .from('campaign_events')
-      .select('*')
-      .eq('campaign_id', campaign.id)
-
-    // Create more robust campaign events lookup - use just event_id for primary lookup
-    const campaignEventsMap = new Map()
-    const campaignEventsByDate = new Map()
-
-    campaignEvents?.forEach(ce => {
-      const key = `${ce.event_id}_${ce.event_date}`
-      campaignEventsMap.set(key, ce)
-
-      // Also create a date-based map for debugging
-      if (!campaignEventsByDate.has(ce.event_date)) {
-        campaignEventsByDate.set(ce.event_date, [])
-      }
-      campaignEventsByDate.get(ce.event_date).push(ce)
-    })
-
-    console.log('MailerLite - Campaign events loaded:', campaignEvents?.length || 0)
-    console.log('MailerLite - Campaign events by date:', Array.from(campaignEventsByDate.entries()).map(([date, events]) => `${date}: ${events.length} events`))
-
-    // Filter events by date and selection status
-    const eventsByDate: { [key: string]: any[] } = {}
-
-    dates.forEach(date => {
-      console.log(`MailerLite - Processing date: ${date}`)
-
-      // Filter events that occur on this date
-      const dateStart = new Date(date + 'T00:00:00-05:00')
-      const dateEnd = new Date(date + 'T23:59:59-05:00')
-
-      const eventsForDate = availableEvents.filter(event => {
-        const eventStart = new Date(event.start_date)
-        const eventEnd = event.end_date ? new Date(event.end_date) : eventStart
-        return (eventStart <= dateEnd && eventEnd >= dateStart)
-      })
-
-      console.log(`MailerLite - Found ${eventsForDate.length} available events for ${date}`)
-
-      // Only include events that are selected for the campaign
-      const selectedEvents = eventsForDate
-        .map(event => {
-          const lookupKey = `${event.id}_${date}`
-          const campaignEvent = campaignEventsMap.get(lookupKey)
-
-          console.log(`MailerLite - Event ${event.title} (${event.id}): lookup key=${lookupKey}, found=${!!campaignEvent}, selected=${campaignEvent?.is_selected}`)
-
-          if (campaignEvent && campaignEvent.is_selected) {
-            console.log(`MailerLite - Including event: ${event.title} (featured: ${campaignEvent.is_featured}, order: ${campaignEvent.display_order})`)
-            return {
-              ...event,
-              is_featured: campaignEvent.is_featured,
-              display_order: campaignEvent.display_order
-            }
-          }
-          return null
-        })
-        .filter(Boolean)
-        .sort((a, b) => (a.display_order || 999) - (b.display_order || 999))
-
-      console.log(`MailerLite - Selected ${selectedEvents.length} events for ${date}`)
-
-      if (selectedEvents.length > 0) {
-        eventsByDate[date] = selectedEvents
-      }
-    })
-
-    console.log('MailerLite - HTML generation - events by date:', Object.keys(eventsByDate).map(date => `${date}: ${eventsByDate[date].length} events`))
-
-    if (Object.keys(eventsByDate).length === 0) {
-      return '' // Don't include section if no selected events
-    }
-
-    const formatEventDate = (dateString: string) => {
-      try {
-        const date = new Date(dateString + 'T00:00:00')
-        return date.toLocaleDateString('en-US', {
-          weekday: 'long',
-          month: 'long',
-          day: 'numeric'
-        })
-      } catch (e) {
-        return dateString
-      }
-    }
-
-    const formatEventTime = (startDate: string, endDate?: string) => {
-      try {
-        const start = new Date(startDate)
-        const startTime = start.toLocaleTimeString('en-US', {
-          hour: 'numeric',
-          minute: '2-digit',
-          hour12: true
-        }).replace(':00', '').replace(' ', '')
-
-        if (endDate) {
-          const end = new Date(endDate)
-          const endTime = end.toLocaleTimeString('en-US', {
-            hour: 'numeric',
-            minute: '2-digit',
-            hour12: true
-          }).replace(':00', '').replace(' ', '')
-          return `${startTime} → ${endTime}`
-        }
-
-        return startTime
-      } catch (e) {
-        return ''
-      }
-    }
-
-    // Helper function to get event emoji based on title/venue
-    const getEventEmoji = (title: string, venue: string) => {
-      const titleLower = title.toLowerCase()
-      const venueLower = venue ? venue.toLowerCase() : ''
-
-      if (titleLower.includes('harvest') || titleLower.includes('corn maze') || titleLower.includes('farm')) return '🌽'
-      if (titleLower.includes('art') || titleLower.includes('exhibition') || titleLower.includes('ceramic')) return '🎨'
-      if (titleLower.includes('blacklight') || titleLower.includes('adventure')) return '🎯'
-      if (titleLower.includes('farmers') || titleLower.includes('market')) return '🥕'
-      if (titleLower.includes('skate') || titleLower.includes('skating')) return '🛼'
-      if (titleLower.includes('carnival')) return '🎡'
-      if (titleLower.includes('music') || titleLower.includes('concert') || venueLower.includes('amphitheater')) return '🎶'
-      if (titleLower.includes('magic') || titleLower.includes('gathering') || titleLower.includes('commander')) return '🎲'
-      if (titleLower.includes('run') || titleLower.includes('5k') || titleLower.includes('race')) return '🏃‍♂️'
-      if (titleLower.includes('fall') || titleLower.includes('festival')) return '🍂'
-      if (titleLower.includes('hockey')) return '🏒'
-      if (titleLower.includes('pride')) return '🏳️‍🌈'
-      if (titleLower.includes('beer') || titleLower.includes('oktoberfest') || titleLower.includes('brewing')) return '🍺'
-      if (titleLower.includes('sensory') || titleLower.includes('kids') || titleLower.includes('children')) return '🧒'
-      if (titleLower.includes('dungeons') || titleLower.includes('dragons')) return '🐉'
-      if (titleLower.includes('theater') || titleLower.includes('play') || titleLower.includes('piggie')) return '🎭'
-      if (titleLower.includes('bluegrass') || titleLower.includes('brews')) return '🎶'
-
-      return '🎉' // Default emoji
-    }
-
-    // Generate each day column using the calculated dates in order
-    const dayColumns = dates.map(date => {
-      const events = eventsByDate[date] || []
-      const featuredEvents = events.filter(event => event.is_featured)
-      const regularEvents = events.filter(event => !event.is_featured)
-
-      // Generate featured events HTML (can be multiple)
-      const featuredHtml = featuredEvents.map(featuredEvent => `
-      <tr>
-        <td style='padding:0; border-top: 1px solid #eee;'>
-          <div style='padding:8px 16px; background:#E8F0FE; border:2px solid #1877F2; border-radius:6px;'>
-            ${featuredEvent.cropped_image_url ? `
-            <img src='${featuredEvent.cropped_image_url}' alt='${featuredEvent.title}' style='width:100%; max-width:400px; height:auto; object-fit:cover; border-radius:4px; border:1px solid #1877F2; display:block; margin-bottom:8px;' />
-            <span style='font-size: 16px;'>${getEventEmoji(featuredEvent.title, featuredEvent.venue)} <strong>${featuredEvent.title}</strong></span><br>
-            <span style='font-size:14px;'><a href='${featuredEvent.url || '#'}' style='color: #000; text-decoration: underline;'>${formatEventTime(featuredEvent.start_date, featuredEvent.end_date)}</a>  | ${featuredEvent.venue || 'TBA'}</span>${(featuredEvent.event_summary || featuredEvent.description) ? `<br><br><span style='font-size:13px;'>${featuredEvent.event_summary || featuredEvent.description}</span>` : ''}
-            ` : `
-            <span style='font-size: 16px;'>${getEventEmoji(featuredEvent.title, featuredEvent.venue)} <strong>${featuredEvent.title}</strong></span><br>
-            <span style='font-size:14px;'><a href='${featuredEvent.url || '#'}' style='color: #000; text-decoration: underline;'>${formatEventTime(featuredEvent.start_date, featuredEvent.end_date)}</a>  | ${featuredEvent.venue || 'TBA'}</span>${(featuredEvent.event_summary || featuredEvent.description) ? `<br><br><span style='font-size:13px;'>${featuredEvent.event_summary || featuredEvent.description}</span>` : ''}
-            `}
-          </div>
-        </td>
-      </tr>`).join('')
-
-      // Generate regular events HTML
-      const regularEventsHtml = regularEvents.map((event: any) => `
-      <tr>
-        <td style='padding: 8px 16px; border-top: 1px solid #eee;'>
-          <span style='font-size: 16px;'>${getEventEmoji(event.title, event.venue)} <strong>${event.title}</strong></span><br>
-          <span style='font-size:14px;'><a href='${event.url || '#'}' style='color: #000; text-decoration: underline;'>${formatEventTime(event.start_date, event.end_date)}</a>  | ${event.venue || 'TBA'}</span>
-        </td>
-      </tr>`).join('')
-
-      return `
-<td class='column' style='padding:8px; vertical-align: top;'>
-  <table width='100%' cellpadding='0' cellspacing='0' style='table-layout: fixed; border: 1px solid #ddd; border-radius: 8px; background: #fff; height: 100%; font-family: Arial, sans-serif; font-size: 16px; line-height: 26px; box-shadow:0 4px 12px rgba(0,0,0,.15);'>
-    <tr>
-      <td style='background: #F8F9FA; padding: 8px; text-align: center; font-weight: normal; font-size: 16px; line-height: 26px; color: #3C4043; border-top-left-radius: 8px; border-top-right-radius: 8px;'>${formatEventDate(date)}</td>
-    </tr>
-    ${featuredHtml}
-    ${regularEventsHtml}
-  </table>
-</td>`
-    }).join(' ')
-
-    return `
-<table width="100%" cellpadding="0" cellspacing="0" style="border: 1px solid #f7f7f7; border-radius: 10px; margin-top: 10px; max-width: 990px; margin: 0 auto; background-color: #f7f7f7; font-family: Arial, sans-serif;">
-  <tr>
-    <td style="padding: 5px;">
-      <h2 style="font-size: 1.625em; line-height: 1.16em; font-family: Arial, sans-serif; color: #1877F2; margin: 0; padding: 0;">Local Events</h2>
-    </td>
-  </tr><tr class="row">${dayColumns}
-</td></table>
-<div style="text-align: center; padding: 20px 10px; max-width: 990px; margin: 0 auto;">
-  <a href="https://events.stcscoop.com/events/view" style="display: inline-block; background-color: #1877F2; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; margin: 0 10px; font-family: Arial, sans-serif;">View All Events</a>
-  <a href="https://events.stcscoop.com/events/submit" style="display: inline-block; background-color: #28a745; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; margin: 0 10px; font-family: Arial, sans-serif;">Submit Your Event</a>
-</div>
-<br>`
-  }
-
-  async generateWordleSection(campaign: any): Promise<string> {
-    try {
-      console.log('MailerLite - Generating Wordle section for campaign:', campaign?.id)
-
-      // Get yesterday's date from the newsletter date (since this is for "Yesterday's Wordle")
-      const newsletterDate = new Date(campaign.date + 'T00:00:00')
-      const yesterday = new Date(newsletterDate)
-      yesterday.setDate(yesterday.getDate() - 1)
-      const yesterdayDate = yesterday.toISOString().split('T')[0]
-
-      console.log('MailerLite - Looking for Wordle data for date:', yesterdayDate)
-
-      // Fetch Wordle data for yesterday
-      const { data: wordleData, error } = await supabaseAdmin
-        .from('wordle')
-        .select('*')
-        .eq('date', yesterdayDate)
-        .single()
-
-      if (error || !wordleData) {
-        console.log('MailerLite - No Wordle data found for yesterday:', yesterdayDate, 'excluding Wordle section')
-        return '' // Don't include section if no data
-      }
-
-      console.log('MailerLite - Found Wordle data:', wordleData.word)
-
-      // Generate the HTML using the template structure
-      const wordleCard = `<table width='100%' cellpadding='0' cellspacing='0' style='border: 1px solid #ddd; border-radius: 12px; background-color: #fff; box-shadow: 0 4px 12px rgba(0,0,0,.15); font-family: Arial, sans-serif; font-size: 16px; color: #333; line-height: 26px;'>
-        <tr><td style='background-color: #F8F9FA; text-align: center; padding: 8px; font-weight: bold; font-size: 24px; color: #3C4043; text-transform: uppercase;'>${wordleData.word}</td></tr>
-        <tr><td style='padding: 16px;'>
-          <div style='margin-bottom: 12px;'><strong>Definition:</strong> ${wordleData.definition}</div>
-          <div><strong>Interesting Fact:</strong> ${wordleData.interesting_fact}</div>
-        </td></tr>
-      </table>`
-
-      const wordleColumn = `<td class='column' style='padding:8px; vertical-align: top;'>${wordleCard}</td>`
-
-      return `
-<table width="100%" cellpadding="0" cellspacing="0" style="border: 1px solid #f7f7f7; border-radius: 10px; margin-top: 10px; max-width: 990px; margin: 0 auto; background-color: #f7f7f7; font-family: Arial, sans-serif;">
-  <tr>
-    <td style="padding: 5px;">
-      <h2 style="font-size: 1.625em; line-height: 1.16em; font-family: Arial, sans-serif; color: #1877F2; margin: 0; padding: 0;">Yesterday's Wordle</h2>
-    </td>
-  </tr>
-  <tr class="row">${wordleColumn}</tr>
-</table>
-<br>`
-
-    } catch (error) {
-      console.error('MailerLite - Error generating Wordle section:', error)
-      return '' // Return empty string on error to not break the newsletter
-    }
-  }
-
-  async generateMinnesotaGetawaysSection(campaign: any): Promise<string> {
-    try {
-      console.log('MailerLite - Generating Minnesota Getaways section for campaign:', campaign?.id)
-
-      // Get selected properties for this campaign (or select them if not done yet)
-      let selectedProperties = await getSelectedPropertiesForCampaign(campaign.id)
-
-      if (selectedProperties.length === 0) {
-        console.log('MailerLite - No existing selections, selecting properties for campaign')
-        await selectPropertiesForCampaign(campaign.id)
-        selectedProperties = await getSelectedPropertiesForCampaign(campaign.id)
-      }
-
-      if (selectedProperties.length === 0) {
-        console.log('MailerLite - No VRBO properties available for Minnesota Getaways section')
-        return '' // Don't include section if no properties
-      }
-
-      console.log(`MailerLite - Found ${selectedProperties.length} selected properties for Minnesota Getaways`)
-
-      // Generate HTML for each property using the provided template
-      let propertyCards = ''
-
-      selectedProperties.forEach((property, index) => {
-        // Clean and validate data
-        const title = property.title || ''
-        const imageUrl = property.adjusted_image_url || property.main_image_url || ''
-        const city = property.city || ''
-        const bedrooms = property.bedrooms || 0
-        const bathrooms = property.bathrooms || 0
-        const sleeps = property.sleeps || 0
-        const link = property.link || ''
-
-        // Skip if essential data is missing
-        if (!title || !link) {
-          console.log(`MailerLite - Skipping property ${index + 1} - missing title or link`)
-          return
-        }
-
-        propertyCards += `
-    <!-- CARD ${index + 1} -->
-    <td class="column" width="33.33%" style="padding:8px;vertical-align:top;">
-      <table role="presentation" width="100%" cellpadding="0" cellspacing="0"
-             style="table-layout:fixed;border:1px solid #ddd;border-radius:8px;background:#fff;height:100%;font-size:16px;line-height:26px;box-shadow:0 4px 12px rgba(0,0,0,.15);">
-        <!-- Image -->
-        <tr>
-          <!-- remove any gap above image -->
-          <td style="padding:0;line-height:0;font-size:0;mso-line-height-rule:exactly;border-top-left-radius:8px;border-top-right-radius:8px;">
-            <a href="${link}" style="display:block;text-decoration:none;">
-              <img src="${imageUrl}"
-                   alt="${title}, ${city}" border="0"
-                   style="display:block;width:100%;height:auto;border:0;outline:none;text-decoration:none;border-top-left-radius:8px;border-top-right-radius:8px;">
-            </a>
-          </td>
-        </tr>
-        <!-- Body -->
-        <tr>
-          <td style="padding:6px 10px 6px;">
-            <!-- 2-line clamp on desktop; mobile unlocks below -->
-            <div class="vrbo-title" style="font-size:16px;line-height:20px;height:auto;overflow:hidden;font-weight:bold;margin:0 0 4px;">
-              <a href="${link}" style="color:#0A66C2;text-decoration:none;">${title}</a>
-            </div>
-            <div style="font-size:13px;line-height:18px;color:#555;margin:0 0 8px;">${city}</div>
-            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-top:1px solid #eee;table-layout:fixed;">
-              <tr>
-                <td align="center" style="padding:4px 0;font-size:12px;color:#222;white-space:nowrap;"><strong>${bedrooms}</strong> BR</td>
-                <td align="center" style="padding:4px 0;font-size:12px;color:#222;border-left:1px solid #eee;border-right:1px solid #eee;white-space:nowrap;"><strong>${bathrooms}</strong> BA</td>
-                <td align="center" style="padding:4px 0;font-size:12px;color:#222;white-space:nowrap;">Sleeps <strong>${sleeps}</strong></td>
-              </tr>
-            </table>
-          </td>
-        </tr>
-      </table>
-    </td>`
-      })
-
-      return `
-<table width="100%" cellpadding="0" cellspacing="0" style="border: 1px solid #f7f7f7; border-radius: 10px; margin-top: 10px; max-width: 990px; margin: 0 auto; background-color: #f7f7f7; font-family: Arial, sans-serif;">
-  <tr>
-    <td style="padding: 5px;">
-      <h2 style="font-size: 1.625em; line-height: 1.16em; font-family: Arial, sans-serif; color: #1877F2; margin: 0; padding: 0;">Minnesota Getaways</h2>
-    </td>
-  </tr>
-  <tr>
-<tr class="row">${propertyCards}
-</tr>
-</table>
-<!--[if mso]></td></tr></table><![endif]-->
-
-<!-- Mobile helpers: stack columns + allow long titles -->
-<style>
-@media only screen and (max-width:600px){
-  .row .column{display:block !important;width:100% !important;max-width:100% !important;}
-}
-</style>
-<!-- ===== /Minnesota Vrbo ===== -->
-<br>`
-
-    } catch (error) {
-      console.error('MailerLite - Error generating Minnesota Getaways section:', error)
-      return '' // Return empty string on error to not break the newsletter
-    }
-  }
-
-  async generateDiningDealsSection(campaign: any): Promise<string> {
-    try {
-      console.log('MailerLite - Generating Dining Deals section for campaign:', campaign.id)
-
-      // Get campaign date to determine day of week
-      const campaignDate = new Date(campaign.date + 'T00:00:00')
-      const dayOfWeek = campaignDate.toLocaleDateString('en-US', { weekday: 'long' })
-
-      console.log('MailerLite - Campaign date:', campaign.date, 'Day of week:', dayOfWeek)
-
-      // Select or get existing dining deals for this campaign
-      const result = await selectDiningDealsForCampaign(campaign.id, campaignDate)
-      console.log('MailerLite - Dining deals selection result:', result.message)
-
-      if (!result.deals || result.deals.length === 0) {
-        console.log('MailerLite - No dining deals found for', dayOfWeek)
-        return ''
-      }
-
-      // Format the campaign date for display
-      const formattedDate = campaignDate.toLocaleDateString('en-US', {
-        weekday: 'long',
-        month: 'long',
-        day: 'numeric'
-      })
-
-      console.log('MailerLite - Generating HTML for', result.deals.length, 'dining deals')
-
-      // Generate deals HTML - EXACT SAME FORMAT AS PREVIEW
-      let dealsHtml = ''
-
-      result.deals.forEach((deal: any, index: number) => {
-        const isFeatured = deal.is_featured || deal.is_featured_in_campaign || index === 0
-        const businessName = deal.business_name || ''
-        const specialDescription = deal.special_description || ''
-        const specialTime = deal.special_time || ''
-        const googleProfile = deal.google_profile || '#'
-
-        if (isFeatured) {
-          // Featured deal format (first_special)
-          dealsHtml += `
-            <tr><td style='padding: 8px 16px; background:#E8F0FE; border:2px solid #1877F2; border-radius:6px;'>
-              <div style='font-weight: bold;'>${businessName}</div>
-              <div>${specialDescription}</div>
-              <div style='font-size: 14px;'><a href='${googleProfile}' style='text-decoration: underline; color: inherit;'>${specialTime}</a></div>
-            </td></tr>`
-        } else {
-          // Subsequent deals format
-          dealsHtml += `
-            <tr><td style='padding: 8px 16px 4px; font-weight: bold; border-top: 1px solid #eee;'>${businessName}</td></tr>
-            <tr><td style='padding: 0 16px 2px;'>${specialDescription}</td></tr>
-            <tr><td style='padding: 0 16px 8px; font-size: 14px;'><a href='${googleProfile}' style='text-decoration: underline; color: inherit;'>${specialTime}</a></td></tr>`
-        }
-      })
-
-      // Wrap in card format - EXACT SAME AS PREVIEW
-      const cardHtml = `
-        <table width='100%' cellpadding='0' cellspacing='0' style='table-layout: fixed; border: 1px solid #ddd; border-radius: 8px; background: #fff; font-family: Arial, sans-serif; font-size: 16px; line-height: 20px; box-shadow: 0 4px 12px rgba(0,0,0,.15);'>
-          <tr><td style='background: #F8F9FA; padding: 8px; text-align: center; font-size: 16px; font-weight: normal; color: #3C4043; border-top-left-radius: 8px; border-top-right-radius: 8px;'>${formattedDate}</td></tr>
-          ${dealsHtml}
-        </table>`
-
-      // Wrap in section format - EXACT SAME AS PREVIEW
-      const sectionHtml = `
-        <table width="100%" cellpadding="0" cellspacing="0" style="border: 1px solid #f7f7f7; border-radius: 10px; margin-top: 10px; max-width: 990px; margin: 0 auto; background-color: #f7f7f7; font-family: Arial, sans-serif;">
-          <tr>
-            <td style="padding: 5px;">
-              <h2 style="font-size: 1.625em; line-height: 1.16em; font-family: Arial, sans-serif; color: #1877F2; margin: 0; padding: 0;">Dining Deals</h2>
-            </td>
-          </tr>
-          <tr class="row">
-            <td class='column' style='padding:8px; vertical-align: top;'>
-              ${cardHtml}
-            </td>
-          </tr>
-        </table><br>`
-
-      console.log('MailerLite - Generated Dining Deals HTML, length:', sectionHtml.length)
-      return sectionHtml
-
-    } catch (error) {
-      console.error('MailerLite - Error generating Dining Deals section:', error)
-      return ''
-    }
-  }
-
-  async generateRoadWorkSection(campaign: any): Promise<string> {
-    try {
-      console.log('MailerLite - Generating Road Work section for campaign:', campaign?.id)
-
-      // Import road work functions
-      const { getRoadWorkItemsForCampaign, generateRoadWorkHTML } = await import('@/lib/road-work-manager')
-
-      // Get existing road work items for this campaign
-      const existingRoadWorkItems = await getRoadWorkItemsForCampaign(campaign.id)
-
-      if (!existingRoadWorkItems || existingRoadWorkItems.length === 0) {
-        console.log('MailerLite - No road work items found for campaign')
-        return ''
-      }
-
-      console.log(`MailerLite - Using ${existingRoadWorkItems.length} road work items for campaign`)
-
-      // Convert normalized items to the format expected by generateRoadWorkHTML
-      const itemsForHtml = existingRoadWorkItems.map(item => ({
-        road_name: item.road_name,
-        road_range: item.road_range || '',
-        city_or_township: item.city_or_township || '',
-        reason: item.reason || '',
-        start_date: item.start_date || '',
-        expected_reopen: item.expected_reopen || '',
-        source_url: item.source_url || ''
-      }))
-
-      const roadWorkHtml = generateRoadWorkHTML(itemsForHtml)
-      console.log('MailerLite - Generated Road Work HTML, length:', roadWorkHtml.length)
-
-      return roadWorkHtml
-
-    } catch (error) {
-      console.error('MailerLite - Error generating Road Work section:', error)
-      return ''
-    }
-  }
-
-  // Event notification emails
   async sendEventApprovalEmail(event: {
     title: string
     description: string

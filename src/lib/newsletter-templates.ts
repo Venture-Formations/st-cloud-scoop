@@ -2,6 +2,9 @@
 // Used by both preview route and MailerLite service for consistency
 
 import { supabaseAdmin } from './supabase'
+import { selectPropertiesForCampaign, getSelectedPropertiesForCampaign } from './vrbo-selector'
+import { selectDiningDealsForCampaign } from './dining-selector'
+import { generateDailyRoadWork, getSelectedRoadWorkItemsForCampaign, storeRoadWorkItems, generateRoadWorkHTML } from './road-work-manager'
 
 // ==================== UTILITY FUNCTIONS ====================
 
@@ -220,10 +223,10 @@ export async function generateLocalEventsSection(campaign: any): Promise<string>
           ${featuredEvent.cropped_image_url ? `
           <img src='${featuredEvent.cropped_image_url}' alt='${featuredEvent.title}' style='width:100%; max-width:400px; height:auto; object-fit:cover; border-radius:4px; border:1px solid #1877F2; display:block; margin-bottom:8px;' />
           <span style='font-size: 16px;'>${getEventEmoji(featuredEvent.title, featuredEvent.venue)} <strong>${featuredEvent.title}</strong></span><br>
-          <span style='font-size:14px;'><a href='${featuredEvent.url || '#'}' style='color: #000; text-decoration: underline;'>${formatEventTime(featuredEvent.start_date, featuredEvent.end_date)}</a>  | ${featuredEvent.venue || 'TBA'}</span>${(featuredEvent.event_summary || featuredEvent.description) ? `<br><br><span style='font-size:13px;'>${featuredEvent.event_summary || featuredEvent.description}</span>` : ''}
+          <span style='font-size:14px;'><a href='${featuredEvent.url || '#'}' style='color: #000; text-decoration: underline;'>${formatEventTime(featuredEvent.start_date, featuredEvent.end_date)}</a>  | ${featuredEvent.venue || 'TBA'}</span>${(featuredEvent.event_summary || featuredEvent.description) ? `<br><span style='font-size:13px;'>${featuredEvent.event_summary || featuredEvent.description}</span>` : ''}
           ` : `
           <span style='font-size: 16px;'>${getEventEmoji(featuredEvent.title, featuredEvent.venue)} <strong>${featuredEvent.title}</strong></span><br>
-          <span style='font-size:14px;'><a href='${featuredEvent.url || '#'}' style='color: #000; text-decoration: underline;'>${formatEventTime(featuredEvent.start_date, featuredEvent.end_date)}</a>  | ${featuredEvent.venue || 'TBA'}</span>${(featuredEvent.event_summary || featuredEvent.description) ? `<br><br><span style='font-size:13px;'>${featuredEvent.event_summary || featuredEvent.description}</span>` : ''}
+          <span style='font-size:14px;'><a href='${featuredEvent.url || '#'}' style='color: #000; text-decoration: underline;'>${formatEventTime(featuredEvent.start_date, featuredEvent.end_date)}</a>  | ${featuredEvent.venue || 'TBA'}</span>${(featuredEvent.event_summary || featuredEvent.description) ? `<br><span style='font-size:13px;'>${featuredEvent.event_summary || featuredEvent.description}</span>` : ''}
           `}
         </div>
       </td>
@@ -263,6 +266,404 @@ export async function generateLocalEventsSection(campaign: any): Promise<string>
   <a href="https://events.stcscoop.com/events/submit" style="display: inline-block; background-color: #28a745; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; margin: 0 10px; font-family: Arial, sans-serif;">Submit Your Event</a>
 </div>
 <br>`
+}
+
+// ==================== WORDLE ====================
+
+export async function generateWordleSection(campaign: any): Promise<string> {
+  try {
+    console.log('Generating Wordle section for campaign:', campaign?.id)
+
+    // Get yesterday's date from the newsletter date (since this is for "Yesterday's Wordle")
+    const newsletterDate = new Date(campaign.date + 'T00:00:00')
+    const yesterday = new Date(newsletterDate)
+    yesterday.setDate(yesterday.getDate() - 1)
+    const yesterdayDate = yesterday.toISOString().split('T')[0]
+
+    console.log('Looking for Wordle data for date:', yesterdayDate)
+
+    // Fetch Wordle data for yesterday
+    const { data: wordleData, error } = await supabaseAdmin
+      .from('wordle')
+      .select('*')
+      .eq('date', yesterdayDate)
+      .single()
+
+    if (error || !wordleData) {
+      console.log('No Wordle data found for yesterday:', yesterdayDate, 'excluding Wordle section')
+      return '' // Don't include section if no data
+    }
+
+    console.log('Found Wordle data:', wordleData.word)
+
+    // Generate the HTML using the template structure
+    const wordleCard = `<table width='100%' cellpadding='0' cellspacing='0' style='border: 1px solid #ddd; border-radius: 12px; background-color: #fff; box-shadow: 0 4px 12px rgba(0,0,0,.15); font-family: Arial, sans-serif; font-size: 16px; color: #333; line-height: 26px;'>
+      <tr><td style='background-color: #F8F9FA; text-align: center; padding: 8px; font-weight: bold; font-size: 24px; color: #3C4043; text-transform: uppercase;'>${wordleData.word}</td></tr>
+      <tr><td style='padding: 16px;'>
+        <div style='margin-bottom: 12px;'><strong>Definition:</strong> ${wordleData.definition}</div>
+        <div><strong>Interesting Fact:</strong> ${wordleData.interesting_fact}</div>
+      </td></tr>
+    </table>`
+
+    const wordleColumn = `<td class='column' style='padding:8px; vertical-align: top;'>${wordleCard}</td>`
+
+    return `
+<table width="100%" cellpadding="0" cellspacing="0" style="border: 1px solid #f7f7f7; border-radius: 10px; margin-top: 10px; max-width: 990px; margin: 0 auto; background-color: #f7f7f7; font-family: Arial, sans-serif;">
+  <tr>
+    <td style="padding: 5px;">
+      <h2 style="font-size: 1.625em; line-height: 1.16em; font-family: Arial, sans-serif; color: #1877F2; margin: 0; padding: 0;">Yesterday's Wordle</h2>
+    </td>
+  </tr>
+  <tr class="row">${wordleColumn}</tr>
+</table>
+<br>`
+
+  } catch (error) {
+    console.error('Error generating Wordle section:', error)
+    return '' // Return empty string on error to not break the newsletter
+  }
+}
+
+// ==================== MINNESOTA GETAWAYS ====================
+
+export async function generateMinnesotaGetawaysSection(campaign: any): Promise<string> {
+  try {
+    console.log('Generating Minnesota Getaways section for campaign:', campaign?.id)
+
+    // Get selected properties for this campaign (or select them if not done yet)
+    let selectedProperties = await getSelectedPropertiesForCampaign(campaign.id)
+
+    if (selectedProperties.length === 0) {
+      console.log('No properties selected yet, selecting now...')
+      const selectionResult = await selectPropertiesForCampaign(campaign.id)
+      selectedProperties = selectionResult.selected
+      console.log(selectionResult.message)
+    }
+
+    if (selectedProperties.length === 0) {
+      console.log('No VRBO properties available for Minnesota Getaways section')
+      return '' // Don't include section if no properties
+    }
+
+    console.log(`Found ${selectedProperties.length} selected properties for Minnesota Getaways`)
+
+    // Generate HTML for each property using the provided template
+    let propertyCards = ''
+
+    selectedProperties.forEach((property: any, index: number) => {
+      // Clean and validate data
+      const title = property.title || ''
+      const imageUrl = property.adjusted_image_url || property.main_image_url || ''
+      const city = property.city || ''
+      const bedrooms = property.bedrooms || 0
+      const bathrooms = property.bathrooms || 0
+      const sleeps = property.sleeps || 0
+      const link = property.link || ''
+
+      // Skip if essential data is missing
+      if (!title || !link) {
+        console.log(`Skipping property ${index + 1} - missing title or link`)
+        return
+      }
+
+      propertyCards += `
+    <!-- CARD ${index + 1} -->
+    <td class="column" width="33.33%" style="padding:8px;vertical-align:top;">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0"
+             style="table-layout:fixed;border:1px solid #ddd;border-radius:8px;background:#fff;height:100%;font-size:16px;line-height:26px;box-shadow:0 4px 12px rgba(0,0,0,.15);">
+        <!-- Image -->
+        <tr>
+          <!-- remove any gap above image -->
+          <td style="padding:0;line-height:0;font-size:0;mso-line-height-rule:exactly;border-top-left-radius:8px;border-top-right-radius:8px;">
+            <a href="${link}" style="display:block;text-decoration:none;">
+              <img src="${imageUrl}"
+                   alt="${title}, ${city}" border="0"
+                   style="display:block;width:100%;height:auto;border:0;outline:none;text-decoration:none;border-top-left-radius:8px;border-top-right-radius:8px;">
+            </a>
+          </td>
+        </tr>
+        <!-- Body -->
+        <tr>
+          <td style="padding:6px 10px 6px;">
+            <!-- 2-line clamp on desktop; mobile unlocks below -->
+            <div class="vrbo-title" style="font-size:16px;line-height:20px;height:auto;overflow:hidden;font-weight:bold;margin:0 0 4px;">
+              <a href="${link}" style="color:#0A66C2;text-decoration:none;">${title}</a>
+            </div>
+            <div style="font-size:13px;line-height:18px;color:#555;margin:0 0 8px;">${city}</div>
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-top:1px solid #eee;table-layout:fixed;">
+              <tr>
+                <td align="center" style="padding:4px 0;font-size:12px;color:#222;white-space:nowrap;"><strong>${bedrooms}</strong> BR</td>
+                <td align="center" style="padding:4px 0;font-size:12px;color:#222;border-left:1px solid #eee;border-right:1px solid #eee;white-space:nowrap;"><strong>${bathrooms}</strong> BA</td>
+                <td align="center" style="padding:4px 0;font-size:12px;color:#222;white-space:nowrap;">Sleeps <strong>${sleeps}</strong></td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+      </table>
+    </td>`
+    })
+
+    return `
+<table width="100%" cellpadding="0" cellspacing="0" style="border: 1px solid #f7f7f7; border-radius: 10px; margin-top: 10px; max-width: 990px; margin: 0 auto; background-color: #f7f7f7; font-family: Arial, sans-serif;">
+  <tr>
+    <td style="padding: 5px;">
+      <h2 style="font-size: 1.625em; line-height: 1.16em; font-family: Arial, sans-serif; color: #1877F2; margin: 0; padding: 0;">Minnesota Getaways</h2>
+    </td>
+  </tr>
+  <tr>
+<tr class="row">${propertyCards}
+</tr>
+</table>
+<!--[if mso]></td></tr></table><![endif]-->
+
+<!-- Mobile helpers: stack columns + allow long titles -->
+<style>
+@media only screen and (max-width:600px){
+  .row .column{display:block !important;width:100% !important;max-width:100% !important;}
+}
+</style>
+<!-- ===== /Minnesota Vrbo ===== -->
+<br>`
+
+  } catch (error) {
+    console.error('Error generating Minnesota Getaways section:', error)
+    return '' // Return empty string on error to not break the newsletter
+  }
+}
+
+// ==================== FEEDBACK CARD ====================
+
+export function generateFeedbackSection(campaignDate: string): string {
+  return `
+<!-- Feedback card -->
+<table width="100%" cellpadding="0" cellspacing="0" border="0" role="presentation">
+  <tr>
+    <td style="padding:5px;">
+      <!-- Feedback Box -->
+      <table width="100%" cellpadding="0" cellspacing="0" border="0" role="presentation"
+             style="width:100%; max-width:650px; margin:10px auto; background-color:#E8F0FE;
+                    border:2px solid #1877F2; border-radius:10px; font-family:Arial, sans-serif;">
+        <tr>
+          <td style="padding:14px; color:#1a1a1a; font-size:16px; line-height:1.5; text-align:center;">
+
+            <!-- Text Sections -->
+            <p style="margin:0 0 6px 0; font-weight:bold; font-size:20px; color:#1877F2; text-align:center;">Your opinion matters!</p>
+            <p style="margin:0 0 14px 0; font-size:16px; color:#333; text-align:center;">
+              Which section of today's Scoop did you find the most valuable?
+            </p>
+
+            <!-- Button Stack: 1 per row, centered -->
+            <table cellpadding="0" cellspacing="0" border="0" role="presentation" align="center" style="margin:0 auto; width:100%; max-width:350px;">
+              <tr>
+                <td style="padding:0 0 8px 0;">
+                  <a href="https://hook.us1.make.com/5tbml34rikusa9z5cg9t68qkmd1x7uu8?date=${campaignDate}&amp;choice=Weather&amp;email={$email}"
+                     style="display:block; text-decoration:none; background:#1877F2; color:#ffffff; font-weight:bold;
+                            font-size:16px; line-height:20px; padding:12px; border-radius:8px; text-align:center;">Weather</a>
+                </td>
+              </tr>
+              <tr>
+                <td style="padding:0 0 8px 0;">
+                  <a href="https://hook.us1.make.com/5tbml34rikusa9z5cg9t68qkmd1x7uu8?date=${campaignDate}&amp;choice=The%20Local%20Scoop&amp;email={$email}"
+                     style="display:block; text-decoration:none; background:#1877F2; color:#ffffff; font-weight:bold;
+                            font-size:16px; line-height:20px; padding:12px; border-radius:8px; text-align:center;">The Local Scoop</a>
+                </td>
+              </tr>
+              <tr>
+                <td style="padding:0 0 8px 0;">
+                  <a href="https://hook.us1.make.com/5tbml34rikusa9z5cg9t68qkmd1x7uu8?date=${campaignDate}&amp;choice=Local%20Events&amp;email={$email}"
+                     style="display:block; text-decoration:none; background:#1877F2; color:#ffffff; font-weight:bold;
+                            font-size:16px; line-height:20px; padding:12px; border-radius:8px; text-align:center;">Local Events</a>
+                </td>
+              </tr>
+              <tr>
+                <td style="padding:0 0 8px 0;">
+                  <a href="https://hook.us1.make.com/5tbml34rikusa9z5cg9t68qkmd1x7uu8?date=${campaignDate}&amp;choice=Dining%20Deals&amp;email={$email}"
+                     style="display:block; text-decoration:none; background:#1877F2; color:#ffffff; font-weight:bold;
+                            font-size:16px; line-height:20px; padding:12px; border-radius:8px; text-align:center;">Dining Deals</a>
+                </td>
+              </tr>
+              <tr>
+                <td style="padding:0 0 8px 0;">
+                  <a href="https://hook.us1.make.com/5tbml34rikusa9z5cg9t68qkmd1x7uu8?date=${campaignDate}&amp;choice=Yesterdays%20Wordle&amp;email={$email}"
+                     style="display:block; text-decoration:none; background:#1877F2; color:#ffffff; font-weight:bold;
+                            font-size:16px; line-height:20px; padding:12px; border-radius:8px; text-align:center;">Yesterday's Wordle</a>
+                </td>
+              </tr>
+              <tr>
+                <td style="padding:0;">
+                  <a href="https://hook.us1.make.com/5tbml34rikusa9z5cg9t68qkmd1x7uu8?date=${campaignDate}&amp;choice=Road%20Work&amp;email={$email}"
+                     style="display:block; text-decoration:none; background:#1877F2; color:#ffffff; font-weight:bold;
+                            font-size:16px; line-height:20px; padding:12px; border-radius:8px; text-align:center;">Road Work</a>
+                </td>
+              </tr>
+            </table>
+
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+</table>
+<br>`
+}
+
+// ==================== DINING DEALS ====================
+
+export async function generateDiningDealsSection(campaign: any): Promise<string> {
+  try {
+    console.log('Generating Dining Deals section for campaign:', campaign.id)
+
+    // Get campaign date to determine day of week
+    const campaignDate = new Date(campaign.date + 'T00:00:00')
+    const dayOfWeek = campaignDate.toLocaleDateString('en-US', { weekday: 'long' })
+
+    console.log('Campaign date:', campaign.date, 'Day of week:', dayOfWeek)
+
+    // Select or get existing dining deals for this campaign
+    const result = await selectDiningDealsForCampaign(campaign.id, campaignDate)
+    console.log('Dining deals selection result:', result.message)
+
+    if (!result.deals || result.deals.length === 0) {
+      console.log('No dining deals found for', dayOfWeek)
+      return ''
+    }
+
+    // Format the campaign date for display
+    const formattedDate = campaignDate.toLocaleDateString('en-US', {
+      weekday: 'long',
+      month: 'long',
+      day: 'numeric'
+    })
+
+    console.log('Generating HTML for', result.deals.length, 'dining deals')
+
+    // Generate deals HTML
+    let dealsHtml = ''
+
+    result.deals.forEach((deal: any, index: number) => {
+      const isFeatured = deal.is_featured || deal.is_featured_in_campaign || index === 0
+      const businessName = deal.business_name || ''
+      const specialDescription = deal.special_description || ''
+      const specialTime = deal.special_time || ''
+      const googleProfile = deal.google_profile || '#'
+
+      if (isFeatured) {
+        // Featured deal format (first_special)
+        dealsHtml += `
+          <tr><td style='padding: 8px 16px; background:#E8F0FE; border:2px solid #1877F2; border-radius:6px;'>
+            <div style='font-weight: bold;'>${businessName}</div>
+            <div>${specialDescription}</div>
+            <div style='font-size: 14px;'><a href='${googleProfile}' style='text-decoration: underline; color: inherit;'>${specialTime}</a></div>
+          </td></tr>`
+      } else {
+        // Subsequent deals format
+        dealsHtml += `
+          <tr><td style='padding: 8px 16px 4px; font-weight: bold; border-top: 1px solid #eee;'>${businessName}</td></tr>
+          <tr><td style='padding: 0 16px 2px;'>${specialDescription}</td></tr>
+          <tr><td style='padding: 0 16px 8px; font-size: 14px;'><a href='${googleProfile}' style='text-decoration: underline; color: inherit;'>${specialTime}</a></td></tr>`
+      }
+    })
+
+    // Wrap in card format
+    const cardHtml = `
+      <table width='100%' cellpadding='0' cellspacing='0' style='table-layout: fixed; border: 1px solid #ddd; border-radius: 8px; background: #fff; font-family: Arial, sans-serif; font-size: 16px; line-height: 20px; box-shadow: 0 4px 12px rgba(0,0,0,.15);'>
+        <tr><td style='background: #F8F9FA; padding: 8px; text-align: center; font-size: 16px; font-weight: normal; color: #3C4043; border-top-left-radius: 8px; border-top-right-radius: 8px;'>${formattedDate}</td></tr>
+        ${dealsHtml}
+      </table>`
+
+    // Wrap in section format
+    const sectionHtml = `
+      <table width="100%" cellpadding="0" cellspacing="0" style="border: 1px solid #f7f7f7; border-radius: 10px; margin-top: 10px; max-width: 990px; margin: 0 auto; background-color: #f7f7f7; font-family: Arial, sans-serif;">
+        <tr>
+          <td style="padding: 5px;">
+            <h2 style="font-size: 1.625em; line-height: 1.16em; font-family: Arial, sans-serif; color: #1877F2; margin: 0; padding: 0;">Dining Deals</h2>
+          </td>
+        </tr>
+        <tr class="row">
+          <td class='column' style='padding:8px; vertical-align: top;'>
+            ${cardHtml}
+          </td>
+        </tr>
+      </table><br>`
+
+    console.log('Generated Dining Deals HTML, length:', sectionHtml.length)
+    return sectionHtml
+
+  } catch (error) {
+    console.error('Error generating Dining Deals section:', error)
+    return ''
+  }
+}
+
+// ==================== ROAD WORK ====================
+
+export async function generateRoadWorkSection(campaign: any): Promise<string> {
+  try {
+    console.log('Generating Road Work section for campaign:', campaign?.id)
+
+    // Get SELECTED road work items for this campaign (max 9)
+    const selectedRoadWorkItems = await getSelectedRoadWorkItemsForCampaign(campaign.id)
+
+    if (selectedRoadWorkItems && selectedRoadWorkItems.length > 0) {
+      console.log(`Using ${selectedRoadWorkItems.length} selected road work items for campaign`)
+      // Convert normalized items to the format expected by generateRoadWorkHTML
+      const itemsForHtml = selectedRoadWorkItems.map((item: any) => ({
+        road_name: item.road_name,
+        road_range: item.road_range || '',
+        city_or_township: item.city_or_township || '',
+        reason: item.reason || '',
+        start_date: item.start_date || '',
+        expected_reopen: item.expected_reopen || '',
+        source_url: item.source_url || ''
+      }))
+      return generateRoadWorkHTML(itemsForHtml)
+    }
+
+    // If no existing normalized data, check legacy road_work_data table
+    const { data: legacyRoadWork } = await supabaseAdmin
+      .from('road_work_data')
+      .select('*')
+      .eq('is_active', true)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .single()
+
+    if (legacyRoadWork && legacyRoadWork.html_content) {
+      console.log(`Using existing legacy road work data (ID: ${legacyRoadWork.id})`)
+      return legacyRoadWork.html_content
+    }
+
+    // If no existing data, generate new road work data
+    console.log('No existing road work found, generating new data...')
+    const campaignDateStr = campaign.date // Format: YYYY-MM-DD
+    const campaignDate = new Date(campaignDateStr)
+
+    // Format date as "MMM D, YYYY" for AI prompt
+    const formattedDate = campaignDate.toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+      timeZone: 'UTC' // Use UTC to avoid timezone issues with date parsing
+    })
+
+    console.log('Generating road work for campaign date:', formattedDate)
+
+    // Generate road work data using AI
+    const roadWorkData = await generateDailyRoadWork(formattedDate)
+
+    // Store the items in the normalized database structure
+    if (roadWorkData.road_work_data && roadWorkData.road_work_data.length > 0) {
+      console.log(`Storing ${roadWorkData.road_work_data.length} road work items in normalized structure`)
+      await storeRoadWorkItems(roadWorkData.road_work_data, campaign.id)
+    }
+
+    console.log(`Generated road work section with ${roadWorkData.road_work_data.length} items`)
+    return roadWorkData.html_content
+
+  } catch (error) {
+    console.error('Error generating Road Work section:', error)
+    return ''
+  }
 }
 
 // ==================== FOOTER ====================

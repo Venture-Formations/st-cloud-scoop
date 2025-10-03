@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
+import { generateNewsletterHeader, generateNewsletterFooter } from '@/lib/newsletter-templates'
 
-function generateNewsletterHeader(): string {
+function generateTestHeader(): string {
   const formattedDate = new Date().toLocaleDateString('en-US', {
     weekday: 'long',
     year: 'numeric',
@@ -10,47 +11,11 @@ function generateNewsletterHeader(): string {
     day: 'numeric'
   })
 
-  return `
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>St. Cloud Scoop - ${formattedDate}</title>
-  <style>
-    body { margin: 0; padding: 20px; font-family: Arial, sans-serif; background-color: #f5f5f5; }
-    .newsletter-container { max-width: 990px; margin: 0 auto; background-color: #ffffff; }
-    /* Mobile responsive styles */
-    @media only screen and (max-width:600px){
-      .row .column{display:block !important;width:100% !important;max-width:100% !important;}
-    }
-  </style>
-</head>
-<body>
-  <div class="newsletter-container">
-    <div style="background-color: #1877F2; color: white; text-align: center; padding: 20px;">
-      <h1 style="margin: 0; font-size: 2.5em;">🍦 St. Cloud Scoop</h1>
-      <p style="margin: 10px 0 0; font-size: 1.2em;">${formattedDate}</p>
-    </div>`
+  return generateNewsletterHeader(formattedDate)
 }
 
-function generateNewsletterFooter(): string {
-  return `
-    <div style="background-color: #1877F2; padding: 8px 0; text-align: center;">
-      <a href="https://www.facebook.com/61578947310955/" target="_blank">
-        <img src="https://raw.githubusercontent.com/VFDavid/STCScoop/refs/heads/main/facebook_light.png" alt="Facebook" width="24" height="24" style="border: none; display: inline-block;">
-      </a>
-    </div>
-    <div style="font-family: Arial, sans-serif; font-size: 12px; color: #777; text-align: center; padding: 20px 10px; border-top: 1px solid #ccc; background-color: #ffffff;">
-      <p style="margin: 0;text-align: center;">You're receiving this email because you subscribed to <strong>St. Cloud Scoop</strong>.</p>
-      <p style="margin: 5px 0 0;text-align: center;">
-        <a href="#unsubscribe" style='text-decoration: underline;'>Unsubscribe</a>
-      </p>
-      <p style="margin: 5px;text-align: center;">©2025 Venture Formations LLC, all rights reserved</p>
-    </div>
-  </div>
-</body>
-</html>`
+function generateTestFooter(): string {
+  return generateNewsletterFooter()
 }
 
 async function fetchSectionHtml(sectionName: string): Promise<string> {
@@ -99,8 +64,8 @@ export async function GET(request: NextRequest) {
     // Since we can't easily call the other endpoints from here due to auth,
     // we'll create a simplified version that includes test content for all sections
 
-    const header = generateNewsletterHeader()
-    const footer = generateNewsletterFooter()
+    const header = generateTestHeader()
+    const footer = generateTestFooter()
 
     // Sample content for each section
     const sampleArticlesSection = `

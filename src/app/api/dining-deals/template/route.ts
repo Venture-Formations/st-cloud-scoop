@@ -16,7 +16,7 @@ export async function GET() {
   // Sample rows with example data (special_description max 65 chars)
   const sampleRows = [
     [
-      'The Local Eatery',
+      'Example - The Local Eatery',
       '123 Main St, St. Cloud, MN 56301',
       '1234567890123456789',
       'Monday',
@@ -26,7 +26,7 @@ export async function GET() {
       'FALSE'
     ],
     [
-      'Downtown Bistro',
+      'Example - Downtown Bistro',
       '456 1st Ave S, St. Cloud, MN 56301',
       '9876543210987654321',
       'Tuesday',
@@ -37,24 +37,10 @@ export async function GET() {
     ]
   ]
 
-  // Helper note rows explaining the template
-  const noteRows = [
-    [''],
-    ['NOTES:'],
-    ['- day_of_week must be: Monday, Tuesday, Wednesday, Thursday, Friday, Saturday, or Sunday'],
-    ['- special_description has a 65 character limit'],
-    ['- is_featured: Use TRUE or FALSE (checkbox in Excel/Sheets)'],
-    ['- paid_placement: Use TRUE or FALSE (checkbox in Excel/Sheets) - guarantees selection'],
-    ['- Find Google CIDs at https://cidfinder.com/'],
-    ['- All uploaded deals are set to active automatically']
-  ]
-
-  // Combine headers and sample rows, then add notes
+  // Combine headers and sample rows
   const csvContent = [
-    // Make headers bold by wrapping in special formatting (works in some CSV readers)
     headers.map(h => `"${h}"`).join(','),
-    ...sampleRows.map(row => row.map(cell => `"${cell}"`).join(',')),
-    ...noteRows.map(row => row.map(cell => `"${cell}"`).join(','))
+    ...sampleRows.map(row => row.map(cell => `"${cell}"`).join(','))
   ].join('\n')
 
   // Return CSV file

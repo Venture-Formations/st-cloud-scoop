@@ -17,7 +17,7 @@ export async function GET() {
   // Sample rows with example data
   const sampleRows = [
     [
-      'Cozy Lakefront Cabin - Perfect for Families',
+      'Example - Cozy Lakefront Cabin',
       'https://www.example.com/images/cabin.jpg',
       'St. Cloud',
       '3',
@@ -28,7 +28,7 @@ export async function GET() {
       'Local'
     ],
     [
-      'Modern Downtown Loft with Amazing Views',
+      'Example - Modern Downtown Loft',
       'https://www.example.com/images/loft.jpg',
       'Minneapolis',
       '2',
@@ -39,7 +39,7 @@ export async function GET() {
       'Greater'
     ],
     [
-      'Charming Cottage Near Lake George',
+      'Example - Charming Cottage',
       'https://www.example.com/images/cottage.jpg',
       'Sartell',
       '2',

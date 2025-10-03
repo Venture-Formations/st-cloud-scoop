@@ -90,6 +90,15 @@ export async function POST(request: NextRequest) {
         const values = parseCSVLine(lines[i])
         if (values.length === 0) continue // Skip empty lines
 
+        // Skip example rows (check if any field contains "example" case-insensitive)
+        const isExampleRow = values.some(value =>
+          value && value.toLowerCase().includes('example')
+        )
+        if (isExampleRow) {
+          results.skipped++
+          continue
+        }
+
         // Extract data from CSV row
         const rowData: any = {}
         for (const [dbField, index] of Object.entries(columnIndices)) {

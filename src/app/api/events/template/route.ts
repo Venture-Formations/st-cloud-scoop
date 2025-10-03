@@ -21,8 +21,8 @@ export async function GET() {
   // Sample rows with example data (separate date and time)
   const sampleRows = [
     [
-      'event-001',
-      'St. Cloud Farmers Market',
+      'example-001',
+      'Example - St. Cloud Farmers Market',
       'Fresh local produce, baked goods, and handmade crafts every Saturday morning',
       '2025-10-04',
       '09:00:00',
@@ -36,8 +36,8 @@ export async function GET() {
       'FALSE'
     ],
     [
-      'event-002',
-      'Live Music at The Local',
+      'example-002',
+      'Example - Live Music at The Local',
       'Join us for an evening of acoustic folk music featuring local artists',
       '2025-10-05',
       '19:00:00',
@@ -46,29 +46,16 @@ export async function GET() {
       'The Local Music Venue',
       '456 2nd Ave N, St. Cloud, MN 56301',
       'https://www.example.com/live-music',
-      '',
+      'https://www.example.com/images/concert.jpg',
       'TRUE',
       'FALSE'
     ]
   ]
 
-  // Helper note rows explaining the template
-  const noteRows = [
-    [''],
-    ['NOTES:'],
-    ['- external_id: Unique identifier for the event (any format)'],
-    ['- start_date/end_date: Use format YYYY-MM-DD (e.g., 2025-10-04)'],
-    ['- start_time/end_time: Use format HH:MM:SS in 24-hour time (e.g., 09:00:00 for 9 AM, 19:00:00 for 7 PM)'],
-    ['- featured: Use TRUE or FALSE (checkbox in Excel/Sheets)'],
-    ['- paid_placement: Use TRUE or FALSE (checkbox in Excel/Sheets) - guarantees selection'],
-    ['- All uploaded events are set to active automatically']
-  ]
-
-  // Combine headers and sample rows, then add notes
+  // Combine headers and sample rows
   const csvContent = [
     headers.map(h => `"${h}"`).join(','),
-    ...sampleRows.map(row => row.map(cell => `"${cell}"`).join(',')),
-    ...noteRows.map(row => row.map(cell => `"${cell}"`).join(','))
+    ...sampleRows.map(row => row.map(cell => `"${cell}"`).join(','))
   ].join('\n')
 
   // Return CSV file

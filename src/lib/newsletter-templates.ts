@@ -72,7 +72,7 @@ export function getEventEmoji(title: string, venue: string): string {
   if (titleLower.includes('choir') || titleLower.includes('singing')) return '🎵'
 
   // Food & Drink
-  if (titleLower.includes('meat raffle') || titleLower.includes('raffle')) return '🥩'
+  if (titleLower.includes('meat raffle') || titleLower.includes('meat')) return '🥩'
   if (titleLower.includes('farmers') || titleLower.includes('market')) return '🥕'
   if (titleLower.includes('food') || titleLower.includes('dinner') || titleLower.includes('lunch') || titleLower.includes('breakfast') || titleLower.includes('brunch')) return '🍽️'
   if (titleLower.includes('beer') || titleLower.includes('oktoberfest') || titleLower.includes('brewing') || titleLower.includes('brewery')) return '🍺'
@@ -125,6 +125,7 @@ export function getEventEmoji(title: string, venue: string): string {
 
   // Community & Education
   if (titleLower.includes('pride')) return '🏳️‍🌈'
+  if (titleLower.includes('raffle')) return '🎟️'
   if (titleLower.includes('volunteer') || titleLower.includes('fundraiser') || titleLower.includes('charity')) return '🤝'
   if (titleLower.includes('class') || titleLower.includes('workshop') || titleLower.includes('seminar')) return '🎓'
   if (titleLower.includes('meeting') || titleLower.includes('conference')) return '💼'

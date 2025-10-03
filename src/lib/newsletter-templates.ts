@@ -53,21 +53,22 @@ export function getEventEmoji(title: string, venue: string): string {
 // ==================== HEADER ====================
 
 export function generateNewsletterHeader(formattedDate: string): string {
-  return `<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>St. Cloud Scoop Newsletter</title>
-</head>
-<body style="margin: 0; padding: 0; background-color: #f4f4f4; font-family: Arial, sans-serif;">
-  <div style="background-color: #f4f4f4; padding: 20px 10px;">
-    <div style="max-width: 990px; margin: 0 auto;">
-      <div style="text-align: center; padding: 20px; background-color: #ffffff; border-radius: 10px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);">
-        <img src="https://raw.githubusercontent.com/VFDavid/STCScoop/refs/heads/main/STCSCOOP_Logo_824X148_clear.png" alt="St. Cloud Scoop" style="width: 100%; max-width: 500px; height: auto; margin-bottom: 2px;">
-        <p style="font-size: 20px; color: #333; margin: 10px 0 0;">${formattedDate}</p>
-      </div>
-`
+  return `<html>
+<body style='margin:0!important;padding:0!important;background-color:#f7f7f7;'>
+   <div style='width:100%;margin:0 auto;padding:10px;background-color:#f7f7f7;box-sizing:border-box;overflow-x:auto;'>
+     <div style='width:100%;max-width:990px;margin:0 auto;padding:5px;text-align:right;font-weight:bold;'>
+       <a href='{$url}' style='color:#000;text-decoration:underline;'>View Online</a>&nbsp;|&nbsp;
+       <a href='https://stcscoop.com/' style='color:#000;text-decoration:underline;'>Sign Up</a>&nbsp;|&nbsp;
+       <a href='{$forward}' style='color:#000;text-decoration:underline;'>Share</a>
+     </div>
+     <div style='width:100%;max-width:990px;margin:0 auto;padding:0px;'>
+       <div style='font-family:Arial,sans-serif;background-color:#1877F2;text-align:center;border-radius:12px;border:1px solid #333;'>
+         <img alt='St. Cloud Scoop' src='https://raw.githubusercontent.com/VFDavid/STCScoop/refs/heads/main/STCSCOOP_Logo_824X148_clear.png' style='width:100%;max-width:500px;height:auto;margin-bottom:2px;'/>
+         <div style='color:#fff;font-size:16px;font-weight:bold;padding:0 0 5px;'>${formattedDate}</div>
+       </div>
+     </div>
+   </div>
+<br>`
 }
 
 // ==================== LOCAL SCOOP (ARTICLES) ====================

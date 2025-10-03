@@ -10,6 +10,7 @@ export async function GET() {
     'bathrooms',
     'sleeps',
     'link',
+    'non_tracked_link',
     'listing_type'
   ]
 
@@ -22,6 +23,7 @@ export async function GET() {
       '3',
       '2',
       '8',
+      'https://vrbo.com/affiliates/2517038.qZzyrnV',
       'https://www.vrbo.com/12345678',
       'Local'
     ],
@@ -32,42 +34,27 @@ export async function GET() {
       '2',
       '1',
       '4',
-      'https://www.vrbo.com/87654321',
+      'https://vrbo.com/affiliates/3428176.pRxMnQa',
+      '',
       'Greater'
     ],
     [
       'Charming Cottage Near Lake George',
-      '',
+      'https://www.example.com/images/cottage.jpg',
       'Sartell',
       '2',
       '1.5',
       '6',
-      'https://www.vrbo.com/11223344',
+      'https://vrbo.com/affiliates/1829452.vKlWpTn',
+      '',
       'Local'
     ]
   ]
 
-  // Helper note rows explaining the template
-  const noteRows = [
-    [''],
-    ['NOTES:'],
-    ['- title: Name of the property (required)'],
-    ['- main_image_url: Direct URL to property main image (optional, will be resized and hosted on GitHub)'],
-    ['- city: City where property is located (optional)'],
-    ['- bedrooms: Number of bedrooms (numeric, optional - use decimals like 2.5 if needed)'],
-    ['- bathrooms: Number of bathrooms (numeric, optional - use decimals like 1.5 if needed)'],
-    ['- sleeps: Maximum number of guests (numeric, optional)'],
-    ['- link: VRBO listing URL (required - will be converted to tracked affiliate link)'],
-    ['- listing_type: Use "Local" or "Greater" (required - determines which section listing appears in)'],
-    ['- All uploaded listings are set to active automatically'],
-    ['- Images will be automatically resized to newsletter format and hosted on GitHub']
-  ]
-
-  // Combine headers and sample rows, then add notes
+  // Combine headers and sample rows
   const csvContent = [
     headers.map(h => `"${h}"`).join(','),
-    ...sampleRows.map(row => row.map(cell => `"${cell}"`).join(',')),
-    ...noteRows.map(row => row.map(cell => `"${cell}"`).join(','))
+    ...sampleRows.map(row => row.map(cell => `"${cell}"`).join(','))
   ].join('\n')
 
   // Return CSV file

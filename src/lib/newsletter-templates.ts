@@ -233,7 +233,7 @@ export async function generateLocalEventsSection(campaign: any): Promise<string>
       return `
     <tr>
       <td style='padding:0; border-top: 1px solid #eee;'>
-        <div style='padding:8px 16px; background:#E8F0FE; border:2px solid #1877F2; border-radius:6px;'>
+        <div style='padding:8px 16px; background:#E8F0FE; border:2px solid #1877F2; border-radius:6px; margin-bottom:8px;'>
           ${featuredEvent.cropped_image_url ? `
           <img src='${featuredEvent.cropped_image_url}' alt='${featuredEvent.title}' style='width:100%; max-width:400px; height:auto; object-fit:cover; border-radius:4px; border:1px solid #1877F2; display:block; margin-bottom:8px;' />
           <span style='font-size: 16px;'>${getEventEmoji(featuredEvent.title, featuredEvent.venue)} <strong>${featuredEvent.title}</strong></span><br>

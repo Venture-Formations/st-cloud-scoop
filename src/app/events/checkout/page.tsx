@@ -377,7 +377,7 @@ export default function CheckoutPage() {
                 disabled={loading}
                 className="w-full bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white px-6 py-3 rounded-md font-medium text-lg"
               >
-                {loading ? 'Processing...' : calculateTotal() === 0 ? 'Submit Events' : 'Pay with Stripe'}
+                {loading ? 'Processing...' : calculateTotal() === 0 ? 'Submit Events' : 'Continue to Payment'}
               </button>
             </div>
           </div>

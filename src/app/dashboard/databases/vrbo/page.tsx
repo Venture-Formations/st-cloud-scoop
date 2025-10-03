@@ -226,28 +226,6 @@ export default function VrboDatabasePage() {
           </div>
         </div>
 
-        {/* Download Template Section */}
-        <div className="bg-blue-50 border border-blue-200 rounded-md p-4 mb-6">
-          <div className="flex items-start justify-between">
-            <div className="flex-1">
-              <h4 className="text-sm font-medium text-blue-900 mb-1">Need a template?</h4>
-              <p className="text-xs text-blue-700">
-                Download our CSV template to easily bulk upload VRBO listings with proper formatting.
-              </p>
-            </div>
-            <a
-              href="/api/vrbo/template"
-              download
-              className="ml-4 inline-flex items-center px-3 py-1.5 text-xs font-medium text-blue-700 bg-blue-100 border border-blue-300 rounded-md hover:bg-blue-200 transition-colors"
-            >
-              <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-              </svg>
-              Download Template
-            </a>
-          </div>
-        </div>
-
         {/* Stats */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
           <div className="bg-white p-4 rounded-lg shadow">
@@ -815,6 +793,28 @@ function CsvUploadForm({ onClose, onSuccess }: { onClose: () => void; onSuccess:
           {error}
         </div>
       )}
+
+      {/* Download Template Section */}
+      <div className="bg-blue-50 border border-blue-200 rounded-md p-4">
+        <div className="flex items-start justify-between">
+          <div className="flex-1">
+            <h4 className="text-sm font-medium text-blue-900 mb-1">Need a template?</h4>
+            <p className="text-xs text-blue-700">
+              Download our CSV template to easily bulk upload VRBO listings with proper formatting.
+            </p>
+          </div>
+          <a
+            href="/api/vrbo/template"
+            download
+            className="ml-4 inline-flex items-center px-3 py-1.5 text-xs font-medium text-blue-700 bg-blue-100 border border-blue-300 rounded-md hover:bg-blue-200 transition-colors"
+          >
+            <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+            </svg>
+            Download Template
+          </a>
+        </div>
+      </div>
 
       <form onSubmit={handleSubmit}>
         <div>

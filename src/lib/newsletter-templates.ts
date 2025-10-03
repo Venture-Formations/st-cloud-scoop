@@ -92,7 +92,7 @@ export function getEventEmoji(title: string, venue: string): string {
   if (titleLower.includes('golf')) return '⛳'
   if (titleLower.includes('tennis')) return '🎾'
   if (titleLower.includes('volleyball')) return '🏐'
-  if (titleLower.includes('run') || titleLower.includes('5k') || titleLower.includes('race') || titleLower.includes('marathon')) return '🏃‍♂️'
+  if (titleLower.includes('run') || titleLower.includes('5k') || titleLower.includes('race') || titleLower.includes('marathon')) return '🏃'
   if (titleLower.includes('bike') || titleLower.includes('cycling')) return '🚴'
   if (titleLower.includes('swim') || titleLower.includes('pool')) return '🏊'
   if (titleLower.includes('skate') || titleLower.includes('skating')) return '🛼'

@@ -238,10 +238,10 @@ export async function generateLocalEventsSection(campaign: any): Promise<string>
           ${featuredEvent.cropped_image_url ? `
           <img src='${featuredEvent.cropped_image_url}' alt='${featuredEvent.title}' style='width:100%; max-width:400px; height:auto; object-fit:cover; border-radius:4px; border:1px solid #1877F2; display:block; margin-bottom:8px;' />
           <span style='font-size: 16px;'>${getEventEmoji(featuredEvent.title, featuredEvent.venue)} <strong>${featuredEvent.title}</strong></span><br>
-          <span style='font-size:14px;'><a href='${eventUrl}' style='color: #000; text-decoration: underline;'>${formatEventTime(featuredEvent.start_date, featuredEvent.end_date)}</a>  | ${featuredEvent.venue || 'TBA'}</span>${(featuredEvent.event_summary || featuredEvent.description) ? `<br><span style='font-size:13px;'>${featuredEvent.event_summary || featuredEvent.description}</span>` : ''}<br><br>
+          <span style='font-size:14px;'><a href='${eventUrl}' style='color: #000; text-decoration: underline;'>${formatEventTime(featuredEvent.start_date, featuredEvent.end_date)}</a>  | ${featuredEvent.venue || 'TBA'}</span><br><br>${(featuredEvent.event_summary || featuredEvent.description) ? `<span style='font-size:13px;'>${featuredEvent.event_summary || featuredEvent.description}</span><br>` : ''}
           ` : `
           <span style='font-size: 16px;'>${getEventEmoji(featuredEvent.title, featuredEvent.venue)} <strong>${featuredEvent.title}</strong></span><br>
-          <span style='font-size:14px;'><a href='${eventUrl}' style='color: #000; text-decoration: underline;'>${formatEventTime(featuredEvent.start_date, featuredEvent.end_date)}</a>  | ${featuredEvent.venue || 'TBA'}</span>${(featuredEvent.event_summary || featuredEvent.description) ? `<br><span style='font-size:13px;'>${featuredEvent.event_summary || featuredEvent.description}</span>` : ''}<br><br>
+          <span style='font-size:14px;'><a href='${eventUrl}' style='color: #000; text-decoration: underline;'>${formatEventTime(featuredEvent.start_date, featuredEvent.end_date)}</a>  | ${featuredEvent.venue || 'TBA'}</span><br><br>${(featuredEvent.event_summary || featuredEvent.description) ? `<span style='font-size:13px;'>${featuredEvent.event_summary || featuredEvent.description}</span><br>` : ''}
           `}
         </div>
       </td>

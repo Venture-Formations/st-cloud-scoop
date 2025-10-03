@@ -33,21 +33,28 @@ async function getWordleAnswer(dateStr: string): Promise<string | null> {
     const html = await response.text()
     console.log(`Fetched HTML, length: ${html.length}`)
 
-    // Load HTML into cheerio for parsing
-    const $ = cheerio.load(html)
+    // Look for answer directly in HTML (before cheerio parsing to preserve entities)
+    // Pattern 1: "Drumroll, please — it's SPASM" or "Drumroll, please &mdash; it's SPASM"
+    let match = html.match(/Drumroll,?\s*please\s*[—–\-&mdash;]+\s*it'?s\s*<strong>([A-Z]{5})<\/strong>/i)
+    if (match) {
+      const word = match[1].toUpperCase()
+      console.log(`Found via Drumroll HTML pattern: ${word}`)
+      return word
+    }
 
-    // Strategy 1: Look for "Drumroll, please — it's WORD" pattern in text
+    // Load HTML into cheerio for parsing (fallback methods)
+    const $ = cheerio.load(html)
     const text = $('body').text()
 
-    // Pattern 1: "Drumroll, please — it's SPASM" (with em dash)
-    let match = text.match(/Drumroll,?\s*please\s*[—–-]\s*it'?s\s+([A-Z]{5})/i)
+    // Pattern 2: "Drumroll, please — it's SPASM" in plain text (with em dash)
+    match = text.match(/Drumroll,?\s*please\s*[—–-]\s*it'?s\s+([A-Z]{5})/i)
     if (match) {
       const word = match[1].toUpperCase()
       console.log(`Found via Drumroll pattern: ${word}`)
       return word
     }
 
-    // Pattern 2: "it's SPASM" (standalone)
+    // Pattern 3: "it's SPASM" (standalone)
     match = text.match(/it'?s\s+([A-Z]{5})[.\s]/i)
     if (match) {
       const word = match[1].toUpperCase()

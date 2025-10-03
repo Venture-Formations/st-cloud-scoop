@@ -45,7 +45,7 @@ WRONG format: spasm`
     const result = await callPerplexity(prompt, {
       model: 'sonar-pro',
       temperature: 0.0, // Even lower temperature for consistency
-      searchContextSize: 'large' // More context for accuracy
+      searchContextSize: 'high' // More context for accuracy
     })
 
     const cleanResult = result.trim().toUpperCase()

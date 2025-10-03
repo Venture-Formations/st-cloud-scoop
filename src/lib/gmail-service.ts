@@ -27,6 +27,7 @@ export class GmailService {
     venue: string | null
     address: string | null
     url: string | null
+    website: string | null
     submitter_email: string
     submitter_name: string
   }) {
@@ -101,10 +102,10 @@ export class GmailService {
         </div>
         ` : ''}
 
-        ${event.url ? `
+        ${event.website ? `
         <div class="detail-row">
-          <span class="label">Event URL:</span><br>
-          <a href="${event.url}" style="color: #2563eb;">${event.url}</a>
+          <span class="label">Website:</span><br>
+          <a href="${event.website}" style="color: #2563eb;">${event.website}</a>
         </div>
         ` : ''}
       </div>

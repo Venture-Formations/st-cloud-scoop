@@ -51,6 +51,7 @@ export async function POST(
         venue: event.venue,
         address: event.address,
         url: event.url,
+        website: event.website,
         submitter_email: event.submitter_email,
         submitter_name: event.submitter_name || 'Event Submitter'
       })

@@ -14,6 +14,7 @@ export async function GET(request: NextRequest) {
       venue: 'Test Venue',
       address: '123 Main St, St. Cloud, MN 56301',
       url: 'https://st-cloud-scoop.vercel.app',
+      website: 'https://st-cloud-scoop.vercel.app',
       submitter_email: request.nextUrl.searchParams.get('email') || 'test@example.com',
       submitter_name: 'Test User'
     }

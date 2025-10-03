@@ -9,65 +9,75 @@ function getPuzzleNumber(targetDate: string): number {
   return days // days_since_launch matches the displayed puzzle number
 }
 
-// Fetch Wordle answer using improved Perplexity search
+// Fetch Wordle answer by directly scraping Tom's Guide HTML
 async function getWordleAnswer(dateStr: string): Promise<string | null> {
   try {
     const number = getPuzzleNumber(dateStr)
     console.log(`Looking for Wordle #${number} for date ${dateStr}`)
 
-    // Use Perplexity for web search with improved prompt
-    const { callPerplexity } = await import('./perplexity')
+    // Fetch Tom's Guide page directly
+    const url = 'https://www.tomsguide.com/news/what-is-todays-wordle-answer'
+    console.log(`Fetching from: ${url}`)
 
-    // Format date for search
-    const dateObj = new Date(dateStr)
-    const monthName = dateObj.toLocaleDateString('en-US', { month: 'long' })
-    const day = dateObj.getDate()
-    const year = dateObj.getFullYear()
-
-    const prompt = `Find TODAY's Wordle answer from Tom's Guide for ${monthName} ${day}, ${year} (puzzle #${number}).
-
-Go to: https://www.tomsguide.com/news/what-is-todays-wordle-answer
-
-Look for this exact text pattern: "Drumroll, please — it's [WORD]" or "it's [WORD]"
-
-The answer appears after phrases like:
-- "Drumroll, please — it's SPASM"
-- "The answer is SPASM"
-- "Today's Wordle answer is SPASM"
-
-STRICT RULES:
-1. Return ONLY the 5-letter word in UPPERCASE
-2. No explanations, no puzzle numbers, no punctuation
-3. Must be exactly 5 letters (A-Z only)
-4. The word comes AFTER "it's" or "answer is"
-
-CORRECT: SPASM
-WRONG: The answer is SPASM
-WRONG: #${number} SPASM
-WRONG: spasm`
-
-    console.log(`Using Perplexity to find Wordle #${number}`)
-
-    const result = await callPerplexity(prompt, {
-      model: 'sonar-pro',
-      temperature: 0.0, // Even lower temperature for consistency
-      searchContextSize: 'high' // More context for accuracy
+    const response = await fetch(url, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+      }
     })
 
-    const cleanResult = result.trim().toUpperCase()
-
-    // Extract only valid 5-letter words
-    const wordMatch = cleanResult.match(/\b([A-Z]{5})\b/)
-    if (wordMatch) {
-      console.log(`Perplexity found Wordle #${number}: ${wordMatch[1]}`)
-      return wordMatch[1]
+    if (!response.ok) {
+      console.error(`Failed to fetch Tom's Guide: ${response.status}`)
+      return null
     }
 
-    console.log(`No valid Wordle answer found for #${number}. Raw response: ${cleanResult}`)
+    const html = await response.text()
+    console.log(`Fetched HTML, length: ${html.length}`)
+
+    // Load HTML into cheerio for parsing
+    const $ = cheerio.load(html)
+
+    // Strategy 1: Look for "Drumroll, please — it's WORD" pattern in text
+    const text = $('body').text()
+
+    // Pattern 1: "Drumroll, please — it's SPASM" (with em dash)
+    let match = text.match(/Drumroll,?\s*please\s*[—–-]\s*it'?s\s+([A-Z]{5})/i)
+    if (match) {
+      const word = match[1].toUpperCase()
+      console.log(`Found via Drumroll pattern: ${word}`)
+      return word
+    }
+
+    // Pattern 2: "it's SPASM" (standalone)
+    match = text.match(/it'?s\s+([A-Z]{5})[.\s]/i)
+    if (match) {
+      const word = match[1].toUpperCase()
+      console.log(`Found via "it's" pattern: ${word}`)
+      return word
+    }
+
+    // Pattern 3: "The answer is SPASM"
+    match = text.match(/answer\s+is\s+([A-Z]{5})/i)
+    if (match) {
+      const word = match[1].toUpperCase()
+      console.log(`Found via "answer is" pattern: ${word}`)
+      return word
+    }
+
+    // Pattern 4: Look for puzzle number followed by answer
+    const puzzlePattern = new RegExp(`#?${number}[\\s:,.-]+(?:is|answer)?\\s*([A-Z]{5})`, 'i')
+    match = text.match(puzzlePattern)
+    if (match) {
+      const word = match[1].toUpperCase()
+      console.log(`Found via puzzle # pattern: ${word}`)
+      return word
+    }
+
+    console.log(`No Wordle answer found in Tom's Guide HTML for puzzle #${number}`)
+    console.log('Text sample:', text.substring(0, 500))
     return null
 
   } catch (error) {
-    console.error('Error finding Wordle answer with Perplexity:', error)
+    console.error('Error scraping Tom\'s Guide:', error)
     return null
   }
 }

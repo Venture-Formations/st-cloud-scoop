@@ -261,6 +261,7 @@ export interface Event {
   venue: string | null
   address: string | null
   url: string | null
+  website: string | null
   image_url: string | null
   original_image_url: string | null
   cropped_image_url: string | null

@@ -13,6 +13,7 @@ export async function GET() {
     'venue',
     'address',
     'url',
+    'website',
     'image_url',
     'featured',
     'paid_placement'
@@ -30,7 +31,8 @@ export async function GET() {
       '13:00:00',
       'Downtown Square',
       '123 Main St, St. Cloud, MN 56301',
-      'https://www.example.com/farmers-market',
+      '',
+      'https://www.farmersmarket.example.com',
       'https://www.example.com/images/market.jpg',
       'FALSE',
       'FALSE'
@@ -45,7 +47,8 @@ export async function GET() {
       '22:00:00',
       'The Local Music Venue',
       '456 2nd Ave N, St. Cloud, MN 56301',
-      'https://www.example.com/live-music',
+      '',
+      'https://www.thelocalmusicvenue.example.com',
       'https://www.example.com/images/concert.jpg',
       'TRUE',
       'FALSE'

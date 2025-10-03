@@ -50,6 +50,8 @@ export async function POST(request: NextRequest) {
       'address': 'address',
       'URL': 'url',
       'url': 'url',
+      'Website': 'website',
+      'website': 'website',
       'Image URL': 'image_url',
       'image_url': 'image_url',
       'Featured': 'featured',

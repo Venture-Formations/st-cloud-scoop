@@ -3,10 +3,10 @@ import * as cheerio from 'cheerio'
 
 // Map calendar date to Wordle puzzle number
 function getPuzzleNumber(targetDate: string): number {
-  const start = new Date("2021-06-19") // NYT Wordle #1 was June 19, 2021
+  const start = new Date("2021-06-19") // NYT Wordle launch date (June 19, 2021)
   const target = new Date(targetDate)
   const days = Math.floor((target.getTime() - start.getTime()) / 86_400_000)
-  return 1 + days
+  return days // days_since_launch matches the displayed puzzle number
 }
 
 // Fetch Wordle answer using improved Perplexity search
@@ -24,21 +24,27 @@ async function getWordleAnswer(dateStr: string): Promise<string | null> {
     const day = dateObj.getDate()
     const year = dateObj.getFullYear()
 
-    const prompt = `Find the Wordle answer for puzzle #${number} (${monthName} ${day}, ${year}) from Tom's Guide.
+    const prompt = `Find TODAY's Wordle answer from Tom's Guide for ${monthName} ${day}, ${year} (puzzle #${number}).
 
-REQUIRED SOURCE: https://www.tomsguide.com/news/what-is-todays-wordle-answer
+Go to: https://www.tomsguide.com/news/what-is-todays-wordle-answer
 
-CRITICAL INSTRUCTIONS:
-1. Go to Tom's Guide Wordle answer page (the URL above)
-2. Find the answer for Wordle #${number}
-3. Return ONLY the 5-letter answer word in UPPERCASE
-4. Do NOT include any other text, numbers, explanations, or punctuation
-5. If Tom's Guide doesn't have #${number} yet, return nothing
+Look for this exact text pattern: "Drumroll, please — it's [WORD]" or "it's [WORD]"
 
-CORRECT format: SPASM
-WRONG format: The answer is SPASM
-WRONG format: #${number} SPASM
-WRONG format: spasm`
+The answer appears after phrases like:
+- "Drumroll, please — it's SPASM"
+- "The answer is SPASM"
+- "Today's Wordle answer is SPASM"
+
+STRICT RULES:
+1. Return ONLY the 5-letter word in UPPERCASE
+2. No explanations, no puzzle numbers, no punctuation
+3. Must be exactly 5 letters (A-Z only)
+4. The word comes AFTER "it's" or "answer is"
+
+CORRECT: SPASM
+WRONG: The answer is SPASM
+WRONG: #${number} SPASM
+WRONG: spasm`
 
     console.log(`Using Perplexity to find Wordle #${number}`)
 

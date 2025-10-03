@@ -376,16 +376,43 @@ export async function generateDailyRoadWork(campaignDate?: string): Promise<Road
 
     let searchResults = ''
 
-    // Use the OpenAI Responses API with web search as provided by the user
-    console.log('🔍 Using OpenAI Responses API with web search for real road work data...')
+    // Use Perplexity for real web search and data extraction
+    console.log('🔍 Using Perplexity to search for real road work data...')
+    const { callPerplexity } = await import('./perplexity')
 
-    // Convert target date to the format expected by the user's prompts
+    // Convert target date to the format expected by the prompts
     const formattedDate = new Date(targetDate).toISOString().split('T')[0] // Convert to YYYY-MM-DD
 
-    const systemPrompt = `You are a local traffic researcher with web search capabilities. Search for active road closures and construction in the St. Cloud, Minnesota area.
+    const searchPrompt = `Find CURRENT and ACTIVE road, lane, or bridge closures, detours, or traffic restrictions in effect on ${formattedDate} within 15 miles of St. Cloud, Minnesota (ZIP 56303).
 
-Target Date: ${formattedDate}
-Location: Within 15 miles of St. Cloud, MN (ZIP 56303)
+CRITICAL: Search these OFFICIAL government sources for REAL road work data:
+- https://www.dot.state.mn.us/d3/ (MnDOT District 3)
+- https://www.stearnscountymn.gov/185/Public-Works
+- https://www.ci.stcloud.mn.us/307/Road-Construction-Projects
+- https://www.cityofsartell.com/engineering/
+- https://www.ci.waitepark.mn.us/
+- https://ci.sauk-rapids.mn.us/
+- Local news: WJON Traffic, St. Cloud Times
+
+ONLY include road work that:
+- Is currently active or will be active on ${formattedDate}
+- Has CONFIRMED specific dates (not "TBD" or vague ranges)
+- Is from an official government or news source
+
+Return ONLY a JSON array with 6-9 real entries:
+[
+  {
+    "road_name": "[exact road name from source]",
+    "road_range": "[exact range from source, e.g., '2nd St NE to 7th St NE']",
+    "city_or_township": "[exact city from source]",
+    "reason": "[exact reason from source]",
+    "start_date": "[exact date like 'Oct 6' or 'May 1']",
+    "expected_reopen": "[exact date like 'Oct 20' or 'Nov 30']",
+    "source_url": "[actual URL where this info was found]"
+  }
+]
+
+CRITICAL: Return ONLY real, verified road work from actual sources. Better to return 3-4 confirmed items than 9 made-up items.
 
 Search these official sources:
 - MnDOT District 3: https://www.dot.state.mn.us/d3/
@@ -432,63 +459,39 @@ CRITICAL REQUIREMENTS:
 - Return ONLY the JSON array, starting with [ and ending with ]
 - No markdown formatting, no explanations`
 
-    // Try the web search approach with fallback strategies
+    // Use Perplexity to search for real road work data
+    console.log('🔍 Calling Perplexity for real road work data...')
+
+    const perplexityResult = await callPerplexity(searchPrompt, {
+      model: 'sonar-pro',
+      temperature: 0.2,
+      searchContextSize: 'high'
+    })
+
+    console.log('📊 Perplexity raw response:', perplexityResult)
+
     let aiResponse: any = null
-    let attemptNumber = 1
 
     try {
-      console.log(`Attempt ${attemptNumber}: Using Perplexity AI with web search (Make-style)`)
-      const { getRoadWorkWithPerplexity } = await import('./perplexity')
-      aiResponse = await getRoadWorkWithPerplexity(formattedDate)
-      console.log('✅ Perplexity extraction succeeded:', typeof aiResponse, aiResponse?.length || 'N/A')
+      // Try to parse Perplexity's JSON response
+      aiResponse = JSON.parse(perplexityResult)
+      console.log('✅ Successfully parsed Perplexity JSON response:', aiResponse?.length || 0, 'items')
+    } catch (parseError) {
+      console.log('❌ Failed to parse Perplexity response as JSON, trying to extract from markdown...')
 
-      if (!aiResponse || (Array.isArray(aiResponse) && aiResponse.length < 3)) {
-        throw new Error('Insufficient results from Perplexity, trying other methods')
-      }
-    } catch (error) {
-      console.log(`❌ Attempt ${attemptNumber} failed:`, error instanceof Error ? error.message : error)
-      attemptNumber++
-
-      try {
-        console.log(`Attempt ${attemptNumber}: Using direct page fetch + ChatGPT extraction`)
-        const { getRoadWorkWithChatGPT } = await import('./road-work-scraper')
-        aiResponse = await getRoadWorkWithChatGPT(formattedDate)
-        console.log('✅ ChatGPT extraction succeeded:', typeof aiResponse, aiResponse?.length || 'N/A')
-
-        if (!aiResponse || (Array.isArray(aiResponse) && aiResponse.length < 3)) {
-          throw new Error('Insufficient results from ChatGPT extraction, trying web search')
-        }
-      } catch (error2) {
-        console.log(`❌ Attempt ${attemptNumber} failed:`, error2 instanceof Error ? error2.message : error2)
-        attemptNumber++
-
-      try {
-        console.log(`Attempt ${attemptNumber}: Using OpenAI Responses API with web search`)
-        const { callOpenAIWithWebSearch } = await import('./openai')
-        aiResponse = await callOpenAIWithWebSearch(systemPrompt, userPrompt)
-        console.log('✅ Web search prompt succeeded:', typeof aiResponse, aiResponse?.length || 'N/A')
-      } catch (error3) {
-        console.log(`❌ Attempt ${attemptNumber} failed:`, error3 instanceof Error ? error3.message : error3)
-        attemptNumber++
-
+      // Try to extract JSON from markdown code blocks
+      const jsonMatch = perplexityResult.match(/\[[\s\S]*\]/)?.[0]
+      if (jsonMatch) {
         try {
-          // Fallback: Use the regular AI approach with emphasis on real data
-          console.log(`Attempt ${attemptNumber}: Using regular AI with real data emphasis`)
-          const fallbackPrompt = `Find real, current road work in St. Cloud, MN area for ${formattedDate}. Return JSON array with 9 entries using this structure:
-[{"road_name":"Highway 15","road_range":"from 2nd St to County Rd 75","city_or_township":"St. Cloud","reason":"Bridge maintenance","start_date":"${formattedDate}","expected_reopen":"2025-10-15","source_url":"https://www.dot.state.mn.us/d3/"}]
-
-CRITICAL: Only return real, verified road work from actual government sources. If fewer than 9 real projects exist, fill remaining with "No additional closures reported" entries.`
-
-          const { callOpenAI } = await import('./openai')
-          aiResponse = await callOpenAI(fallbackPrompt, undefined, 0.3)
-          console.log('✅ Fallback prompt succeeded:', typeof aiResponse, aiResponse?.length || 'N/A')
-        } catch (error4) {
-          console.log(`❌ Attempt ${attemptNumber} failed:`, error4 instanceof Error ? error4.message : error4)
-          console.error('⚠️ All AI attempts failed - no fallback data will be used')
-          // Return empty array - we never want inaccurate filler data
+          aiResponse = JSON.parse(jsonMatch)
+          console.log('✅ Extracted JSON from markdown:', aiResponse?.length || 0, 'items')
+        } catch (e) {
+          console.error('❌ Could not extract valid JSON from Perplexity response')
           aiResponse = []
         }
-      }
+      } else {
+        console.error('❌ No JSON array found in Perplexity response')
+        aiResponse = []
       }
     }
 

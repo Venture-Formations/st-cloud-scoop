@@ -479,7 +479,7 @@ export default function EventPage() {
                 {/* Newsletter Information */}
                 <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 mt-4">
                   <p className="text-xs text-gray-600">
-                    Each newsletter features 8 events for today, 8 for tomorrow, and 8 for the following day. Events are only eligible to appear in the newsletter on the day they take place. Free events may be randomly selected if space allows, while promoted events are guaranteed placement. Featured events receive top visibility with added details to help them stand out.
+                    Each newsletter features 8 events for today, tomorrow, and the following day. If submitted at least 4 days in advance, your event can appear in up to 3 newsletters leading up to the event date. Free events may be randomly selected if space allows, while promoted events are guaranteed placement. Featured events get top visibility with details and an image.
                   </p>
                 </div>
               </div>

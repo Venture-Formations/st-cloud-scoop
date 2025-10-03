@@ -556,7 +556,7 @@ export default function ViewEventsPage() {
         <div className="mt-8 bg-blue-50 border border-blue-200 rounded-lg p-6">
           <h3 className="text-xl font-semibold text-blue-900 mb-3">Do You Have an Event Coming Up?</h3>
           <p className="text-sm text-gray-700 mb-6">
-            Each newsletter features 8 events for today, 8 for tomorrow, and 8 for the following day. Events are only eligible to appear in the newsletter on the day they take place. Free events may be randomly selected if space allows, while promoted events are guaranteed placement. Featured events receive top visibility with added details to help them stand out.
+            Each newsletter features 8 events for today, tomorrow, and the following day. If submitted at least 4 days in advance, your event can appear in up to 3 newsletters leading up to the event date. Free events may be randomly selected if space allows, while promoted events are guaranteed placement. Featured events get top visibility with details and an image.
           </p>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
             {/* Free Listing */}
@@ -713,7 +713,7 @@ export default function ViewEventsPage() {
                 {/* Newsletter Information */}
                 <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 mt-4">
                   <p className="text-xs text-gray-600">
-                    Each newsletter features 8 events for today, 8 for tomorrow, and 8 for the following day. Events are only eligible to appear in the newsletter on the day they take place. Free events may be randomly selected if space allows, while promoted events are guaranteed placement. Featured events receive top visibility with added details to help them stand out.
+                    Each newsletter features 8 events for today, tomorrow, and the following day. If submitted at least 4 days in advance, your event can appear in up to 3 newsletters leading up to the event date. Free events may be randomly selected if space allows, while promoted events are guaranteed placement. Featured events get top visibility with details and an image.
                   </p>
                 </div>
               </div>

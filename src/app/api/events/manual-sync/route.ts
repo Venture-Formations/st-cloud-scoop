@@ -134,6 +134,7 @@ export async function GET(request: NextRequest) {
           venue: decodeHtmlEntities(apiEvent.venue?.venue),
           address: decodeHtmlEntities(apiEvent.venue?.address),
           url: apiEvent.url || null,
+          website: apiEvent.website || null,
           image_url: apiEvent.image?.url || null,
           featured: false, // Will be set manually
           active: true,

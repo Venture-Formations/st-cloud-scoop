@@ -1074,27 +1074,27 @@ function AddEventModal({
 
           {!showImageUpload ? (
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Image URL
-              </label>
-              <div className="flex gap-2">
-                <input
-                  type="url"
-                  value={formData.image_url}
-                  onChange={(e) => setFormData(prev => ({ ...prev, image_url: e.target.value }))}
-                  className="flex-1 border border-gray-300 rounded-md px-3 py-2"
-                  disabled={submitting}
-                  placeholder="https://example.com/image.jpg"
-                />
+              <div className="flex justify-between items-center mb-2">
+                <label className="block text-sm font-medium text-gray-700">
+                  Image URL
+                </label>
                 <button
                   type="button"
                   onClick={() => setShowImageUpload(true)}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+                  className="text-sm text-blue-600 hover:text-blue-800"
                   disabled={submitting}
                 >
-                  Upload Image
+                  Upload Image Instead
                 </button>
               </div>
+              <input
+                type="url"
+                value={formData.image_url}
+                onChange={(e) => setFormData(prev => ({ ...prev, image_url: e.target.value }))}
+                className="w-full border border-gray-300 rounded-md px-3 py-2"
+                disabled={submitting}
+                placeholder="https://example.com/image.jpg"
+              />
             </div>
           ) : (
             <div>

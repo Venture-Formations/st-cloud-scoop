@@ -1,10 +1,12 @@
 'use client'
 
-import { useEffect, useState, useMemo } from 'react'
+import { useEffect, useState, useMemo, useRef } from 'react'
 import Layout from '@/components/Layout'
 import Link from 'next/link'
 import { Event } from '@/types/database'
 import CsvUploadSummary from '@/components/CsvUploadSummary'
+import ReactCrop, { Crop, PixelCrop } from 'react-image-crop'
+import 'react-image-crop/dist/ReactCrop.css'
 
 type SortField = 'title' | 'start_date' | 'venue' | 'featured' | 'created_at'
 type SortDirection = 'asc' | 'desc'
@@ -663,15 +665,138 @@ function AddEventModal({
     end_date: '',
     venue: '',
     address: '',
-    url: '',
+    website: '',
     image_url: '',
     featured: false,
     paid_placement: false
   })
 
-  const handleSubmit = (e: React.FormEvent) => {
+  // Image upload state
+  const [selectedImage, setSelectedImage] = useState<string | null>(null)
+  const [crop, setCrop] = useState<Crop>()
+  const [completedCrop, setCompletedCrop] = useState<PixelCrop>()
+  const [showImageUpload, setShowImageUpload] = useState(false)
+  const [uploading, setUploading] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const imgRef = useRef<HTMLImageElement>(null)
+
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    // Validate file size (5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      alert('Image must be smaller than 5MB')
+      return
+    }
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      alert('Please upload an image file')
+      return
+    }
+
+    const reader = new FileReader()
+    reader.onload = () => {
+      setSelectedImage(reader.result as string)
+      // Set initial crop to 5:4 aspect ratio
+      setCrop({
+        unit: '%',
+        width: 80,
+        height: 64, // 80 * (4/5) = 64
+        x: 10,
+        y: 18
+      })
+    }
+    reader.readAsDataURL(file)
+  }
+
+  const getCroppedImage = (): Promise<Blob> => {
+    return new Promise((resolve, reject) => {
+      if (!imgRef.current || !completedCrop) {
+        reject(new Error('No image to crop'))
+        return
+      }
+
+      const canvas = document.createElement('canvas')
+      const scaleX = imgRef.current.naturalWidth / imgRef.current.width
+      const scaleY = imgRef.current.naturalHeight / imgRef.current.height
+
+      // Set canvas to target dimensions (900x720)
+      canvas.width = 900
+      canvas.height = 720
+
+      const ctx = canvas.getContext('2d')
+      if (!ctx) {
+        reject(new Error('No 2d context'))
+        return
+      }
+
+      ctx.drawImage(
+        imgRef.current,
+        completedCrop.x * scaleX,
+        completedCrop.y * scaleY,
+        completedCrop.width * scaleX,
+        completedCrop.height * scaleY,
+        0,
+        0,
+        900,
+        720
+      )
+
+      canvas.toBlob(
+        (blob) => {
+          if (!blob) {
+            reject(new Error('Canvas is empty'))
+            return
+          }
+          resolve(blob)
+        },
+        'image/jpeg',
+        0.95
+      )
+    })
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    onSubmit(formData)
+
+    // If image was uploaded and cropped, upload it first
+    if (selectedImage && completedCrop) {
+      setUploading(true)
+      try {
+        const croppedBlob = await getCroppedImage()
+        const uploadFormData = new FormData()
+        uploadFormData.append('file', croppedBlob, 'event-image.jpg')
+
+        const uploadResponse = await fetch('/api/events/upload-image', {
+          method: 'POST',
+          body: uploadFormData
+        })
+
+        if (!uploadResponse.ok) {
+          throw new Error('Failed to upload image')
+        }
+
+        const { cropped_image_url } = await uploadResponse.json()
+
+        // Update formData with the uploaded image URL
+        const dataWithImage = {
+          ...formData,
+          cropped_image_url,
+          image_url: cropped_image_url
+        }
+
+        onSubmit(dataWithImage)
+      } catch (error) {
+        console.error('Image upload error:', error)
+        alert('Failed to upload image. Please try again.')
+      } finally {
+        setUploading(false)
+      }
+    } else {
+      onSubmit(formData)
+    }
   }
 
   return (
@@ -936,29 +1061,94 @@ function AddEventModal({
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Event URL
+              Website
             </label>
             <input
               type="url"
-              value={formData.url}
-              onChange={(e) => setFormData(prev => ({ ...prev, url: e.target.value }))}
+              value={formData.website}
+              onChange={(e) => setFormData(prev => ({ ...prev, website: e.target.value }))}
               className="w-full border border-gray-300 rounded-md px-3 py-2"
               disabled={submitting}
             />
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Image URL
-            </label>
-            <input
-              type="url"
-              value={formData.image_url}
-              onChange={(e) => setFormData(prev => ({ ...prev, image_url: e.target.value }))}
-              className="w-full border border-gray-300 rounded-md px-3 py-2"
-              disabled={submitting}
-            />
-          </div>
+          {!showImageUpload ? (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Image URL
+              </label>
+              <div className="flex gap-2">
+                <input
+                  type="url"
+                  value={formData.image_url}
+                  onChange={(e) => setFormData(prev => ({ ...prev, image_url: e.target.value }))}
+                  className="flex-1 border border-gray-300 rounded-md px-3 py-2"
+                  disabled={submitting}
+                  placeholder="https://example.com/image.jpg"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowImageUpload(true)}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+                  disabled={submitting}
+                >
+                  Upload Image
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div>
+              <div className="flex justify-between items-center mb-2">
+                <label className="block text-sm font-medium text-gray-700">
+                  Upload Image
+                </label>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowImageUpload(false)
+                    setSelectedImage(null)
+                    setCrop(undefined)
+                    setCompletedCrop(undefined)
+                  }}
+                  className="text-sm text-blue-600 hover:text-blue-800"
+                  disabled={submitting}
+                >
+                  Use URL Instead
+                </button>
+              </div>
+              <p className="text-xs text-gray-500 mb-2">Max 5MB, JPG format, will be cropped to 5:4 ratio (900x720px)</p>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                onChange={handleImageUpload}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                disabled={submitting}
+              />
+
+              {/* Image Cropper */}
+              {selectedImage && (
+                <div className="mt-4">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Crop Image (5:4 ratio)
+                  </label>
+                  <ReactCrop
+                    crop={crop}
+                    onChange={(c) => setCrop(c)}
+                    onComplete={(c) => setCompletedCrop(c)}
+                    aspect={5 / 4}
+                  >
+                    <img
+                      ref={imgRef}
+                      src={selectedImage}
+                      alt="Crop preview"
+                      style={{ maxWidth: '100%' }}
+                    />
+                  </ReactCrop>
+                </div>
+              )}
+            </div>
+          )}
 
           <div>
             <label className="flex items-center">
@@ -998,9 +1188,9 @@ function AddEventModal({
             <button
               type="submit"
               className="px-4 py-2 bg-brand-primary text-white rounded-md hover:bg-brand-primary/90 disabled:opacity-50"
-              disabled={submitting}
+              disabled={submitting || uploading}
             >
-              {submitting ? 'Adding...' : 'Add Event'}
+              {uploading ? 'Uploading Image...' : submitting ? 'Adding...' : 'Add Event'}
             </button>
           </div>
         </form>

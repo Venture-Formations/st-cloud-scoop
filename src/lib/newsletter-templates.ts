@@ -82,37 +82,42 @@ export function generateLocalScoopSection(articles: any[], campaignDate: string,
     const content = article.content || ''
     const sourceUrl = article.rss_post?.source_url || '#'
     const imageUrl = article.rss_post?.image_url || ''
-    const source = article.rss_post?.rss_feed?.name || 'Unknown Source'
+    const author = article.rss_post?.author || ''
 
-    const rank = index + 1
-    const rankEmoji = rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : `${rank}.`
+    // Check if image URL is valid and not expired Facebook URL
+    const isFacebookUrl = imageUrl && imageUrl.includes('fbcdn.net')
+    const hasFacebookExpiration = isFacebookUrl && imageUrl.includes('&oe=')
+    const validImageUrl = imageUrl && !hasFacebookExpiration ? imageUrl : null
+
+    // Generate image HTML if valid URL exists
+    const imageHtml = validImageUrl
+      ? `<tr><td style='padding: 0 12px; text-align: center;'><img src='${validImageUrl}' alt='${headline}' style='max-width: 100%; max-height: 500px; border-radius: 4px;'></td></tr>${author ? `
+<tr><td style='padding: 0 12px 12px; text-align: center; font-size: 12px; color: #555; font-style: italic;'>Photo by ${author}</td></tr>` : ''}`
+      : ''
 
     // Wrap URL with tracking
     const trackedUrl = sourceUrl !== '#' ? wrapTrackingUrl(sourceUrl, 'Local Scoop', campaignDate, campaignId) : '#'
 
     return `
-      <div style="background: #fff; border-radius: 8px; padding: 15px; margin-bottom: 15px; box-shadow: 0 4px 12px rgba(0,0,0,.15);">
-        <h3 style="color: #1877F2; margin: 0 0 10px; font-size: 18px;">${rankEmoji} ${headline}</h3>
-        ${imageUrl ? `<img src="${imageUrl}" alt="${headline}" style="width: 100%; max-width: 400px; height: auto; border-radius: 8px; margin-bottom: 10px; display: block;" />` : ''}
-        <p style="color: #666; margin: 10px 0; font-size: 14px; line-height: 1.6;">${content.substring(0, 200)}...</p>
-        <a href="${trackedUrl}" style="color: #1877F2; text-decoration: underline; font-weight: bold;">Read more</a>
-        <p style="color: #999; font-size: 12px; margin: 10px 0 0;">Source: ${source}</p>
-      </div>
-    `
+<tr class='row'>
+ <td class='column' style='padding:8px; vertical-align: top;'>
+ <table width='100%' cellpadding='0' cellspacing='0' style='border: 1px solid #ddd; border-radius: 8px; background: #fff; font-family: Arial, sans-serif; font-size: 16px; line-height: 26px; box-shadow:0 4px 12px rgba(0,0,0,.15);'>
+ <tr><td style='padding: 12px 12px 4px; font-size: 20px; font-weight: bold;'>${headline}</td></tr>
+ ${imageHtml}
+ <tr><td style='padding: 0 12px 20px;'>${content} ${sourceUrl !== '#' ? `(<a href='${trackedUrl}' style='color: #0080FE; text-decoration: none;'>read more</a>)` : ''}</td></tr>
+ </table>
+ </td>
+</tr>`
   }).join('')
 
   return `
 <table width="100%" cellpadding="0" cellspacing="0" style="border: 1px solid #f7f7f7; border-radius: 10px; margin-top: 10px; max-width: 990px; margin: 0 auto; background-color: #f7f7f7;">
   <tr>
     <td style="padding: 5px;">
-      <h2 style="font-size: 1.625em; line-height: 1.16em; font-family: Arial, sans-serif; color: #1877F2; margin: 0; padding: 0;">Local Scoop</h2>
+      <h2 style="font-size: 1.625em; line-height: 1.16em; font-family: Arial, sans-serif; color: #1877F2; margin: 0; padding: 0;">The Local Scoop</h2>
     </td>
   </tr>
-  <tr>
-    <td style="padding: 10px;">
-      ${articlesHtml}
-    </td>
-  </tr>
+  ${articlesHtml}
 </table>
 <br>`
 }

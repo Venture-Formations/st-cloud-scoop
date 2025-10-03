@@ -48,12 +48,15 @@ export default function RssSourcesPage() {
       })
 
       if (!response.ok) {
-        throw new Error('Failed to update source exclusion')
+        const errorData = await response.json()
+        console.error('Error response:', errorData)
+        throw new Error(errorData.error || 'Failed to update source exclusion')
       }
 
       // Refresh the list
       await fetchSources()
     } catch (err) {
+      console.error('Toggle exclusion error:', err)
       alert(err instanceof Error ? err.message : 'Failed to update source')
     }
   }

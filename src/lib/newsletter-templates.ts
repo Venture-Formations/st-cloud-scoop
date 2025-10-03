@@ -62,7 +62,7 @@ export function getEventEmoji(title: string, venue: string): string {
   if (titleLower.includes('library') || titleLower.includes('book') || titleLower.includes('reading') || titleLower.includes('author')) return '📚'
 
   // Music & Dance
-  if (titleLower.includes('music') || titleLower.includes('concert') || venueLower.includes('amphitheater')) return '🎶'
+  if (titleLower.includes('music') || titleLower.includes('concert') || titleLower.includes('song') || venueLower.includes('amphitheater')) return '🎶'
   if (titleLower.includes('bluegrass') || titleLower.includes('brews')) return '🎶'
   if (titleLower.includes('jazz')) return '🎷'
   if (titleLower.includes('rock') || titleLower.includes('band')) return '🎸'
@@ -72,6 +72,7 @@ export function getEventEmoji(title: string, venue: string): string {
   if (titleLower.includes('choir') || titleLower.includes('singing')) return '🎵'
 
   // Food & Drink
+  if (titleLower.includes('meat raffle') || titleLower.includes('raffle')) return '🥩'
   if (titleLower.includes('farmers') || titleLower.includes('market')) return '🥕'
   if (titleLower.includes('food') || titleLower.includes('dinner') || titleLower.includes('lunch') || titleLower.includes('breakfast') || titleLower.includes('brunch')) return '🍽️'
   if (titleLower.includes('beer') || titleLower.includes('oktoberfest') || titleLower.includes('brewing') || titleLower.includes('brewery')) return '🍺'
@@ -82,6 +83,7 @@ export function getEventEmoji(title: string, venue: string): string {
   if (titleLower.includes('bbq') || titleLower.includes('barbecue') || titleLower.includes('grill')) return '🍖'
   if (titleLower.includes('dessert') || titleLower.includes('cake') || titleLower.includes('bakery')) return '🍰'
   if (titleLower.includes('ice cream')) return '🍦'
+  if (titleLower.includes('steak') || titleLower.includes('beef')) return '🥩'
 
   // Sports & Recreation
   if (titleLower.includes('hockey')) return '🏒'

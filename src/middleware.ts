@@ -7,7 +7,6 @@ export function middleware(request: NextRequest) {
   // Check subdomain types
   const isEventsSubdomain = hostname.startsWith('events.')
   const isAdminSubdomain = hostname.startsWith('admin.')
-  const isMainDomain = !isEventsSubdomain && !isAdminSubdomain
 
   // Events subdomain - public events pages only
   if (isEventsSubdomain) {
@@ -40,15 +39,7 @@ export function middleware(request: NextRequest) {
     }
   }
 
-  // Main domain - redirect to admin subdomain
-  if (isMainDomain) {
-    // Redirect to admin subdomain
-    const adminUrl = new URL(request.url)
-    adminUrl.hostname = `admin.${hostname}`
-    return NextResponse.redirect(adminUrl)
-  }
-
-  // Allow all other requests
+  // Allow all other requests (including main domain)
   return NextResponse.next()
 }
 

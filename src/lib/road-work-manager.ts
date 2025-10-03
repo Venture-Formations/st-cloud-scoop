@@ -383,7 +383,9 @@ export async function generateDailyRoadWork(campaignDate?: string): Promise<Road
     // Convert target date to the format expected by the prompts
     const formattedDate = new Date(targetDate).toISOString().split('T')[0] // Convert to YYYY-MM-DD
 
-    const searchPrompt = `Find CURRENT and ACTIVE road, lane, or bridge closures, detours, or traffic restrictions in effect on ${formattedDate} within 15 miles of St. Cloud, Minnesota (ZIP 56303).
+    const searchPrompt = `Find road, lane, or bridge closures, detours, or traffic restrictions within 15 miles of St. Cloud, Minnesota (ZIP 56303) that are:
+1. Currently active on ${formattedDate}, OR
+2. Planned to start within the next 7 days (between ${formattedDate} and 7 days later)
 
 CRITICAL: Search these OFFICIAL government sources for REAL road work data:
 - https://www.dot.state.mn.us/d3/ (MnDOT District 3)
@@ -395,7 +397,7 @@ CRITICAL: Search these OFFICIAL government sources for REAL road work data:
 - Local news: WJON Traffic, St. Cloud Times
 
 ONLY include road work that:
-- Is currently active or will be active on ${formattedDate}
+- Is currently active on ${formattedDate} OR starts within next 7 days
 - Has CONFIRMED specific dates (not "TBD" or vague ranges)
 - Is from an official government or news source
 

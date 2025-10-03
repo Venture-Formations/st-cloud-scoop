@@ -116,7 +116,6 @@ export async function PATCH(request: NextRequest) {
         key: 'excluded_rss_sources',
         value: JSON.stringify(excludedSources),
         description: 'List of RSS post authors/sources to exclude from processing',
-        updated_by: session.user.email,
         updated_at: new Date().toISOString()
       })
 

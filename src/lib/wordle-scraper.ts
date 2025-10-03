@@ -34,8 +34,16 @@ async function getWordleAnswer(dateStr: string): Promise<string | null> {
     console.log(`Fetched HTML, length: ${html.length}`)
 
     // Look for answer directly in HTML (before cheerio parsing to preserve entities)
-    // Pattern 1: "Drumroll, please — it's SPASM" or "Drumroll, please &mdash; it's SPASM"
-    let match = html.match(/Drumroll,?\s*please\s*[—–\-&mdash;]+\s*it'?s\s*<strong>([A-Z]{5})<\/strong>/i)
+    // Pattern 1: JSON-escaped format "Drumroll, please \u2014 it's <strong>SPASM<\/strong>"
+    let match = html.match(/Drumroll,?\s*please\s*\\u2014\s*it'?s\s*<strong>([A-Z]{5})<\\\/strong>/i)
+    if (match) {
+      const word = match[1].toUpperCase()
+      console.log(`Found via Drumroll JSON pattern: ${word}`)
+      return word
+    }
+
+    // Pattern 2: HTML entity format "Drumroll, please &mdash; it's <strong>SPASM</strong>"
+    match = html.match(/Drumroll,?\s*please\s*&mdash;\s*it'?s\s*<strong>([A-Z]{5})<\/strong>/i)
     if (match) {
       const word = match[1].toUpperCase()
       console.log(`Found via Drumroll HTML pattern: ${word}`)

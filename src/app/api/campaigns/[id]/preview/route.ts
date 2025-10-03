@@ -343,11 +343,11 @@ async function generateLocalEventsSection(campaign: any): Promise<string> {
   // Generate each day column using the calculated dates in order
   const dayColumns = dates.map(date => {
     const events = eventsByDate[date] || []
-    const featuredEvent = events.find(event => event.is_featured)
+    const featuredEvents = events.filter(event => event.is_featured)
     const regularEvents = events.filter(event => !event.is_featured)
 
-    // Generate featured event HTML
-    const featuredHtml = featuredEvent ? `
+    // Generate featured events HTML (can be multiple)
+    const featuredHtml = featuredEvents.map(featuredEvent => `
     <tr>
       <td style='padding:0; border-top: 1px solid #eee;'>
         <div style='padding:8px 16px; background:#E8F0FE; border:2px solid #1877F2; border-radius:6px;'>
@@ -361,7 +361,7 @@ async function generateLocalEventsSection(campaign: any): Promise<string> {
           `}
         </div>
       </td>
-    </tr>` : ''
+    </tr>`).join('')
 
     // Generate regular events HTML
     const regularEventsHtml = regularEvents.map((event: any) => `

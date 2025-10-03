@@ -877,19 +877,25 @@ ${sectionsHtml}
     // Generate each day column using the calculated dates in order
     const dayColumns = dates.map(date => {
       const events = eventsByDate[date] || []
-      const featuredEvent = events.find(event => event.is_featured)
+      const featuredEvents = events.filter(event => event.is_featured)
       const regularEvents = events.filter(event => !event.is_featured)
 
-      // Generate featured event HTML
-      const featuredHtml = featuredEvent ? `
+      // Generate featured events HTML (can be multiple)
+      const featuredHtml = featuredEvents.map(featuredEvent => `
       <tr>
         <td style='padding:0; border-top: 1px solid #eee;'>
           <div style='padding:8px 16px; background:#E8F0FE; border:2px solid #1877F2; border-radius:6px;'>
+            ${featuredEvent.cropped_image_url ? `
+            <img src='${featuredEvent.cropped_image_url}' alt='${featuredEvent.title}' style='width:100%; max-width:400px; height:auto; object-fit:cover; border-radius:4px; border:1px solid #1877F2; display:block; margin-bottom:8px;' />
             <span style='font-size: 16px;'>${getEventEmoji(featuredEvent.title, featuredEvent.venue)} <strong>${featuredEvent.title}</strong></span><br>
             <span style='font-size:14px;'><a href='${featuredEvent.url || '#'}' style='color: #000; text-decoration: underline;'>${formatEventTime(featuredEvent.start_date, featuredEvent.end_date)}</a>  | ${featuredEvent.venue || 'TBA'}</span>${(featuredEvent.event_summary || featuredEvent.description) ? `<br><br><span style='font-size:13px;'>${featuredEvent.event_summary || featuredEvent.description}</span>` : ''}
+            ` : `
+            <span style='font-size: 16px;'>${getEventEmoji(featuredEvent.title, featuredEvent.venue)} <strong>${featuredEvent.title}</strong></span><br>
+            <span style='font-size:14px;'><a href='${featuredEvent.url || '#'}' style='color: #000; text-decoration: underline;'>${formatEventTime(featuredEvent.start_date, featuredEvent.end_date)}</a>  | ${featuredEvent.venue || 'TBA'}</span>${(featuredEvent.event_summary || featuredEvent.description) ? `<br><br><span style='font-size:13px;'>${featuredEvent.event_summary || featuredEvent.description}</span>` : ''}
+            `}
           </div>
         </td>
-      </tr>` : ''
+      </tr>`).join('')
 
       // Generate regular events HTML
       const regularEventsHtml = regularEvents.map((event: any) => `

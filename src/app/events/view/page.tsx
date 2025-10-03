@@ -27,8 +27,10 @@ interface Venue {
 export default function ViewEventsPage() {
   const router = useRouter()
   const [events, setEvents] = useState<Event[]>([])
+  const [allEvents, setAllEvents] = useState<Event[]>([]) // Store all events for filtering
   const [venues, setVenues] = useState<Venue[]>([])
   const [selectedVenue, setSelectedVenue] = useState<string>('all')
+  const [searchQuery, setSearchQuery] = useState<string>('')
   const [loading, setLoading] = useState(true)
   const [pricing, setPricing] = useState({ paidPlacement: 5, featured: 15 })
   const [expandedEventId, setExpandedEventId] = useState<string | null>(null)
@@ -40,7 +42,12 @@ export default function ViewEventsPage() {
     loadEvents()
     loadPricing()
     updateCartCount()
-  }, [selectedVenue])
+  }, [])
+
+  // Filter events when search query or venue changes
+  useEffect(() => {
+    filterEvents()
+  }, [searchQuery, selectedVenue, allEvents])
 
   const updateCartCount = () => {
     const cartJson = sessionStorage.getItem('eventCart')
@@ -51,16 +58,12 @@ export default function ViewEventsPage() {
   const loadEvents = async () => {
     try {
       setLoading(true)
-      const url = selectedVenue === 'all'
-        ? '/api/events/public'
-        : `/api/events/public?venue=${encodeURIComponent(selectedVenue)}`
-
-      const response = await fetch(url)
+      const response = await fetch('/api/events/public')
       if (response.ok) {
         const data = await response.json()
-        setEvents(data.events || [])
+        setAllEvents(data.events || [])
 
-        // Extract unique venues with counts
+        // Extract unique venues with counts from ALL events
         const venueMap = new Map<string, number>()
         data.events.forEach((event: Event) => {
           if (event.venue) {
@@ -79,6 +82,31 @@ export default function ViewEventsPage() {
     } finally {
       setLoading(false)
     }
+  }
+
+  const filterEvents = () => {
+    let filtered = [...allEvents]
+
+    // Apply venue filter
+    if (selectedVenue !== 'all') {
+      filtered = filtered.filter(event => event.venue === selectedVenue)
+    }
+
+    // Apply search filter
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase()
+      filtered = filtered.filter(event => {
+        const searchableText = `
+          ${event.title}
+          ${event.description}
+          ${event.venue}
+          ${event.address}
+        `.toLowerCase()
+        return searchableText.includes(query)
+      })
+    }
+
+    setEvents(filtered)
   }
 
   const loadPricing = async () => {
@@ -253,23 +281,70 @@ export default function ViewEventsPage() {
           </button>
         </div>
 
-        {/* Venue Filter */}
+        {/* Search and Filters */}
         <div className="bg-white shadow rounded-lg p-4 mb-6">
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Filter by Venue
-          </label>
-          <select
-            value={selectedVenue}
-            onChange={(e) => setSelectedVenue(e.target.value)}
-            className="w-full md:w-96 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-          >
-            <option value="all">All Venues ({events.length})</option>
-            {venues.map(venue => (
-              <option key={venue.name} value={venue.name}>
-                {venue.name} ({venue.count})
-              </option>
-            ))}
-          </select>
+          <div className="space-y-4">
+            {/* Search Bar */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Search Events
+              </label>
+              <div className="relative">
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Search by title, description, venue, or address..."
+                  className="w-full px-4 py-2 pl-10 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+                <svg
+                  className="absolute left-3 top-2.5 w-5 h-5 text-gray-400"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+                {searchQuery && (
+                  <button
+                    onClick={() => setSearchQuery('')}
+                    className="absolute right-3 top-2.5 text-gray-400 hover:text-gray-600"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Venue Filter */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Filter by Venue
+              </label>
+              <select
+                value={selectedVenue}
+                onChange={(e) => setSelectedVenue(e.target.value)}
+                className="w-full md:w-96 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="all">All Venues ({allEvents.length})</option>
+                {venues.map(venue => (
+                  <option key={venue.name} value={venue.name}>
+                    {venue.name} ({venue.count})
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Results Count */}
+            {(searchQuery || selectedVenue !== 'all') && (
+              <div className="text-sm text-gray-600">
+                Showing {events.length} of {allEvents.length} events
+                {searchQuery && ` matching "${searchQuery}"`}
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Events List - Grouped by Date */}

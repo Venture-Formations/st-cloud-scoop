@@ -9,57 +9,55 @@ function getPuzzleNumber(targetDate: string): number {
   return 1 + days
 }
 
-// Fetch Wordle answer using Perplexity web search
+// Fetch Wordle answer using improved Perplexity search
 async function getWordleAnswer(dateStr: string): Promise<string | null> {
   try {
     const number = getPuzzleNumber(dateStr)
     console.log(`Looking for Wordle #${number} for date ${dateStr}`)
 
-    // Use Perplexity for web search
+    // Use Perplexity for web search with improved prompt
     const { callPerplexity } = await import('./perplexity')
 
-    // Format date for better search
+    // Format date for search
     const dateObj = new Date(dateStr)
     const monthName = dateObj.toLocaleDateString('en-US', { month: 'long' })
     const day = dateObj.getDate()
     const year = dateObj.getFullYear()
 
-    const prompt = `Find the Wordle answer for ${monthName} ${day}, ${year} (puzzle #${number}).
+    const prompt = `Find the Wordle answer for puzzle #${number} (${monthName} ${day}, ${year}) from Tom's Guide.
 
-Search these sources:
-- Tom's Guide Wordle answers
-- PC Gamer Wordle solutions
-- Forbes Wordle coverage
-- The Gamer Wordle answers
-- Insider Gaming Wordle hints
+REQUIRED SOURCE: https://www.tomsguide.com/news/what-is-todays-wordle-answer
 
-Look for phrases like:
-- "Wordle #${number} answer is [WORD]"
-- "Today's Wordle answer: [WORD]"
-- "The answer to Wordle ${number} is [WORD]"
+CRITICAL INSTRUCTIONS:
+1. Go to Tom's Guide Wordle answer page (the URL above)
+2. Find the answer for Wordle #${number}
+3. Return ONLY the 5-letter answer word in UPPERCASE
+4. Do NOT include any other text, numbers, explanations, or punctuation
+5. If Tom's Guide doesn't have #${number} yet, return nothing
 
-Return ONLY the 5-letter answer word in UPPERCASE with no additional text, explanations, or formatting.
-
-If you cannot find a definitive answer, leave your response blank.`
+CORRECT format: SPASM
+WRONG format: The answer is SPASM
+WRONG format: #${number} SPASM
+WRONG format: spasm`
 
     console.log(`Using Perplexity to find Wordle #${number}`)
 
     const result = await callPerplexity(prompt, {
       model: 'sonar-pro',
-      temperature: 0.1,
-      searchContextSize: 'medium'
+      temperature: 0.0, // Even lower temperature for consistency
+      searchContextSize: 'large' // More context for accuracy
     })
 
     const cleanResult = result.trim().toUpperCase()
 
-    // Extract just the word if there's extra text
+    // Extract only valid 5-letter words
     const wordMatch = cleanResult.match(/\b([A-Z]{5})\b/)
     if (wordMatch) {
       console.log(`Perplexity found Wordle #${number}: ${wordMatch[1]}`)
       return wordMatch[1]
     }
 
-    console.log(`No valid Wordle answer found for #${number}`)
+    console.log(`No valid Wordle answer found for #${number}. Raw response: ${cleanResult}`)
     return null
 
   } catch (error) {

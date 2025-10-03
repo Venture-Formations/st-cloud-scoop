@@ -1338,7 +1338,7 @@ export class RSSProcessor {
         console.warn('Warning: Failed to clear existing campaign events:', deleteError)
       }
 
-      // Group events by date and auto-select up to 8 events per day
+      // Group events by date and auto-select events per day
       const eventsByDate: { [key: string]: any[] } = {}
 
       dates.forEach(date => {
@@ -1352,23 +1352,31 @@ export class RSSProcessor {
         })
 
         if (eventsForDate.length > 0) {
-          // Separate paid placements - these are GUARANTEED selections
+          // Separate by category: featured (database flag), paid placements, and regular
+          const featuredEvents = eventsForDate.filter(e => e.featured && !e.paid_placement)
           const paidEvents = eventsForDate.filter(e => e.paid_placement)
-          const nonPaidEvents = eventsForDate.filter(e => !e.paid_placement)
+          const regularEvents = eventsForDate.filter(e => !e.featured && !e.paid_placement)
 
-          // Auto-select up to 8 events per day: all paid placements + fill remaining slots randomly
-          const shuffledNonPaid = [...nonPaidEvents].sort(() => Math.random() - 0.5)
-          const spotsAvailable = 8
-          const remainingSlots = Math.max(0, spotsAvailable - paidEvents.length)
+          console.log(`${date}: ${featuredEvents.length} featured, ${paidEvents.length} paid, ${regularEvents.length} regular events`)
 
-          // Combine: paid placements first, then random selection from non-paid
+          // Calculate available slots for regular events (target 8 total, but can exceed for featured/paid)
+          const guaranteedEvents = [...featuredEvents, ...paidEvents]
+          const baseSlots = 8
+          const remainingSlots = Math.max(0, baseSlots - guaranteedEvents.length)
+
+          // Randomly select regular events to fill remaining slots
+          const shuffledRegular = [...regularEvents].sort(() => Math.random() - 0.5)
+          const selectedRegular = shuffledRegular.slice(0, remainingSlots)
+
+          // Combine: featured first, then paid placements, then regular
           const selectedEvents = [
+            ...featuredEvents,
             ...paidEvents,
-            ...shuffledNonPaid.slice(0, remainingSlots)
+            ...selectedRegular
           ]
 
-          if (paidEvents.length > spotsAvailable) {
-            console.warn(`Warning: ${paidEvents.length} paid placement events exceed ${spotsAvailable} spots for ${date}. All will be included.`)
+          if (guaranteedEvents.length > baseSlots) {
+            console.log(`Note: ${guaranteedEvents.length} featured/paid events exceed ${baseSlots} base slots for ${date}. All will be included (total: ${selectedEvents.length}).`)
           }
 
           eventsByDate[date] = selectedEvents
@@ -1380,13 +1388,29 @@ export class RSSProcessor {
       let totalSelected = 0
 
       Object.entries(eventsByDate).forEach(([date, events]) => {
+        // Count how many events are marked as featured in the database for this day
+        const dbFeaturedCount = events.filter(e => e.featured).length
+
         events.forEach((event, index) => {
+          // Determine if this should be featured in the campaign:
+          // 1. If event.featured is true in database, it's featured
+          // 2. If no database featured events exist, first NON-paid event becomes featured
+          let isFeatured = false
+
+          if (event.featured) {
+            // Database-marked featured events are always featured
+            isFeatured = true
+          } else if (dbFeaturedCount === 0 && index === 0 && !event.paid_placement) {
+            // No database featured events, first non-paid event becomes featured
+            isFeatured = true
+          }
+
           campaignEventsData.push({
             campaign_id: campaignId,
             event_id: event.id,
             event_date: date,
             is_selected: true,
-            is_featured: index === 0, // First event of each day is featured
+            is_featured: isFeatured,
             display_order: index + 1
           })
           totalSelected++

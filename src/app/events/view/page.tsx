@@ -214,6 +214,22 @@ export default function ViewEventsPage() {
       groups.get(dateKey)!.push(event)
     })
 
+    // Sort events within each day: featured first, then paid_placement, then chronological
+    groups.forEach((dayEvents, dateKey) => {
+      dayEvents.sort((a, b) => {
+        // Featured events first
+        if (a.featured && !b.featured) return -1
+        if (!a.featured && b.featured) return 1
+
+        // Then paid placements (sponsored events)
+        if (a.paid_placement && !b.paid_placement) return -1
+        if (!a.paid_placement && b.paid_placement) return 1
+
+        // Then chronological order by start time
+        return new Date(a.start_date).getTime() - new Date(b.start_date).getTime()
+      })
+    })
+
     // Sort groups by date
     return Array.from(groups.entries())
       .sort(([dateA], [dateB]) => new Date(dateA).getTime() - new Date(dateB).getTime())

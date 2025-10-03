@@ -492,8 +492,8 @@ export default function ViewEventsPage() {
                         {/* Expanded View */}
                         {isExpanded && (
                           <div className="px-4 pb-4 border-t border-gray-100">
-                            {/* Large Image */}
-                            {event.cropped_image_url && (
+                            {/* Large Image - only show for non-featured events */}
+                            {event.cropped_image_url && !event.featured && (
                               <div className="mb-4 mt-4">
                                 <img
                                   src={event.cropped_image_url}

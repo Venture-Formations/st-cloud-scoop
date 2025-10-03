@@ -259,7 +259,7 @@ export default function EventPage() {
         <div className="bg-white rounded-lg shadow-lg overflow-hidden">
           {/* Event Image */}
           {displayImage && (
-            <div className="relative h-96 w-full">
+            <div className="relative w-full" style={{ paddingBottom: '80%' }}>
               <Image
                 src={displayImage}
                 alt={event.title}

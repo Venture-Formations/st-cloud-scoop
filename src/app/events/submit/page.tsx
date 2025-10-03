@@ -398,14 +398,26 @@ export default function SubmitEventPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8 px-4">
-      <div className="max-w-4xl mx-auto">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Submit Your Event</h1>
-          <p className="text-gray-600">
-            Share your event with the St. Cloud community. Add to cart and promote multiple events in one transaction.
-          </p>
+    <div className="min-h-screen bg-gray-50">
+      {/* Logo Header */}
+      <div className="bg-blue-600 py-6">
+        <div className="max-w-4xl mx-auto px-4">
+          <img
+            src="https://raw.githubusercontent.com/VFDavid/STCScoop/refs/heads/main/STCSCOOP_Logo_824X148_clear.png"
+            alt="St. Cloud Scoop"
+            className="h-12 md:h-16 w-auto mx-auto"
+          />
         </div>
+      </div>
+
+      <div className="py-8 px-4">
+        <div className="max-w-4xl mx-auto">
+          <div className="mb-8">
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">Submit Your Event</h1>
+            <p className="text-gray-600">
+              Share your event with the St. Cloud community. Add to cart and promote multiple events in one transaction.
+            </p>
+          </div>
 
         {/* Event Submission Form */}
         <div className="bg-white shadow rounded-lg p-6 mb-6">
@@ -777,6 +789,7 @@ export default function SubmitEventPage() {
             </div>
           </div>
         )}
+        </div>
       </div>
     </div>
   )

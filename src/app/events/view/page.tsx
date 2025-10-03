@@ -274,17 +274,29 @@ export default function ViewEventsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8 px-4">
-      <div className="max-w-6xl mx-auto">
-        {/* Header */}
-        <div className="mb-8">
-          <div className="flex justify-between items-start mb-4">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900 mb-2">Local Events</h1>
-              <p className="text-gray-600">
-                Browse upcoming events in the St. Cloud area. Promote your event to reach more people!
-              </p>
-            </div>
+    <div className="min-h-screen bg-gray-50">
+      {/* Logo Header */}
+      <div className="bg-blue-600 py-6">
+        <div className="max-w-6xl mx-auto px-4">
+          <img
+            src="https://raw.githubusercontent.com/VFDavid/STCScoop/refs/heads/main/STCSCOOP_Logo_824X148_clear.png"
+            alt="St. Cloud Scoop"
+            className="h-12 md:h-16 w-auto mx-auto"
+          />
+        </div>
+      </div>
+
+      <div className="py-8 px-4">
+        <div className="max-w-6xl mx-auto">
+          {/* Header */}
+          <div className="mb-8">
+            <div className="flex justify-between items-start mb-4">
+              <div>
+                <h1 className="text-3xl font-bold text-gray-900 mb-2">Local Events</h1>
+                <p className="text-gray-600">
+                  Browse upcoming events in the St. Cloud area. Promote your event to reach more people!
+                </p>
+              </div>
             {cartItemCount > 0 && (
               <button
                 onClick={() => router.push('/events/checkout')}
@@ -744,6 +756,8 @@ export default function ViewEventsPage() {
           </div>
         </div>
       )}
+        </div>
+      </div>
     </div>
   )
 }

@@ -55,12 +55,14 @@ export async function GET(
             id,
             title,
             description,
+            event_summary,
             start_date,
             end_date,
             venue,
             address,
             url,
-            image_url
+            image_url,
+            cropped_image_url
           )
         )
       `)

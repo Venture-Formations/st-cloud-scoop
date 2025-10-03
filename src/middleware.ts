@@ -40,12 +40,12 @@ export function middleware(request: NextRequest) {
     }
   }
 
-  // Main domain - redirect to MailerLite landing page
-  if (isMainDomain && !request.nextUrl.pathname.startsWith('/api')) {
-    const mailerliteLandingPage = process.env.NEXT_PUBLIC_MAILERLITE_LANDING_PAGE || 'https://landing.mailerlite.com/webforms/landing/your-page-id'
-
-    // Redirect all non-API traffic to MailerLite
-    return NextResponse.redirect(mailerliteLandingPage)
+  // Main domain - redirect to admin subdomain
+  if (isMainDomain) {
+    // Redirect to admin subdomain
+    const adminUrl = new URL(request.url)
+    adminUrl.hostname = `admin.${hostname}`
+    return NextResponse.redirect(adminUrl)
   }
 
   // Allow all other requests

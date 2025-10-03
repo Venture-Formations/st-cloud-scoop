@@ -600,6 +600,7 @@ export default function ViewEventsPage() {
           </button>
         </div>
       </div>
+      </div>
 
       {/* Promotion Modal */}
       {promotingEvent && (
@@ -745,8 +746,6 @@ export default function ViewEventsPage() {
           </div>
         </div>
       )}
-        </div>
-      </div>
     </div>
   )
 }

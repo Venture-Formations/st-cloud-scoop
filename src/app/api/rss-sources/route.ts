@@ -94,9 +94,13 @@ export async function PATCH(request: NextRequest) {
       .eq('key', 'excluded_rss_sources')
       .single()
 
+    console.log('Current settings fetch:', { currentSettings, fetchError })
+
     let excludedSources: string[] = currentSettings?.value
       ? JSON.parse(currentSettings.value)
       : []
+
+    console.log('Current excluded sources:', excludedSources)
 
     // Update the list
     if (excluded) {
@@ -109,6 +113,8 @@ export async function PATCH(request: NextRequest) {
       excludedSources = excludedSources.filter(s => s !== author)
     }
 
+    console.log('Updated excluded sources:', excludedSources)
+
     // Save back to settings
     const { error: updateError } = await supabaseAdmin
       .from('app_settings')
@@ -117,6 +123,8 @@ export async function PATCH(request: NextRequest) {
         value: JSON.stringify(excludedSources),
         description: 'List of RSS post authors/sources to exclude from processing',
         updated_at: new Date().toISOString()
+      }, {
+        onConflict: 'key'
       })
 
     if (updateError) {

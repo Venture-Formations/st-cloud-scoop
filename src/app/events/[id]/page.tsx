@@ -189,6 +189,13 @@ export default function EventPage() {
     })
   }
 
+  const stripHtmlTags = (html: string | null) => {
+    if (!html) return ''
+    const tmp = document.createElement('DIV')
+    tmp.innerHTML = html
+    return tmp.textContent || tmp.innerText || ''
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -300,7 +307,7 @@ export default function EventPage() {
               <div className="mb-6">
                 <h2 className="text-xl font-semibold text-gray-900 mb-3">About This Event</h2>
                 <div className="prose max-w-none text-gray-700">
-                  <p>{event.event_summary || event.description}</p>
+                  <p>{event.event_summary || stripHtmlTags(event.description)}</p>
                 </div>
               </div>
             )}

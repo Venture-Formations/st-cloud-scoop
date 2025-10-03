@@ -926,6 +926,10 @@ ${sectionsHtml}
     </td>
   </tr><tr class="row">${dayColumns}
 </td></table>
+<div style="text-align: center; padding: 20px 10px; max-width: 990px; margin: 0 auto;">
+  <a href="https://events.stcscoop.com/events/view" style="display: inline-block; background-color: #1877F2; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; margin: 0 10px; font-family: Arial, sans-serif;">View All Events</a>
+  <a href="https://events.stcscoop.com/events/submit" style="display: inline-block; background-color: #28a745; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; margin: 0 10px; font-family: Arial, sans-serif;">Submit Your Event</a>
+</div>
 <br>`
   }
 

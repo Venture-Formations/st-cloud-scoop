@@ -110,9 +110,6 @@ export class RSSProcessor {
         console.log('Previous posts cleared successfully')
       }
 
-      // Note: Event population now happens via separate cron job (5 minutes before RSS processing)
-      // This ensures events are populated even if RSS processing times out
-
       // Get active RSS feeds
       const { data: feeds, error: feedsError } = await supabaseAdmin
         .from('rss_feeds')
@@ -146,6 +143,16 @@ export class RSSProcessor {
             })
             .eq('id', feed.id)
         }
+      }
+
+      // Populate events for this campaign BEFORE processing articles
+      console.log('Populating events for campaign...')
+      try {
+        await this.populateEventsForCampaignSmart(campaignId)
+        console.log('✅ Events populated successfully')
+      } catch (eventError) {
+        console.error('Failed to populate events, but continuing:', eventError)
+        // Don't fail the entire RSS processing if event population fails
       }
 
       // Process posts with AI

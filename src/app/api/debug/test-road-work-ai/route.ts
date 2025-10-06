@@ -9,7 +9,7 @@ export async function GET(request: NextRequest) {
     const testDate = searchParams.get('date') || 'Sep 25, 2025'
 
     // Test the AI prompt
-    const prompt = AI_PROMPTS.roadWorkGenerator(testDate)
+    const prompt = await AI_PROMPTS.roadWorkGenerator(testDate)
     console.log('Generated AI prompt:', prompt.substring(0, 200) + '...')
 
     // Call OpenAI API

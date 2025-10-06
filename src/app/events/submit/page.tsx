@@ -656,7 +656,7 @@ export default function SubmitEventPage() {
                 Promotion Type
               </label>
               <div className="space-y-2">
-                <label className="flex items-center">
+                <label className="flex items-center group relative">
                   <input
                     type="radio"
                     name="placement"
@@ -665,9 +665,20 @@ export default function SubmitEventPage() {
                     onChange={(e) => setFormData(prev => ({ ...prev, placement_type: 'none' }))}
                     className="mr-2"
                   />
-                  <span>Free Listing (no promotion)</span>
+                  <span className="flex items-center gap-1">
+                    Free Listing (no promotion)
+                    <span className="inline-block text-gray-400 cursor-help">ⓘ</span>
+                  </span>
+                  <div className="absolute left-0 top-8 hidden group-hover:block bg-gray-800 text-white text-xs rounded-lg p-3 w-64 z-10">
+                    <p className="font-semibold mb-1">Free Listing includes:</p>
+                    <ul className="space-y-1">
+                      <li>• Event added to the public events page</li>
+                      <li>• Eligible to appear in the newsletter (random selection if space is available)</li>
+                      <li>• No guarantee of email placement</li>
+                    </ul>
+                  </div>
                 </label>
-                <label className="flex items-center">
+                <label className="flex items-center group relative">
                   <input
                     type="radio"
                     name="placement"
@@ -676,9 +687,20 @@ export default function SubmitEventPage() {
                     onChange={(e) => setFormData(prev => ({ ...prev, placement_type: 'paid' }))}
                     className="mr-2"
                   />
-                  <span>Paid Placement (3 days*) - ${pricing.paidPlacement}</span>
+                  <span className="flex items-center gap-1">
+                    Guaranteed Placement (3 days*) - ${pricing.paidPlacement}
+                    <span className="inline-block text-gray-400 cursor-help">ⓘ</span>
+                  </span>
+                  <div className="absolute left-0 top-8 hidden group-hover:block bg-gray-800 text-white text-xs rounded-lg p-3 w-64 z-10">
+                    <p className="font-semibold mb-1">Guaranteed Placement includes:</p>
+                    <ul className="space-y-1">
+                      <li>• Guaranteed spot in the newsletter's daily list of 8 events</li>
+                      <li>• Standard placement without description or image</li>
+                      <li>• Event also listed on the public events page</li>
+                    </ul>
+                  </div>
                 </label>
-                <label className="flex items-center">
+                <label className="flex items-center group relative">
                   <input
                     type="radio"
                     name="placement"
@@ -687,7 +709,18 @@ export default function SubmitEventPage() {
                     onChange={(e) => setFormData(prev => ({ ...prev, placement_type: 'featured' }))}
                     className="mr-2"
                   />
-                  <span>Featured Event (3 days*) - ${pricing.featured}</span>
+                  <span className="flex items-center gap-1">
+                    Featured Event (3 days*) - ${pricing.featured}
+                    <span className="inline-block text-gray-400 cursor-help">ⓘ</span>
+                  </span>
+                  <div className="absolute left-0 top-8 hidden group-hover:block bg-gray-800 text-white text-xs rounded-lg p-3 w-64 z-10">
+                    <p className="font-semibold mb-1">Featured Event includes:</p>
+                    <ul className="space-y-1">
+                      <li>• Guaranteed top placement in the newsletter</li>
+                      <li>• Event description and image (if provided) included</li>
+                      <li>• Maximum visibility and engagement</li>
+                    </ul>
+                  </div>
                 </label>
               </div>
             </div>

@@ -83,6 +83,28 @@ export async function DELETE(
       // Don't fail - continue with deletion
     }
 
+    // 4c. Delete dining deal selections associated with this campaign
+    const { error: diningSelectionsError } = await supabaseAdmin
+      .from('campaign_dining_selections')
+      .delete()
+      .eq('campaign_id', campaignId)
+
+    if (diningSelectionsError) {
+      console.error('Error deleting dining selections:', diningSelectionsError)
+      // Don't fail - continue with deletion
+    }
+
+    // 4d. Delete VRBO selections associated with this campaign
+    const { error: vrboSelectionsError } = await supabaseAdmin
+      .from('campaign_vrbo_selections')
+      .delete()
+      .eq('campaign_id', campaignId)
+
+    if (vrboSelectionsError) {
+      console.error('Error deleting VRBO selections:', vrboSelectionsError)
+      // Don't fail - continue with deletion
+    }
+
     // 5. Delete user activities related to this campaign
     const { error: activitiesError } = await supabaseAdmin
       .from('user_activities')

@@ -26,8 +26,9 @@ export async function DELETE(
     console.log(`Deleting campaign ${campaignId} (${campaign.date}, status: ${campaign.status})`)
 
     // Delete related records first (cascading delete)
+    // Order matters - delete child records before parent records
 
-    // Delete campaign events
+    // 1. Delete campaign events
     const { error: campaignEventsError } = await supabaseAdmin
       .from('campaign_events')
       .delete()
@@ -35,13 +36,10 @@ export async function DELETE(
 
     if (campaignEventsError) {
       console.error('Error deleting campaign events:', campaignEventsError)
-      return NextResponse.json(
-        { error: 'Failed to delete campaign events' },
-        { status: 500 }
-      )
+      // Don't fail - continue with deletion
     }
 
-    // Delete articles associated with this campaign
+    // 2. Delete articles associated with this campaign
     const { error: articlesError } = await supabaseAdmin
       .from('articles')
       .delete()
@@ -49,10 +47,40 @@ export async function DELETE(
 
     if (articlesError) {
       console.error('Error deleting campaign articles:', articlesError)
-      return NextResponse.json(
-        { error: 'Failed to delete campaign articles' },
-        { status: 500 }
-      )
+      // Don't fail - continue with deletion
+    }
+
+    // 3. Delete RSS posts associated with this campaign
+    const { error: postsError } = await supabaseAdmin
+      .from('rss_posts')
+      .delete()
+      .eq('campaign_id', campaignId)
+
+    if (postsError) {
+      console.error('Error deleting RSS posts:', postsError)
+      // Don't fail - continue with deletion
+    }
+
+    // 4. Delete road work data associated with this campaign
+    const { error: roadWorkError } = await supabaseAdmin
+      .from('road_work_data')
+      .delete()
+      .eq('campaign_id', campaignId)
+
+    if (roadWorkError) {
+      console.error('Error deleting road work data:', roadWorkError)
+      // Don't fail - continue with deletion
+    }
+
+    // 5. Delete user activities related to this campaign
+    const { error: activitiesError } = await supabaseAdmin
+      .from('user_activities')
+      .delete()
+      .eq('campaign_id', campaignId)
+
+    if (activitiesError) {
+      console.error('Error deleting user activities:', activitiesError)
+      // Don't fail - continue with deletion
     }
 
     // Finally delete the campaign itself
@@ -63,8 +91,13 @@ export async function DELETE(
 
     if (deleteError) {
       console.error('Error deleting campaign:', deleteError)
+      console.error('Delete error details:', JSON.stringify(deleteError, null, 2))
       return NextResponse.json(
-        { error: 'Failed to delete campaign' },
+        {
+          error: 'Failed to delete campaign',
+          details: deleteError.message || 'Unknown database error',
+          code: deleteError.code || 'UNKNOWN'
+        },
         { status: 500 }
       )
     }

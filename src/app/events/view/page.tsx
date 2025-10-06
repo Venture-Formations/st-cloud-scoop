@@ -96,7 +96,8 @@ export default function ViewEventsPage() {
     // Apply date filter
     if (selectedDate) {
       filtered = filtered.filter(event => {
-        const eventDate = new Date(event.start_date).toISOString().split('T')[0]
+        // Extract just the date part (YYYY-MM-DD) without timezone conversion
+        const eventDate = event.start_date.split('T')[0]
         return eventDate === selectedDate
       })
     }

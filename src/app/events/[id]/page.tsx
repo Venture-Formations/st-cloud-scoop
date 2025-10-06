@@ -227,7 +227,7 @@ export default function EventPage() {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Logo Header */}
-      <div className="bg-blue-600 py-6">
+      <div className="bg-blue-600 py-3">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
           <Link href="/events/view">
             <img

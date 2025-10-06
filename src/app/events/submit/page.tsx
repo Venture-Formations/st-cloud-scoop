@@ -400,7 +400,7 @@ export default function SubmitEventPage() {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Logo Header */}
-      <div className="bg-blue-600 py-6">
+      <div className="bg-blue-600 py-3">
         <div className="max-w-4xl mx-auto px-4">
           <img
             src="https://raw.githubusercontent.com/VFDavid/STCScoop/refs/heads/main/STCSCOOP_Logo_824X148_clear.png"

@@ -862,7 +862,7 @@ function EventsManager({
 
   const getFeaturedEventForDate = (date: string) => {
     // Only return manual featured if no database-featured events exist for this date
-    const hasDatabaseFeatured = getEventsForDate(date).some(event => event.is_featured === true)
+    const hasDatabaseFeatured = getEventsForDate(date).some(event => event.featured === true)
     if (hasDatabaseFeatured) {
       return null // Disable manual featuring when database-featured exists
     }
@@ -890,7 +890,7 @@ function EventsManager({
     // Clear featured if we're removing the featured event
     const newFeatured = newSelected.includes(currentFeatured || '') ? currentFeatured : undefined
 
-    onUpdateEvents(date, newSelected, newFeatured)
+    onUpdateEvents(date, newSelected, newFeatured ?? undefined)
   }
 
   const handleFeaturedToggle = async (date: string, eventId: string) => {
@@ -1011,9 +1011,9 @@ function EventsManager({
                   <div className="space-y-3">
                     {dateEvents.map(event => {
                       const isSelected = selectedEvents.some(ce => ce.event_id === event.id)
-                      const isDatabaseFeatured = event.is_featured === true // Featured in events table
+                      const isDatabaseFeatured = event.featured === true // Featured in events table
                       const isFeatured = featuredEventId === event.id // Manually featured in campaign
-                      const hasDatabaseFeatured = dateEvents.some(e => e.is_featured === true)
+                      const hasDatabaseFeatured = dateEvents.some(e => e.featured === true)
 
                       return (
                         <div

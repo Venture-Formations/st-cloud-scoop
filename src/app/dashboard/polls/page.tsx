@@ -188,8 +188,32 @@ export default function PollsPage() {
 
   return (
     <div className="p-6 max-w-7xl mx-auto">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold">Poll Management</h1>
+      <div className="flex justify-between items-start mb-6">
+        <div>
+          <nav className="mb-2">
+            <ol className="flex items-center space-x-2 text-sm text-gray-500">
+              <li>
+                <Link href="/dashboard" className="hover:text-brand-primary">
+                  Dashboard
+                </Link>
+              </li>
+              <li>/</li>
+              <li>
+                <Link href="/dashboard/databases" className="hover:text-brand-primary">
+                  Databases
+                </Link>
+              </li>
+              <li>/</li>
+              <li>
+                <span className="text-gray-900 font-medium">Polls</span>
+              </li>
+            </ol>
+          </nav>
+          <h1 className="text-2xl font-bold text-gray-900">Poll Management</h1>
+          <p className="text-gray-600">
+            {polls.length} {polls.length === 1 ? 'poll' : 'polls'} • {polls.filter(p => p.is_active).length} active
+          </p>
+        </div>
         <button
           onClick={() => {
             resetForm()

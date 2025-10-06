@@ -20,7 +20,7 @@ export async function GET(request: NextRequest) {
     console.log('Test articles:', testArticles)
 
     // Generate subject line using AI
-    const prompt = AI_PROMPTS.subjectLineGenerator(testArticles)
+    const prompt = await AI_PROMPTS.subjectLineGenerator(testArticles)
     console.log('AI Prompt:', prompt)
 
     const result = await callOpenAI(prompt)

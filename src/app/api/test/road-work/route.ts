@@ -9,7 +9,7 @@ export async function GET(request: NextRequest) {
     console.log(`Testing road work generation for date: ${campaignDate}`)
 
     // Generate road work data using AI directly
-    const prompt = AI_PROMPTS.roadWorkGenerator(campaignDate)
+    const prompt = await AI_PROMPTS.roadWorkGenerator(campaignDate)
     console.log('Calling AI for road work generation...')
 
     const aiResponse = await callOpenAI(prompt, 3000, 0.7)

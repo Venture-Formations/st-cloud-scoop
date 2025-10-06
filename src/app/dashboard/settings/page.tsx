@@ -1407,14 +1407,14 @@ function AIPromptsSettings() {
                           Prompt Content
                         </label>
                         <span className="text-xs text-gray-500">
-                          {isEditing ? editingPrompt.value.length : prompt.value.length} characters
+                          {isEditing ? editingPrompt?.value.length || 0 : prompt.value.length} characters
                         </span>
                       </div>
                       {isEditing ? (
                         <>
                           <textarea
-                            value={editingPrompt.value}
-                            onChange={(e) => setEditingPrompt({ ...editingPrompt, value: e.target.value })}
+                            value={editingPrompt?.value || ''}
+                            onChange={(e) => editingPrompt && setEditingPrompt({ ...editingPrompt, value: e.target.value })}
                             rows={15}
                             className="w-full px-3 py-2 border border-gray-300 rounded-md font-mono text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                           />

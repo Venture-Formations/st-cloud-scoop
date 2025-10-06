@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import Link from 'next/link'
 import { Poll, PollResponse } from '@/types/database'
 
 interface PollWithAnalytics extends Poll {

@@ -25,6 +25,9 @@ export async function DELETE(
 
     console.log(`Deleting campaign ${campaignId} (${campaign.date}, status: ${campaign.status})`)
 
+    // Track deletion errors for debugging
+    const deletionErrors: Record<string, any> = {}
+
     // Delete related records first (cascading delete)
     // Order matters - delete child records before parent records
 
@@ -36,7 +39,7 @@ export async function DELETE(
 
     if (campaignEventsError) {
       console.error('Error deleting campaign events:', campaignEventsError)
-      // Don't fail - continue with deletion
+      deletionErrors.campaign_events = { message: campaignEventsError.message, code: campaignEventsError.code }
     }
 
     // 2. Delete articles associated with this campaign
@@ -47,7 +50,7 @@ export async function DELETE(
 
     if (articlesError) {
       console.error('Error deleting campaign articles:', articlesError)
-      // Don't fail - continue with deletion
+      deletionErrors.articles = { message: articlesError.message, code: articlesError.code }
     }
 
     // 3. Delete RSS posts associated with this campaign
@@ -58,7 +61,7 @@ export async function DELETE(
 
     if (postsError) {
       console.error('Error deleting RSS posts:', postsError)
-      // Don't fail - continue with deletion
+      deletionErrors.rss_posts = { message: postsError.message, code: postsError.code }
     }
 
     // 4. Delete road work data associated with this campaign
@@ -69,10 +72,21 @@ export async function DELETE(
 
     if (roadWorkError) {
       console.error('Error deleting road work data:', roadWorkError)
-      // Don't fail - continue with deletion
+      deletionErrors.road_work_data = { message: roadWorkError.message, code: roadWorkError.code }
     }
 
-    // 4b. Delete road work selections associated with this campaign
+    // 4b. Delete road work items associated with this campaign
+    const { error: roadWorkItemsError } = await supabaseAdmin
+      .from('road_work_items')
+      .delete()
+      .eq('campaign_id', campaignId)
+
+    if (roadWorkItemsError) {
+      console.error('Error deleting road work items:', roadWorkItemsError)
+      deletionErrors.road_work_items = { message: roadWorkItemsError.message, code: roadWorkItemsError.code }
+    }
+
+    // 4c. Delete road work selections associated with this campaign
     const { error: roadWorkSelectionsError } = await supabaseAdmin
       .from('road_work_selections')
       .delete()
@@ -80,10 +94,10 @@ export async function DELETE(
 
     if (roadWorkSelectionsError) {
       console.error('Error deleting road work selections:', roadWorkSelectionsError)
-      // Don't fail - continue with deletion
+      deletionErrors.road_work_selections = { message: roadWorkSelectionsError.message, code: roadWorkSelectionsError.code }
     }
 
-    // 4c. Delete dining deal selections associated with this campaign
+    // 4d. Delete dining deal selections associated with this campaign
     const { error: diningSelectionsError } = await supabaseAdmin
       .from('campaign_dining_selections')
       .delete()
@@ -91,10 +105,10 @@ export async function DELETE(
 
     if (diningSelectionsError) {
       console.error('Error deleting dining selections:', diningSelectionsError)
-      // Don't fail - continue with deletion
+      deletionErrors.campaign_dining_selections = { message: diningSelectionsError.message, code: diningSelectionsError.code }
     }
 
-    // 4d. Delete VRBO selections associated with this campaign
+    // 4e. Delete VRBO selections associated with this campaign
     const { error: vrboSelectionsError } = await supabaseAdmin
       .from('campaign_vrbo_selections')
       .delete()
@@ -102,7 +116,7 @@ export async function DELETE(
 
     if (vrboSelectionsError) {
       console.error('Error deleting VRBO selections:', vrboSelectionsError)
-      // Don't fail - continue with deletion
+      deletionErrors.campaign_vrbo_selections = { message: vrboSelectionsError.message, code: vrboSelectionsError.code }
     }
 
     // 5. Delete user activities related to this campaign
@@ -113,7 +127,7 @@ export async function DELETE(
 
     if (activitiesError) {
       console.error('Error deleting user activities:', activitiesError)
-      // Don't fail - continue with deletion
+      deletionErrors.user_activities = { message: activitiesError.message, code: activitiesError.code }
     }
 
     // 6. Delete archived articles associated with this campaign
@@ -124,7 +138,7 @@ export async function DELETE(
 
     if (archivedArticlesError) {
       console.error('Error deleting archived articles:', archivedArticlesError)
-      // Don't fail - continue with deletion
+      deletionErrors.archived_articles = { message: archivedArticlesError.message, code: archivedArticlesError.code }
     }
 
     // 7. Delete archived RSS posts associated with this campaign
@@ -135,7 +149,7 @@ export async function DELETE(
 
     if (archivedPostsError) {
       console.error('Error deleting archived RSS posts:', archivedPostsError)
-      // Don't fail - continue with deletion
+      deletionErrors.archived_rss_posts = { message: archivedPostsError.message, code: archivedPostsError.code }
     }
 
     // Finally delete the campaign itself
@@ -147,11 +161,13 @@ export async function DELETE(
     if (deleteError) {
       console.error('Error deleting campaign:', deleteError)
       console.error('Delete error details:', JSON.stringify(deleteError, null, 2))
+      console.error('Child deletion errors:', deletionErrors)
       return NextResponse.json(
         {
           error: 'Failed to delete campaign',
           details: deleteError.message || 'Unknown database error',
-          code: deleteError.code || 'UNKNOWN'
+          code: deleteError.code || 'UNKNOWN',
+          child_deletion_errors: deletionErrors
         },
         { status: 500 }
       )

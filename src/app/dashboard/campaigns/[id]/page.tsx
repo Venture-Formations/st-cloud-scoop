@@ -325,6 +325,97 @@ function RoadWorkSection({ campaign }: { campaign: any }) {
   )
 }
 
+function PollSection({ campaign }: { campaign: any }) {
+  const [activePoll, setActivePoll] = useState<any>(null)
+  const [loading, setLoading] = useState(true)
+  const [responseCount, setResponseCount] = useState(0)
+
+  useEffect(() => {
+    const fetchActivePoll = async () => {
+      try {
+        const response = await fetch('/api/polls/active')
+        if (response.ok) {
+          const data = await response.json()
+          if (data.poll) {
+            setActivePoll(data.poll)
+            // Fetch response count for this poll
+            const responsesResponse = await fetch(`/api/polls/${data.poll.id}/responses`)
+            if (responsesResponse.ok) {
+              const responsesData = await responsesResponse.json()
+              setResponseCount(responsesData.responses?.length || 0)
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Failed to fetch active poll:', error)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchActivePoll()
+  }, [])
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-8">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-primary"></div>
+        <span className="ml-3 text-gray-600">Loading poll data...</span>
+      </div>
+    )
+  }
+
+  if (!activePoll) {
+    return (
+      <div className="p-6">
+        <div className="text-center py-8 text-gray-500">
+          No active poll found. Create and activate a poll in the Poll Management section.
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="p-6">
+      <div className="bg-gray-50 rounded-lg p-6">
+        <div className="mb-4">
+          <div className="flex items-start justify-between mb-2">
+            <h3 className="text-lg font-medium text-gray-900">
+              {activePoll.title}
+            </h3>
+            <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+              Active
+            </span>
+          </div>
+          <p className="text-gray-700 text-base mb-4">{activePoll.question}</p>
+        </div>
+
+        <div className="space-y-2 mb-4">
+          <h4 className="text-sm font-medium text-gray-700">Options:</h4>
+          {activePoll.options && activePoll.options.map((option: string, index: number) => (
+            <div key={index} className="flex items-center space-x-3 bg-white p-3 rounded-lg border border-gray-200">
+              <span className="flex items-center justify-center w-6 h-6 rounded-full bg-blue-100 text-blue-700 text-sm font-medium">
+                {String.fromCharCode(65 + index)}
+              </span>
+              <span className="text-gray-900">{option}</span>
+            </div>
+          ))}
+        </div>
+
+        <div className="pt-4 border-t border-gray-200">
+          <div className="flex items-center justify-between text-sm">
+            <span className="text-gray-600">Total Responses:</span>
+            <span className="font-semibold text-gray-900">{responseCount}</span>
+          </div>
+          <div className="mt-2 text-xs text-gray-500">
+            This poll will appear in the newsletter and track subscriber responses.
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 function DiningDealsSection({ campaign }: { campaign: any }) {
   const [deals, setDeals] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
@@ -525,6 +616,8 @@ function NewsletterSectionComponent({
         )
       case 'Road Work':
         return <RoadWorkSection campaign={campaign} />
+      case 'Poll':
+        return <PollSection campaign={campaign} />
       default:
         return (
           <div className="text-center py-8 text-gray-500">

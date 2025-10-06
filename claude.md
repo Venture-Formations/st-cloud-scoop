@@ -1,8 +1,30 @@
 # St. Cloud Scoop Development - Main Content Repository
 
-**Last Updated:** 2025-09-26 (Current Session - Road Work Section Implementation Complete)
+**Last Updated:** 2025-10-06
 **Primary Source:** This is now the authoritative development document
-**Session Focus:** Complete Road Work Newsletter Section Implementation
+
+## ⚠️ CRITICAL DEVELOPMENT RULES
+
+### Date/Time Handling Policy
+**ALL date and time operations MUST use local (non-UTC) comparisons:**
+- ❌ **NEVER** use `.toISOString()`, `.toUTCString()`, or UTC-based Date methods for date comparisons
+- ✅ **ALWAYS** extract date strings directly (e.g., `date.split('T')[0]`) to avoid timezone shifts
+- ✅ **ALWAYS** use local time for filtering, sorting, and displaying dates
+- ✅ When comparing dates, use string comparison on YYYY-MM-DD format without timezone conversion
+
+**Why:** UTC conversion causes dates to shift forward/backward depending on timezone, breaking filters and comparisons.
+
+**Example - CORRECT:**
+```typescript
+const eventDate = event.start_date.split('T')[0] // "2025-10-10"
+return eventDate === selectedDate
+```
+
+**Example - INCORRECT:**
+```typescript
+const eventDate = new Date(event.start_date).toISOString().split('T')[0] // May shift to "2025-10-09" or "2025-10-11"
+return eventDate === selectedDate
+```
 
 ## 🔒 **SAVE POINT - Road Work Section Implementation Complete** (2025-09-26)
 **Git Commit:** `b5fb129` - Fix road work section appearing below footer by closing container divs

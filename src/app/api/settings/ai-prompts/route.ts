@@ -119,7 +119,7 @@ export async function PATCH(request: NextRequest) {
   }
 }
 
-// POST - Reset prompt to default value
+// POST - Reset prompt to default value (custom default if exists, otherwise code default)
 export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
@@ -128,7 +128,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { key } = body
+    const { key, action } = body
 
     if (!key || !key.startsWith('ai_prompt_')) {
       return NextResponse.json(
@@ -137,35 +137,90 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Get default prompts
-    const defaultPrompts = await getDefaultPrompts()
-    const defaultPrompt = defaultPrompts.find(p => p.key === key)
+    // Handle "Save as Default" action
+    if (action === 'save_as_default') {
+      // Get current value
+      const { data: current, error: fetchError } = await supabaseAdmin
+        .from('app_settings')
+        .select('value')
+        .eq('key', key)
+        .single()
 
-    if (!defaultPrompt) {
-      return NextResponse.json(
-        { error: 'Default prompt not found' },
-        { status: 404 }
-      )
+      if (fetchError || !current) {
+        return NextResponse.json(
+          { error: 'Prompt not found' },
+          { status: 404 }
+        )
+      }
+
+      // Save current value as custom default
+      const { error: updateError } = await supabaseAdmin
+        .from('app_settings')
+        .update({
+          custom_default: current.value,
+          updated_at: new Date().toISOString()
+        })
+        .eq('key', key)
+
+      if (updateError) throw updateError
+
+      return NextResponse.json({
+        success: true,
+        message: 'Current prompt saved as your custom default'
+      })
+    }
+
+    // Handle "Reset to Default" action
+    // First check if there's a custom default
+    const { data: settings, error: fetchError } = await supabaseAdmin
+      .from('app_settings')
+      .select('custom_default')
+      .eq('key', key)
+      .single()
+
+    let defaultValue: string
+
+    if (!fetchError && settings?.custom_default) {
+      // Use custom default if available
+      defaultValue = settings.custom_default
+    } else {
+      // Fall back to code default
+      const defaultPrompts = await getDefaultPrompts()
+      const defaultPrompt = defaultPrompts.find(p => p.key === key)
+
+      if (!defaultPrompt) {
+        return NextResponse.json(
+          { error: 'Default prompt not found' },
+          { status: 404 }
+        )
+      }
+
+      defaultValue = defaultPrompt.value
     }
 
     // Update database with default value
-    const { error } = await supabaseAdmin
+    const { error: updateError } = await supabaseAdmin
       .from('app_settings')
       .update({
-        value: defaultPrompt.value,
+        value: defaultValue,
         updated_at: new Date().toISOString()
       })
       .eq('key', key)
 
-    if (error) throw error
+    if (updateError) throw updateError
+
+    const usedCustomDefault = settings?.custom_default ? true : false
 
     return NextResponse.json({
       success: true,
-      message: 'Prompt reset to default successfully'
+      message: usedCustomDefault
+        ? 'Prompt reset to your custom default'
+        : 'Prompt reset to original code default',
+      used_custom_default: usedCustomDefault
     })
 
   } catch (error) {
-    console.error('Failed to reset AI prompt:', error)
+    console.error('Failed to process AI prompt action:', error)
     return NextResponse.json(
       {
         success: false,

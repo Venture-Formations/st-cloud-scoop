@@ -1365,7 +1365,11 @@ function AIPromptsSettings() {
       })
 
       if (response.ok) {
-        setMessage('Prompt reset to default successfully!')
+        const data = await response.json()
+        const message = data.used_custom_default
+          ? 'Prompt reset to your custom default!'
+          : 'Prompt reset to original code default!'
+        setMessage(message)
         await loadPrompts()
         setTimeout(() => setMessage(''), 3000)
       } else {
@@ -1373,6 +1377,40 @@ function AIPromptsSettings() {
       }
     } catch (error) {
       setMessage('Error: Failed to reset prompt')
+      setTimeout(() => setMessage(''), 5000)
+    } finally {
+      setSaving(null)
+    }
+  }
+
+  const handleSaveAsDefault = async (key: string) => {
+    if (!confirm('Are you sure you want to save the current prompt as your custom default?\n\nThis will replace any previous custom default. When you click "Reset to Default", it will restore to this version instead of the original code default.')) {
+      return
+    }
+
+    if (!confirm('Double confirmation: Save current prompt as default? This action will be permanent.')) {
+      return
+    }
+
+    setSaving(key)
+    setMessage('')
+
+    try {
+      const response = await fetch('/api/settings/ai-prompts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ key, action: 'save_as_default' })
+      })
+
+      if (response.ok) {
+        setMessage('✓ Current prompt saved as your custom default!')
+        await loadPrompts()
+        setTimeout(() => setMessage(''), 3000)
+      } else {
+        throw new Error('Failed to save as default')
+      }
+    } catch (error) {
+      setMessage('Error: Failed to save as default')
       setTimeout(() => setMessage(''), 5000)
     } finally {
       setSaving(null)
@@ -1471,13 +1509,22 @@ function AIPromptsSettings() {
                             {prompt.value}
                           </div>
                           <div className="mt-3 flex items-center justify-between">
-                            <button
-                              onClick={() => handleReset(prompt.key)}
-                              disabled={saving === prompt.key}
-                              className="px-4 py-2 text-sm font-medium text-red-700 bg-white border border-red-300 rounded-md hover:bg-red-50 disabled:opacity-50"
-                            >
-                              {saving === prompt.key ? 'Resetting...' : 'Reset to Default'}
-                            </button>
+                            <div className="flex items-center space-x-3">
+                              <button
+                                onClick={() => handleReset(prompt.key)}
+                                disabled={saving === prompt.key}
+                                className="px-4 py-2 text-sm font-medium text-red-700 bg-white border border-red-300 rounded-md hover:bg-red-50 disabled:opacity-50"
+                              >
+                                {saving === prompt.key ? 'Resetting...' : 'Reset to Default'}
+                              </button>
+                              <button
+                                onClick={() => handleSaveAsDefault(prompt.key)}
+                                disabled={saving === prompt.key}
+                                className="px-4 py-2 text-sm font-medium text-green-700 bg-white border border-green-300 rounded-md hover:bg-green-50 disabled:opacity-50"
+                              >
+                                {saving === prompt.key ? 'Saving...' : 'Save as Default'}
+                              </button>
+                            </div>
                             <button
                               onClick={() => handleEdit(prompt)}
                               className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700"

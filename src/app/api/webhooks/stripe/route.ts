@@ -146,6 +146,22 @@ async function handleCheckoutSessionCompleted(session: any) {
   for (const event of events) {
     const paymentAmount = event.paid_placement ? 5.00 : event.featured ? 15.00 : 0
 
+    // If this is a promotion of an existing event, mark the original as inactive
+    if (event.existing_event_id) {
+      console.log(`[Webhook] Marking original event ${event.existing_event_id} as inactive (being promoted)`)
+      const { error: deactivateError } = await supabaseAdmin
+        .from('events')
+        .update({ active: false })
+        .eq('id', event.existing_event_id)
+
+      if (deactivateError) {
+        console.error('[Webhook] Error deactivating original event:', deactivateError)
+        // Don't throw - continue with creating the promoted event
+      } else {
+        console.log(`[Webhook] Successfully deactivated original event ${event.existing_event_id}`)
+      }
+    }
+
     const { data: insertedEvent, error: insertError } = await supabaseAdmin
       .from('events')
       .insert({
@@ -183,7 +199,7 @@ async function handleCheckoutSessionCompleted(session: any) {
     }
 
     insertedEvents.push(insertedEvent)
-    console.log(`[Webhook] Inserted event: ${event.title}`)
+    console.log(`[Webhook] Inserted event: ${event.title}${event.existing_event_id ? ' (promoted from existing)' : ''}`)
   }
 
   // Send Slack notification

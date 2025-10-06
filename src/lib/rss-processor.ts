@@ -1296,15 +1296,18 @@ export class RSSProcessor {
           const shuffled = [...regularEvents].sort(() => Math.random() - 0.5)
           const selectedRegular = shuffled.slice(0, remainingSlots)
 
-          selectedRegular.forEach(event => {
+          // If NO database-featured events exist for this day, mark the first regular event as featured
+          const shouldAutoFeature = featuredEvents.length === 0 && selectedRegular.length > 0
+
+          selectedRegular.forEach((event, index) => {
             selectedForDate.push({
               event,
-              is_featured: false,
+              is_featured: shouldAutoFeature && index === 0, // First regular event becomes featured if no database-featured exists
               display_order: displayOrder++
             })
           })
 
-          console.log(`Selected ${selectedRegular.length} regular events randomly for ${date}`)
+          console.log(`Selected ${selectedRegular.length} regular events randomly for ${date}${shouldAutoFeature ? ' (first marked as featured)' : ''}`)
         }
 
         // Add all selected events to campaign_events

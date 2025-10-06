@@ -861,6 +861,11 @@ function EventsManager({
   }
 
   const getFeaturedEventForDate = (date: string) => {
+    // Only return manual featured if no database-featured events exist for this date
+    const hasDatabaseFeatured = getEventsForDate(date).some(event => event.is_featured === true)
+    if (hasDatabaseFeatured) {
+      return null // Disable manual featuring when database-featured exists
+    }
     const featured = campaignEvents.find(ce => ce.event_date === date && ce.is_featured)
     return featured?.event_id
   }
@@ -1006,13 +1011,15 @@ function EventsManager({
                   <div className="space-y-3">
                     {dateEvents.map(event => {
                       const isSelected = selectedEvents.some(ce => ce.event_id === event.id)
-                      const isFeatured = featuredEventId === event.id
+                      const isDatabaseFeatured = event.is_featured === true // Featured in events table
+                      const isFeatured = featuredEventId === event.id // Manually featured in campaign
+                      const hasDatabaseFeatured = dateEvents.some(e => e.is_featured === true)
 
                       return (
                         <div
                           key={event.id}
                           className={`p-3 rounded-lg border-2 transition-all ${
-                            isFeatured
+                            isDatabaseFeatured || isFeatured
                               ? 'border-blue-500 bg-blue-50 shadow-md'
                               : isSelected
                                 ? 'border-green-300 bg-green-50'
@@ -1037,7 +1044,15 @@ function EventsManager({
                               )}
                             </button>
 
-                            {isSelected && (
+                            {/* Database-Featured Badge (read-only, gold) */}
+                            {isDatabaseFeatured && (
+                              <span className="px-2 py-1 text-xs font-medium bg-yellow-100 text-yellow-800 border border-yellow-300 rounded">
+                                ⭐ Featured
+                              </span>
+                            )}
+
+                            {/* Manual Feature Button (only if no database-featured exists) */}
+                            {!isDatabaseFeatured && !hasDatabaseFeatured && isSelected && (
                               <button
                                 onClick={() => handleFeaturedToggle(date, event.id)}
                                 disabled={updating}
@@ -1073,7 +1088,7 @@ function EventsManager({
                             </div>
 
                             {/* Featured Event Image */}
-                            {isFeatured && event.cropped_image_url && (
+                            {(isDatabaseFeatured || isFeatured) && event.cropped_image_url && (
                               <div className="ml-3 flex-shrink-0">
                                 <img
                                   src={event.cropped_image_url}

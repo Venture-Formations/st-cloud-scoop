@@ -5,10 +5,8 @@ import { authOptions } from '@/lib/auth'
 
 export async function GET(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions)
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+    // Public endpoint - no authentication required for GET
+    // This allows the public events submission page to fetch current pricing
 
     // Get current pricing settings from database
     const { data: settingsRows, error } = await supabaseAdmin

@@ -405,7 +405,7 @@ export default function SubmitEventPage() {
           <img
             src="https://raw.githubusercontent.com/VFDavid/STCScoop/refs/heads/main/STCSCOOP_Logo_824X148_clear.png"
             alt="St. Cloud Scoop"
-            className="h-12 md:h-16 w-auto mx-auto"
+            className="h-16 md:h-24 w-auto mx-auto"
           />
         </div>
       </div>

@@ -28,6 +28,7 @@ interface ColumnConfig {
 export default function EventsDatabasePage() {
   const [events, setEvents] = useState<Event[]>([])
   const [loading, setLoading] = useState(true)
+  const [pendingCount, setPendingCount] = useState(0)
   const [sortField, setSortField] = useState<SortField>('start_date')
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc')
   const [filter, setFilter] = useState<EventsFilter>({
@@ -59,6 +60,7 @@ export default function EventsDatabasePage() {
 
   useEffect(() => {
     fetchEvents()
+    fetchPendingCount()
   }, [])
 
   const fetchEvents = async () => {
@@ -72,6 +74,18 @@ export default function EventsDatabasePage() {
       console.error('Failed to fetch events:', error)
     } finally {
       setLoading(false)
+    }
+  }
+
+  const fetchPendingCount = async () => {
+    try {
+      const response = await fetch('/api/events?submission_status=pending')
+      if (response.ok) {
+        const data = await response.json()
+        setPendingCount(data.events?.length || 0)
+      }
+    } catch (error) {
+      console.error('Failed to fetch pending count:', error)
     }
   }
 
@@ -306,6 +320,17 @@ export default function EventsDatabasePage() {
             </p>
           </div>
           <div className="flex space-x-3">
+            <Link
+              href="/dashboard/events"
+              className="relative bg-orange-600 hover:bg-orange-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors inline-flex items-center"
+            >
+              Event Approvals
+              {pendingCount > 0 && (
+                <span className="ml-2 bg-white text-orange-600 text-xs font-bold px-2 py-0.5 rounded-full">
+                  {pendingCount}
+                </span>
+              )}
+            </Link>
             <button
               onClick={() => setShowCsvUpload(true)}
               className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors"

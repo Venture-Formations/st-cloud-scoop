@@ -46,6 +46,15 @@ export async function GET(request: NextRequest) {
       // Don't fail the request if table doesn't exist yet
     }
 
+    const { data: pollsCount, error: pollsError } = await supabaseAdmin
+      .from('polls')
+      .select('id', { count: 'exact' })
+
+    if (pollsError) {
+      console.error('Error fetching Polls count:', pollsError)
+      // Don't fail the request if table doesn't exist yet
+    }
+
     // Get unique RSS sources count
     const { data: rssPosts, error: rssError } = await supabaseAdmin
       .from('rss_posts')
@@ -61,6 +70,12 @@ export async function GET(request: NextRequest) {
         description: 'Events pulled from Visit St. Cloud API',
         count: eventsCount?.length || 0,
         href: '/dashboard/databases/events'
+      },
+      {
+        name: 'Polls',
+        description: 'Newsletter polls and subscriber responses',
+        count: pollsCount?.length || 0,
+        href: '/dashboard/polls'
       },
       {
         name: 'VRBO Listings',

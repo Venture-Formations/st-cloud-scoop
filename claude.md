@@ -3,6 +3,159 @@
 **Last Updated:** 2025-10-06
 **Primary Source:** This is now the authoritative development document
 
+## 🔒 **SAVE POINT - Campaign Deletion & AI Prompts Complete** (2025-10-06)
+**Git Commit:** `319b36b` - Add road_work_items table to campaign deletion and improve error tracking
+**System State:** Fully functional with complete campaign management and AI prompt customization
+**Working Features:**
+- ✅ RSS Processing with Smart Event Population (8 events per day, random selection)
+- ✅ Subject Line Generation (both AI and manual editing)
+- ✅ Automatic Subject Line Regeneration (when #1 article changes via skip/reorder)
+- ✅ Real-Time UI Updates (subject line updates instantly without page refresh)
+- ✅ Event Management with random selection and featured events
+- ✅ Manual Subject Line Editing (no character limits)
+- ✅ Campaign workflow (Draft → In Review → Ready to Send → Sent)
+- ✅ Skip Article functionality with complete audit trail
+- ✅ Complete Road Work Newsletter Section (AI-generated, database-integrated, automated)
+- ✅ Preview Loading States (visual feedback during newsletter generation)
+- ✅ **NEW: Complete Campaign Deletion** (handles all 12 related tables with error tracking)
+- ✅ **NEW: AI Prompt Testing** (purple "Test Prompt" button with realistic St. Cloud data)
+- ✅ **NEW: Custom AI Prompt Defaults** (Save as Default with double confirmation)
+- ✅ **NEW: Smart Prompt Reset** (prioritizes custom defaults over code defaults)
+
+**Purpose:** Safe restore point with complete campaign management, AI prompt customization, and robust deletion system
+
+## 🆕 Current Session (2025-10-06): Campaign Deletion & AI Prompt Management
+
+### Major Features Implemented ✅
+
+#### 1. **Complete Campaign Deletion System**
+- **Root Cause Fixed**: Missing `road_work_items` table causing foreign key constraint violation
+- **Error Tracking**: Enhanced endpoint with detailed error reporting for each child table deletion
+- **Comprehensive Cleanup**: Handles all 12 related tables in correct deletion order
+- **Non-Blocking Design**: Child table deletion errors don't stop the overall process
+- **Detailed Logging**: Returns `child_deletion_errors` object showing exactly which tables failed
+
+#### 2. **AI Prompt Testing System**
+- **Test Endpoint**: Created `/api/debug/test-ai-prompts` with realistic St. Cloud data
+- **UI Integration**: Purple "Test Prompt" button on each prompt card
+- **Realistic Test Data**: Pre-populated with St. Cloud-specific content for each prompt type
+- **New Tab Opening**: Tests open in separate browser tab for easy comparison
+
+#### 3. **Custom AI Prompt Defaults**
+- **Database Schema**: Added `custom_default` TEXT column to `app_settings` table
+- **Save as Default**: Green button with double confirmation to save current prompt
+- **Smart Reset**: Prioritizes user's custom default over original code defaults
+- **User Feedback**: Clear messages indicating which default was used during reset
+- **Migration Helper**: Created `/api/debug/add-custom-default-column` endpoint
+
+#### 4. **Event Population Integration**
+- **Auto-Population**: Events now populate automatically during RSS processing
+- **No Manual Steps**: Removed need to manually select events for each campaign
+- **Smart Selection**: Up to 8 events per day with featured event logic
+
+### Technical Implementation Details
+
+#### Campaign Deletion Tables (Complete List):
+```
+1. campaign_events
+2. articles
+3. rss_posts
+4. road_work_data
+5. road_work_items (THE MISSING TABLE - fixed in this session)
+6. road_work_selections
+7. campaign_dining_selections
+8. campaign_vrbo_selections
+9. user_activities
+10. archived_articles
+11. archived_rss_posts
+12. newsletter_campaigns (parent table)
+```
+
+#### Error Tracking Enhancement:
+```typescript
+// Now returns detailed error information
+{
+  "error": "Failed to delete campaign",
+  "details": "update or delete on table...",
+  "code": "23503",
+  "child_deletion_errors": {
+    "road_work_items": {
+      "message": "Foreign key constraint violation",
+      "code": "23503"
+    }
+  }
+}
+```
+
+#### Custom Defaults API Flow:
+```
+Save as Default:
+POST /api/settings/ai-prompts
+{ key: "ai_prompt_...", action: "save_as_default" }
+→ Saves current value to custom_default column
+
+Reset to Default:
+POST /api/settings/ai-prompts
+{ key: "ai_prompt_..." }
+→ Checks custom_default first
+→ Falls back to code default if none
+→ Returns which default was used
+```
+
+### Files Modified This Session
+
+```
+# Campaign Deletion Fix
+src/app/api/campaigns/[id]/delete/route.ts         # Added road_work_items, error tracking
+src/app/api/debug/check-campaign-relations/route.ts # Diagnostic endpoint (created)
+
+# AI Prompts Features
+src/app/api/settings/ai-prompts/route.ts           # Custom defaults logic
+src/app/api/debug/test-ai-prompts/route.ts         # Testing endpoint (created)
+src/app/api/debug/add-custom-default-column/route.ts # Migration helper (created)
+src/app/dashboard/settings/page.tsx                # Test/Save buttons, double confirmations
+
+# Event Population Integration
+src/lib/rss-processor.ts                           # Auto-populate events during RSS processing
+
+# TypeScript Fixes
+src/app/api/debug/test-subject/route.ts            # Added await to async AI_PROMPTS
+src/app/api/test/road-work/route.ts                # Added await to async AI_PROMPTS
+src/app/api/debug/test-ai-road-work/route.ts       # Added await to async AI_PROMPTS
+```
+
+### Session Problem Solving
+
+#### Issue 1: Campaign Deletion 500 Error
+- **Symptoms**: Persistent "Failed to delete campaign" error
+- **Root Cause**: `road_work_items` table had foreign key constraint on campaign_id
+- **Investigation**: Added error tracking to see which child table deletions were failing
+- **Solution**: Added `road_work_items` table to deletion sequence
+- **Iterations**: Discovered and added 4 additional tables (road_work_items, campaign_dining_selections, campaign_vrbo_selections, archived tables)
+
+#### Issue 2: Events Not Populating
+- **Symptoms**: Manually created campaigns had no events selected
+- **Root Cause**: Event population only ran via cron, not during RSS processing
+- **Solution**: Integrated `populateEventsForCampaignSmart()` into RSS processor workflow
+
+#### Issue 3: TypeScript Compilation Errors
+- **Symptoms**: Build failures after AI_PROMPTS became async
+- **Root Cause**: Debug endpoints missing `await` keywords
+- **Solution**: Added `await` to all AI_PROMPTS function calls
+
+### Current System Capabilities
+
+#### Campaign Management:
+- **Full Lifecycle**: Create → Populate Events → Process RSS → Generate Articles → Review → Send → Delete
+- **Robust Deletion**: Handles all related tables with comprehensive error tracking
+- **Auto-Population**: Events automatically selected during RSS processing
+
+#### AI Prompt Management:
+- **Testing**: One-click testing with realistic data
+- **Customization**: Save personalized defaults with confirmation
+- **Reset Options**: Choose between custom defaults and original code defaults
+- **Error Prevention**: Double confirmations on destructive actions
+
 ## ⚠️ CRITICAL DEVELOPMENT RULES
 
 ### Date/Time Handling Policy

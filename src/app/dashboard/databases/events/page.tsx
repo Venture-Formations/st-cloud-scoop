@@ -34,7 +34,7 @@ export default function EventsDatabasePage() {
   const [filter, setFilter] = useState<EventsFilter>({
     search: '',
     placement: 'all',
-    dateFilter: 'all',
+    dateFilter: 'upcoming',
     specificDate: ''
   })
   const [showAddForm, setShowAddForm] = useState(false)

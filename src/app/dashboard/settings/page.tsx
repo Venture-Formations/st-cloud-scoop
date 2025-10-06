@@ -1349,6 +1349,36 @@ function AIPromptsSettings() {
     }
   }
 
+  const handleReset = async (key: string) => {
+    if (!confirm('Are you sure you want to reset this prompt to its default value? This cannot be undone.')) {
+      return
+    }
+
+    setSaving(key)
+    setMessage('')
+
+    try {
+      const response = await fetch('/api/settings/ai-prompts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ key })
+      })
+
+      if (response.ok) {
+        setMessage('Prompt reset to default successfully!')
+        await loadPrompts()
+        setTimeout(() => setMessage(''), 3000)
+      } else {
+        throw new Error('Failed to reset prompt')
+      }
+    } catch (error) {
+      setMessage('Error: Failed to reset prompt')
+      setTimeout(() => setMessage(''), 5000)
+    } finally {
+      setSaving(null)
+    }
+  }
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -1440,7 +1470,14 @@ function AIPromptsSettings() {
                           <div className="bg-gray-50 border border-gray-200 rounded-md p-4 font-mono text-xs whitespace-pre-wrap overflow-x-auto max-h-96 overflow-y-auto">
                             {prompt.value}
                           </div>
-                          <div className="mt-3 flex items-center justify-end">
+                          <div className="mt-3 flex items-center justify-between">
+                            <button
+                              onClick={() => handleReset(prompt.key)}
+                              disabled={saving === prompt.key}
+                              className="px-4 py-2 text-sm font-medium text-red-700 bg-white border border-red-300 rounded-md hover:bg-red-50 disabled:opacity-50"
+                            >
+                              {saving === prompt.key ? 'Resetting...' : 'Reset to Default'}
+                            </button>
                             <button
                               onClick={() => handleEdit(prompt)}
                               className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700"

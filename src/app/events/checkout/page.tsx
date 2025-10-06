@@ -127,31 +127,20 @@ export default function CheckoutPage() {
           end_ampm: item.end_ampm
         })
 
-        const startDateTime = `${item.start_date}T${convertTime12to24(item.start_hour, item.start_minute, item.start_ampm)}`
-        const endDateTime = `${item.start_date}T${convertTime12to24(item.end_hour, item.end_minute, item.end_ampm)}`
+        // Store as local datetime without timezone conversion
+        const startTime = convertTime12to24(item.start_hour, item.start_minute, item.start_ampm)
+        const endTime = convertTime12to24(item.end_hour, item.end_minute, item.end_ampm)
 
-        console.log('Constructed date strings:', { startDateTime, endDateTime })
+        const startDateTime = `${item.start_date}T${startTime}:00`
+        const endDateTime = `${item.start_date}T${endTime}:00`
 
-        const startDate = new Date(startDateTime)
-        const endDate = new Date(endDateTime)
-
-        console.log('Parsed dates:', {
-          startDate: startDate.toString(),
-          endDate: endDate.toString(),
-          startValid: !isNaN(startDate.getTime()),
-          endValid: !isNaN(endDate.getTime())
-        })
-
-        // Validate dates
-        if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
-          throw new Error(`Invalid date for event "${item.title}". Start: ${startDateTime}, End: ${endDateTime}`)
-        }
+        console.log('Local datetime strings:', { startDateTime, endDateTime })
 
         return {
           title: item.title,
           description: item.description,
-          start_date: startDate.toISOString(),
-          end_date: endDate.toISOString(),
+          start_date: startDateTime,
+          end_date: endDateTime,
           venue: item.venue_name,
           address: `${item.venue_street}, ${item.venue_city}, ${item.venue_state} ${item.venue_zip}`,
           url: item.url || null,

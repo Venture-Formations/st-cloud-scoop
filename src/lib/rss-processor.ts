@@ -1215,19 +1215,6 @@ export class RSSProcessor {
           continue
         }
 
-        // Check if we already have a featured event for this date
-        const hasFeaturedEvent = existingForDate.some(ce => ce.is_featured)
-
-        // Determine how many events to select (up to 8 total)
-        const maxEventsPerDay = 8
-        const alreadySelected = existingForDate.length
-        const needToSelect = Math.max(0, Math.min(maxEventsPerDay - alreadySelected, eventsForDate.length))
-
-        if (needToSelect === 0) {
-          console.log(`Already have enough events for ${date}`)
-          continue
-        }
-
         // Get event IDs already selected for this date
         const alreadySelectedIds = existingForDate.map(ce => ce.event_id)
 
@@ -1241,30 +1228,84 @@ export class RSSProcessor {
           continue
         }
 
-        // Randomly select events
-        const shuffled = [...availableForSelection].sort(() => Math.random() - 0.5)
-        const selectedEvents = shuffled.slice(0, needToSelect)
+        // Separate events by priority:
+        // 1. Featured events (from events.featured=true) - MUST be included and featured
+        // 2. Paid placement events (from events.paid_placement=true) - MUST be included but NOT featured
+        // 3. Regular events - fill remaining spots randomly
+        const featuredEvents = availableForSelection.filter(e => e.featured)
+        const paidPlacementEvents = availableForSelection.filter(e => e.paid_placement && !e.featured)
+        const regularEvents = availableForSelection.filter(e => !e.featured && !e.paid_placement)
 
-        console.log(`Selecting ${selectedEvents.length} new events for ${date}`)
+        console.log(`Available for ${date}: ${featuredEvents.length} featured, ${paidPlacementEvents.length} paid placement, ${regularEvents.length} regular`)
 
-        // Add selected events to campaign_events
-        selectedEvents.forEach((event, index) => {
-          const displayOrder = alreadySelected + index + 1
-          const isFeatured = !hasFeaturedEvent && index === 0 // First new event becomes featured if no featured event exists
+        // Determine how many events we can still add (up to 8 total)
+        const maxEventsPerDay = 8
+        const alreadySelected = existingForDate.length
+        let remainingSlots = maxEventsPerDay - alreadySelected
 
+        if (remainingSlots <= 0) {
+          console.log(`Already have enough events for ${date}`)
+          continue
+        }
+
+        const selectedForDate: any[] = []
+        let displayOrder = alreadySelected + 1
+
+        // PRIORITY 1: Add ALL featured events (must be included and featured)
+        featuredEvents.forEach(event => {
+          if (remainingSlots > 0) {
+            selectedForDate.push({
+              event,
+              is_featured: true,
+              display_order: displayOrder++
+            })
+            remainingSlots--
+            console.log(`✨ Featured event MUST be included: "${event.title}" for ${date}`)
+          }
+        })
+
+        // PRIORITY 2: Add ALL paid placement events (must be included but NOT featured)
+        paidPlacementEvents.forEach(event => {
+          if (remainingSlots > 0) {
+            selectedForDate.push({
+              event,
+              is_featured: false,
+              display_order: displayOrder++
+            })
+            remainingSlots--
+            console.log(`💰 Paid placement event MUST be included: "${event.title}" for ${date}`)
+          }
+        })
+
+        // PRIORITY 3: Fill remaining slots with random regular events
+        if (remainingSlots > 0 && regularEvents.length > 0) {
+          const shuffled = [...regularEvents].sort(() => Math.random() - 0.5)
+          const selectedRegular = shuffled.slice(0, remainingSlots)
+
+          selectedRegular.forEach(event => {
+            selectedForDate.push({
+              event,
+              is_featured: false,
+              display_order: displayOrder++
+            })
+          })
+
+          console.log(`Selected ${selectedRegular.length} regular events randomly for ${date}`)
+        }
+
+        // Add all selected events to campaign_events
+        selectedForDate.forEach(({ event, is_featured, display_order }) => {
           newCampaignEvents.push({
             campaign_id: campaignId,
             event_id: event.id,
             event_date: date,
             is_selected: true,
-            is_featured: isFeatured,
-            display_order: displayOrder
+            is_featured,
+            display_order
           })
-
-          if (isFeatured) {
-            console.log(`Event "${event.title}" selected as featured for ${date}`)
-          }
         })
+
+        console.log(`Total selected for ${date}: ${selectedForDate.length} events (${selectedForDate.filter(s => s.is_featured).length} featured)`)
       }
 
       // Insert new campaign events
@@ -1373,15 +1414,18 @@ export class RSSProcessor {
         })
 
         if (eventsForDate.length > 0) {
-          // Separate by category: featured (database flag), paid placements, and regular
-          const featuredEvents = eventsForDate.filter(e => e.featured && !e.paid_placement)
-          const paidEvents = eventsForDate.filter(e => e.paid_placement)
+          // Separate by priority:
+          // 1. Featured events (events.featured=true) - MUST be included and featured
+          // 2. Paid placement only (paid_placement=true BUT featured=false) - MUST be included but NOT featured
+          // 3. Regular events - fill remaining spots randomly
+          const featuredEvents = eventsForDate.filter(e => e.featured)
+          const paidPlacementEvents = eventsForDate.filter(e => e.paid_placement && !e.featured)
           const regularEvents = eventsForDate.filter(e => !e.featured && !e.paid_placement)
 
-          console.log(`${date}: ${featuredEvents.length} featured, ${paidEvents.length} paid, ${regularEvents.length} regular events`)
+          console.log(`${date}: ${featuredEvents.length} featured, ${paidPlacementEvents.length} paid placement, ${regularEvents.length} regular events`)
 
-          // Calculate available slots for regular events (target 8 total, but can exceed for featured/paid)
-          const guaranteedEvents = [...featuredEvents, ...paidEvents]
+          // Calculate available slots for regular events (target 8 total)
+          const guaranteedEvents = [...featuredEvents, ...paidPlacementEvents]
           const baseSlots = 8
           const remainingSlots = Math.max(0, baseSlots - guaranteedEvents.length)
 
@@ -1392,7 +1436,7 @@ export class RSSProcessor {
           // Combine: featured first, then paid placements, then regular
           const selectedEvents = [
             ...featuredEvents,
-            ...paidEvents,
+            ...paidPlacementEvents,
             ...selectedRegular
           ]
 
@@ -1414,17 +1458,23 @@ export class RSSProcessor {
 
         events.forEach((event, index) => {
           // Determine if this should be featured in the campaign:
-          // 1. If event.featured is true in database, it's featured
-          // 2. If no database featured events exist, first NON-paid event becomes featured
+          // - MUST be featured: event.featured=true in database
+          // - MUST NOT be featured: event.paid_placement=true (unless also featured=true)
+          // - If no featured events exist, first regular event becomes featured (not paid placement)
           let isFeatured = false
 
           if (event.featured) {
-            // Database-marked featured events are always featured
+            // Database-marked featured events are ALWAYS featured (even if paid_placement=true)
             isFeatured = true
-          } else if (dbFeaturedCount === 0 && index === 0 && !event.paid_placement) {
-            // No database featured events, first non-paid event becomes featured
-            isFeatured = true
+          } else if (dbFeaturedCount === 0 && !event.paid_placement) {
+            // No database featured events - first NON-paid event becomes featured
+            // Find if this is the first non-paid event
+            const nonPaidIndex = events.filter(e => !e.paid_placement).indexOf(event)
+            if (nonPaidIndex === 0) {
+              isFeatured = true
+            }
           }
+          // Note: paid_placement events without featured=true will NEVER be featured
 
           campaignEventsData.push({
             campaign_id: campaignId,

@@ -211,17 +211,32 @@ export default function EventsDatabasePage() {
   }
 
   const formatDate = (dateString: string) => {
-    const date = new Date(dateString)
-    const datePart = date.toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric'
-    })
-    const timePart = date.toLocaleTimeString('en-US', {
-      hour: '2-digit',
-      minute: '2-digit'
-    })
-    return { datePart, timePart }
+    // Parse as local datetime (no timezone conversion)
+    const date = new Date(dateString + 'T00:00:00')
+    const [datePart, timePart] = dateString.split('T')
+
+    if (timePart) {
+      // Has time component - format both date and time
+      const localDate = new Date(dateString)
+      const formattedDate = localDate.toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric'
+      })
+      const formattedTime = localDate.toLocaleTimeString('en-US', {
+        hour: '2-digit',
+        minute: '2-digit'
+      })
+      return { datePart: formattedDate, timePart: formattedTime }
+    } else {
+      // Date only
+      const formattedDate = date.toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric'
+      })
+      return { datePart: formattedDate, timePart: '' }
+    }
   }
 
   const visibleColumns = columns.filter(col => col.visible)

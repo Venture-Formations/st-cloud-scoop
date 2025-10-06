@@ -10,11 +10,13 @@ import { wrapTrackingUrl } from './url-tracking'
 // ==================== UTILITY FUNCTIONS ====================
 
 export function formatEventDate(dateStr: string): string {
-  const date = new Date(dateStr)
-  const dayOfWeek = date.toLocaleDateString('en-US', { weekday: 'long', timeZone: 'America/Chicago' })
-  const month = date.toLocaleDateString('en-US', { month: 'long', timeZone: 'America/Chicago' })
-  const day = date.getDate()
-  return `${dayOfWeek}, ${month} ${day}`
+  // Parse date as local date to avoid timezone offset issues
+  const [year, month, day] = dateStr.split('-').map(Number)
+  const date = new Date(year, month - 1, day) // month is 0-indexed
+  const dayOfWeek = date.toLocaleDateString('en-US', { weekday: 'long' })
+  const monthName = date.toLocaleDateString('en-US', { month: 'long' })
+  const dayNum = date.getDate()
+  return `${dayOfWeek}, ${monthName} ${dayNum}`
 }
 
 export function formatEventTime(startDate: string, endDate: string): string {

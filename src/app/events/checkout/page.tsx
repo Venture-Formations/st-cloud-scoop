@@ -152,7 +152,8 @@ export default function CheckoutPage() {
           paid_placement: item.placement_type === 'paid',
           featured: item.placement_type === 'featured',
           active: true,
-          submission_status: 'pending'
+          submission_status: 'pending',
+          existing_event_id: item.existing_event_id || null
         }
       })
 

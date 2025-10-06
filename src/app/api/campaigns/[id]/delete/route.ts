@@ -72,6 +72,17 @@ export async function DELETE(
       // Don't fail - continue with deletion
     }
 
+    // 4b. Delete road work selections associated with this campaign
+    const { error: roadWorkSelectionsError } = await supabaseAdmin
+      .from('road_work_selections')
+      .delete()
+      .eq('campaign_id', campaignId)
+
+    if (roadWorkSelectionsError) {
+      console.error('Error deleting road work selections:', roadWorkSelectionsError)
+      // Don't fail - continue with deletion
+    }
+
     // 5. Delete user activities related to this campaign
     const { error: activitiesError } = await supabaseAdmin
       .from('user_activities')
@@ -80,6 +91,28 @@ export async function DELETE(
 
     if (activitiesError) {
       console.error('Error deleting user activities:', activitiesError)
+      // Don't fail - continue with deletion
+    }
+
+    // 6. Delete archived articles associated with this campaign
+    const { error: archivedArticlesError } = await supabaseAdmin
+      .from('archived_articles')
+      .delete()
+      .eq('campaign_id', campaignId)
+
+    if (archivedArticlesError) {
+      console.error('Error deleting archived articles:', archivedArticlesError)
+      // Don't fail - continue with deletion
+    }
+
+    // 7. Delete archived RSS posts associated with this campaign
+    const { error: archivedPostsError } = await supabaseAdmin
+      .from('archived_rss_posts')
+      .delete()
+      .eq('campaign_id', campaignId)
+
+    if (archivedPostsError) {
+      console.error('Error deleting archived RSS posts:', archivedPostsError)
       // Don't fail - continue with deletion
     }
 

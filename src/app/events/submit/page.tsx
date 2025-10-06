@@ -776,6 +776,13 @@ export default function SubmitEventPage() {
                 {uploading ? 'Uploading...' : 'Add to Cart'}
               </button>
             </div>
+
+            {/* Disclaimer */}
+            <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 mt-4">
+              <p className="text-xs text-gray-600">
+                Each newsletter features 8 events for today, tomorrow, and the following day. *If submitted at least 4 days in advance, your event can appear in up to 3 newsletters leading up to the event date. Free events may be randomly selected if space allows, while promoted events are guaranteed placement. Featured events get top visibility with details and an image.
+              </p>
+            </div>
           </div>
         </div>
 

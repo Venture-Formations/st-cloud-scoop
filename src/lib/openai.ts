@@ -282,7 +282,9 @@ CRITICAL REQUIREMENTS:
 - Each item must be currently active on the target date`,
 
   imageAnalyzer: () => `
-Analyze this image and return strict JSON:
+Analyze this image for a St. Cloud, Minnesota local newsletter. Focus on identifying elements relevant to community news, events, education, public safety, healthcare, sports, business development, seasonal activities, and local landmarks.
+
+Return strict JSON:
 {
   "caption": "...",
   "alt_text": "10–14 words, descriptive, no quotes",
@@ -311,7 +313,7 @@ GUIDELINES:
 - Caption: Natural, descriptive sentence about the image contents
 - Alt text: 10-14 words maximum, accessible description for screen readers
 - Tags scored: Array of categorized tags with confidence scores (0-1)
-- Tag types: people, scene, theme, style, color, object, safety, mood
+- Tag types: location, venue, scene, event_type, sport, season, object, safety, mood, activity
 - Tag names: concrete nouns, lowercase with underscores
 - Top tags: 5-15 most relevant tags in "type_name" format
 - Include safety.has_text if text/signage is visible
@@ -319,16 +321,58 @@ GUIDELINES:
 - Focus on concrete, visible elements rather than abstract concepts
 - Mood tags: emotional atmosphere/feeling conveyed (happy, energetic, calm, serious, playful, etc.)
 
+ST. CLOUD SPECIFIC TAGGING PRIORITIES:
+Prioritize identifying and tagging these high-value categories for St. Cloud newsletter:
+
+LOCATIONS & VENUES:
+- Educational: apollo_high_school, scsu_campus, kennedy_school, talahi_school, college_of_saint_benedict
+- Parks: lake_george, munsinger_gardens, clemens_gardens, quarry_park, wilson_park
+- Downtown: downtown_st_cloud, jules_bistro, caribou_coffee, bad_habit_brewing
+- Public Safety: fire_station, police_station, sartell_public_safety
+- Healthcare: centracare_hospital, medical_facility, clinic
+- Government: city_hall, county_building, district_office
+- Sports Venues: herb_brooks_hockey_center, arena, gymnasium, athletic_field
+
+EVENT TYPES:
+- Community: ribbon_cutting, open_house, walkathon, festival, parade
+- Sports: hockey_game, volleyball_match, soccer_game, basketball_game
+- Education: school_spirit, graduation, classroom_activity
+- Public Safety: fire_demonstration, police_k9, emergency_response
+- Arts: theatre_performance, art_class, museum_exhibit
+- Fundraising: charity_event, donation_activity, volunteer_work
+
+SEASONAL MARKERS:
+- Fall: autumn_foliage, pumpkins, halloween, harvest, golden_leaves
+- Winter: snow, ice, hockey, winter_sports, holiday_lights
+- Spring: flowers, gardens, blooming, renewal
+- Summer: outdoor_events, lakes, recreation, sunshine
+
+SPORTS & RECREATION:
+- Hockey: husky_hockey, youth_hockey, ice_rink, hockey_equipment
+- Other Sports: volleyball, soccer, basketball, athletics
+- Recreation: walking_trails, bike_paths, playground, outdoor_activities
+
+PUBLIC SAFETY & COMMUNITY:
+- Fire: fire_truck, firefighter, fire_station_3, emergency_vehicle
+- Police: police_cruiser, k9_unit, officer, patrol_vehicle
+- Security: surveillance_camera, locked_door, safety_equipment
+- Health: vaccination, medical_staff, hospital_equipment
+
+BUSINESS & DEVELOPMENT:
+- Construction: groundbreaking, road_work, building_construction, heavy_equipment
+- Business: restaurant, retail, hotel, office_building
+- Infrastructure: road_closed_sign, detour, traffic_control, maintenance
+
 OCR ANALYSIS:
 - ocr_text: Extract ALL readable text from the image, convert to lowercase, normalize spacing
 - text_density: Estimate what percentage of the image area is covered by text (0.0 to 1.0)
 - ocr_entities: Extract named entities from the OCR text using these types:
-  * ORG: Organizations, businesses, government agencies
+  * ORG: Organizations, businesses, government agencies (e.g., "st cloud state university", "centracare", "apollo high school")
   * PERSON: People's names
-  * LOC: Locations, addresses, place names
+  * LOC: Locations, addresses, place names (e.g., "lake george", "downtown st cloud", "sartell")
   * DATE: Dates, times, temporal references
   * TIME: Specific times, hours
-  * MISC: Other important entities (phone numbers, websites, etc.)
+  * MISC: Other important entities (phone numbers, websites, street names)
 - signage_conf: Confidence (0-1) that this is venue signage vs poster/advertisement
   * 0.8+ = Clear business signage, building signs
   * 0.5-0.8 = Likely signage but could be promotional
@@ -342,7 +386,7 @@ AGE GROUP ANALYSIS:
 - conf: Confidence level (0-1) for age group classification
 - Set to null if no people detected or ages cannot be determined
 
-IMPORTANT: Only include OCR fields if readable text is actually present. Only include age_groups if people are visible and ages can be reasonably estimated. Set to null if not detected.`,
+IMPORTANT: Only include OCR fields if readable text is actually present. Only include age_groups if people are visible and ages can be reasonably estimated. Set to null if not detected. Prioritize tags that match the St. Cloud newsletter's common article themes: education, public safety, community events, sports (especially hockey), seasonal activities, business development, and healthcare.`,
 
   roadWorkValidator: (roadWorkItems: Array<{
     road_name: string

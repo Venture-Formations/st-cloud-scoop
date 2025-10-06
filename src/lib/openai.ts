@@ -1,11 +1,34 @@
 import OpenAI from 'openai'
+import { supabaseAdmin } from './supabase'
 
 export const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 })
 
-// AI Prompts as specified in PRD
-export const AI_PROMPTS = {
+// Helper function to fetch prompt from database with code fallback
+async function getPrompt(key: string, fallback: string): Promise<string> {
+  try {
+    const { data, error } = await supabaseAdmin
+      .from('app_settings')
+      .select('value')
+      .eq('key', key)
+      .single()
+
+    if (error || !data) {
+      console.log(`Using code fallback for prompt: ${key}`)
+      return fallback
+    }
+
+    console.log(`Using database prompt: ${key}`)
+    return data.value
+  } catch (error) {
+    console.error(`Error fetching prompt ${key}, using fallback:`, error)
+    return fallback
+  }
+}
+
+// AI Prompts - Static fallbacks when database is unavailable
+const FALLBACK_PROMPTS = {
   contentEvaluator: (post: { title: string; description: string; content?: string }) => `
 You are evaluating a news article for inclusion in a local St. Cloud, Minnesota newsletter. Rate on three dimensions using a 1-10 scale:
 
@@ -450,6 +473,79 @@ Respond with valid JSON in this exact format:
     "accuracy_score": 0.67
   }
 }`
+}
+
+// Dynamic AI Prompts - Uses database with fallbacks
+export const AI_PROMPTS = {
+  contentEvaluator: async (post: { title: string; description: string; content?: string }) => {
+    const template = await getPrompt(
+      'ai_prompt_content_evaluator',
+      FALLBACK_PROMPTS.contentEvaluator(post)
+    )
+    // Replace placeholders with actual values
+    return template
+      .replace(/\{\{title\}\}/g, post.title)
+      .replace(/\{\{description\}\}/g, post.description || 'No description available')
+      .replace(/\{\{content\}\}/g, post.content ? post.content.substring(0, 1000) + '...' : 'No content available')
+  },
+
+  newsletterWriter: async (post: { title: string; description: string; content?: string; source_url?: string }) => {
+    const template = await getPrompt(
+      'ai_prompt_newsletter_writer',
+      FALLBACK_PROMPTS.newsletterWriter(post)
+    )
+    return template
+      .replace(/\{\{title\}\}/g, post.title)
+      .replace(/\{\{description\}\}/g, post.description || 'No description available')
+      .replace(/\{\{content\}\}/g, post.content ? post.content.substring(0, 1500) + '...' : 'No additional content')
+      .replace(/\{\{url\}\}/g, post.source_url || '')
+  },
+
+  eventSummarizer: async (event: { title: string; description: string | null; venue?: string | null }) => {
+    const template = await getPrompt(
+      'ai_prompt_event_summary',
+      FALLBACK_PROMPTS.eventSummarizer(event)
+    )
+    return template
+      .replace(/\{\{title\}\}/g, event.title)
+      .replace(/\{\{description\}\}/g, event.description || 'No description available')
+      .replace(/\{\{venue\}\}/g, event.venue || 'No venue specified')
+  },
+
+  subjectLineGenerator: async (articles: Array<{ headline: string; content: string }>) => {
+    const template = await getPrompt(
+      'ai_prompt_subject_line',
+      FALLBACK_PROMPTS.subjectLineGenerator(articles)
+    )
+    // For subject line, we need to include the articles list in the prompt
+    const articlesText = articles.map((article, i) =>
+      `${i + 1}. ${article.headline}\n   ${article.content.substring(0, 100)}...`
+    ).join('\n\n')
+    return template
+      .replace(/\{\{headline\}\}/g, articles[0]?.headline || '')
+      .replace(/\{\{content\}\}/g, articles[0]?.content || '')
+      .replace(/Articles in this newsletter:[\s\S]*?HARD RULES:/g, `Articles in this newsletter:\n${articlesText}\n\nHARD RULES:`)
+  },
+
+  roadWorkGenerator: async (campaignDate: string) => {
+    const template = await getPrompt(
+      'ai_prompt_road_work',
+      FALLBACK_PROMPTS.roadWorkGenerator(campaignDate)
+    )
+    return template.replace(/\{\{date\}\}/g, campaignDate)
+  },
+
+  imageAnalyzer: async () => {
+    return await getPrompt(
+      'ai_prompt_image_analyzer',
+      FALLBACK_PROMPTS.imageAnalyzer()
+    )
+  },
+
+  // Non-editable prompts (not stored in database)
+  topicDeduper: FALLBACK_PROMPTS.topicDeduper,
+  factChecker: FALLBACK_PROMPTS.factChecker,
+  roadWorkValidator: FALLBACK_PROMPTS.roadWorkValidator
 }
 
 // This function is no longer needed since we use web scraping instead of AI

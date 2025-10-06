@@ -44,6 +44,7 @@ export async function GET(request: NextRequest) {
     // Test OpenAI Vision API
     try {
       console.log('Calling OpenAI Vision API...')
+      const imageAnalyzerPrompt = await AI_PROMPTS.imageAnalyzer()
       const response = await openai.chat.completions.create({
         model: 'gpt-4o',
         messages: [
@@ -52,7 +53,7 @@ export async function GET(request: NextRequest) {
             content: [
               {
                 type: 'text',
-                text: AI_PROMPTS.imageAnalyzer()
+                text: imageAnalyzerPrompt
               },
               {
                 type: 'image_url',

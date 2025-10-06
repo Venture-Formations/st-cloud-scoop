@@ -25,7 +25,7 @@ export async function GET(request: NextRequest) {
     console.log('Target date:', targetDate)
 
     // Get the AI prompt
-    const prompt = AI_PROMPTS.roadWorkGenerator(targetDate)
+    const prompt = await AI_PROMPTS.roadWorkGenerator(targetDate)
     console.log('=== AI PROMPT ===')
     console.log(prompt)
     console.log('=== END PROMPT ===')

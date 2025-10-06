@@ -11,7 +11,7 @@ async function generateEventSummary(event: { title: string; description: string 
 
     console.log(`Generating AI summary for event: ${event.title}`)
 
-    const prompt = AI_PROMPTS.eventSummarizer({
+    const prompt = await AI_PROMPTS.eventSummarizer({
       title: event.title,
       description: event.description,
       venue: event.venue

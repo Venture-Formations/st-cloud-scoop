@@ -36,6 +36,9 @@ export async function POST(request: NextRequest) {
     const imageUrl = image.cdn_url
 
     try {
+      // Get image analyzer prompt from database
+      const imageAnalyzerPrompt = await AI_PROMPTS.imageAnalyzer()
+
       // Analyze image with OpenAI Vision
       const response = await openai.chat.completions.create({
         model: 'gpt-4o',
@@ -45,7 +48,7 @@ export async function POST(request: NextRequest) {
             content: [
               {
                 type: 'text',
-                text: AI_PROMPTS.imageAnalyzer()
+                text: imageAnalyzerPrompt
               },
               {
                 type: 'image_url',

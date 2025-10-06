@@ -43,6 +43,7 @@ export default function SettingsPage() {
                 { id: 'email', name: 'Email' },
                 { id: 'public-events', name: 'Public Events' },
                 { id: 'slack', name: 'Slack' },
+                { id: 'ai-prompts', name: 'AI Prompts' },
                 { id: 'rss', name: 'RSS Feeds' },
                 { id: 'notifications', name: 'Notifications' },
                 { id: 'users', name: 'Users' }
@@ -70,6 +71,7 @@ export default function SettingsPage() {
           {activeTab === 'email' && <EmailSettings />}
           {activeTab === 'public-events' && <PublicEventsSettings />}
           {activeTab === 'slack' && <SlackSettings />}
+          {activeTab === 'ai-prompts' && <AIPromptsSettings />}
           {activeTab === 'rss' && <RSSFeeds />}
           {activeTab === 'notifications' && <Notifications />}
           {activeTab === 'users' && <Users />}
@@ -1274,6 +1276,203 @@ function EmailSettings() {
           {message}
         </div>
       )}
+    </div>
+  )
+}
+
+function AIPromptsSettings() {
+  const [prompts, setPrompts] = useState<any[]>([])
+  const [grouped, setGrouped] = useState<Record<string, any[]>>({})
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState<string | null>(null)
+  const [message, setMessage] = useState('')
+  const [expandedPrompt, setExpandedPrompt] = useState<string | null>(null)
+  const [editingPrompt, setEditingPrompt] = useState<{key: string, value: string} | null>(null)
+
+  useEffect(() => {
+    loadPrompts()
+  }, [])
+
+  const loadPrompts = async () => {
+    try {
+      const response = await fetch('/api/settings/ai-prompts')
+      if (response.ok) {
+        const data = await response.json()
+        setPrompts(data.prompts || [])
+        setGrouped(data.grouped || {})
+      }
+    } catch (error) {
+      console.error('Failed to load AI prompts:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleEdit = (prompt: any) => {
+    setEditingPrompt({ key: prompt.key, value: prompt.value })
+    setExpandedPrompt(prompt.key)
+  }
+
+  const handleCancel = () => {
+    setEditingPrompt(null)
+  }
+
+  const handleSave = async (key: string) => {
+    if (!editingPrompt || editingPrompt.key !== key) return
+
+    setSaving(key)
+    setMessage('')
+
+    try {
+      const response = await fetch('/api/settings/ai-prompts', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          key: editingPrompt.key,
+          value: editingPrompt.value
+        })
+      })
+
+      if (response.ok) {
+        setMessage('Prompt saved successfully!')
+        setEditingPrompt(null)
+        await loadPrompts()
+        setTimeout(() => setMessage(''), 3000)
+      } else {
+        throw new Error('Failed to save prompt')
+      }
+    } catch (error) {
+      setMessage('Error: Failed to save prompt')
+      setTimeout(() => setMessage(''), 5000)
+    } finally {
+      setSaving(null)
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand-primary"></div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="bg-white shadow rounded-lg p-6">
+        <h2 className="text-xl font-semibold text-gray-900 mb-2">AI Prompts</h2>
+        <p className="text-sm text-gray-600">
+          Customize the AI prompts used throughout the newsletter system. Changes take effect immediately.
+          Use <code className="bg-gray-100 px-1 rounded text-xs">{'{{}}'}</code> placeholders for dynamic content.
+        </p>
+        {message && (
+          <div className={`mt-4 p-3 rounded ${message.includes('Error') ? 'bg-red-50 text-red-700' : 'bg-green-50 text-green-700'}`}>
+            {message}
+          </div>
+        )}
+      </div>
+
+      {/* Prompts by Category */}
+      {Object.entries(grouped).map(([category, categoryPrompts]) => (
+        <div key={category} className="bg-white shadow rounded-lg">
+          <div className="p-6 border-b border-gray-200">
+            <h3 className="text-lg font-medium text-gray-900">{category}</h3>
+          </div>
+          <div className="divide-y divide-gray-200">
+            {categoryPrompts.map((prompt) => {
+              const isExpanded = expandedPrompt === prompt.key
+              const isEditing = editingPrompt?.key === prompt.key
+              const isSaving = saving === prompt.key
+
+              return (
+                <div key={prompt.key} className="p-6">
+                  <div className="flex items-start justify-between mb-2">
+                    <div className="flex-1">
+                      <h4 className="text-base font-medium text-gray-900">{prompt.name}</h4>
+                      <p className="text-sm text-gray-600 mt-1">{prompt.description}</p>
+                    </div>
+                    <button
+                      onClick={() => setExpandedPrompt(isExpanded ? null : prompt.key)}
+                      className="ml-4 text-blue-600 hover:text-blue-800 text-sm font-medium"
+                    >
+                      {isExpanded ? 'Collapse' : 'View/Edit'}
+                    </button>
+                  </div>
+
+                  {isExpanded && (
+                    <div className="mt-4">
+                      <div className="mb-2 flex items-center justify-between">
+                        <label className="block text-sm font-medium text-gray-700">
+                          Prompt Content
+                        </label>
+                        <span className="text-xs text-gray-500">
+                          {isEditing ? editingPrompt.value.length : prompt.value.length} characters
+                        </span>
+                      </div>
+                      {isEditing ? (
+                        <>
+                          <textarea
+                            value={editingPrompt.value}
+                            onChange={(e) => setEditingPrompt({ ...editingPrompt, value: e.target.value })}
+                            rows={15}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md font-mono text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          />
+                          <div className="mt-3 flex items-center justify-end space-x-3">
+                            <button
+                              onClick={handleCancel}
+                              disabled={isSaving}
+                              className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50"
+                            >
+                              Cancel
+                            </button>
+                            <button
+                              onClick={() => handleSave(prompt.key)}
+                              disabled={isSaving}
+                              className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 disabled:opacity-50"
+                            >
+                              {isSaving ? 'Saving...' : 'Save Changes'}
+                            </button>
+                          </div>
+                        </>
+                      ) : (
+                        <>
+                          <div className="bg-gray-50 border border-gray-200 rounded-md p-4 font-mono text-xs whitespace-pre-wrap overflow-x-auto max-h-96 overflow-y-auto">
+                            {prompt.value}
+                          </div>
+                          <div className="mt-3 flex items-center justify-end">
+                            <button
+                              onClick={() => handleEdit(prompt)}
+                              className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700"
+                            >
+                              Edit Prompt
+                            </button>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      ))}
+
+      {/* Help Information */}
+      <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
+        <h4 className="font-medium text-blue-900 mb-3">Prompt Placeholders</h4>
+        <div className="text-sm text-blue-800 space-y-2">
+          <p><code className="bg-blue-100 px-2 py-0.5 rounded">{'{'}title{'}'}</code> - Article/event title</p>
+          <p><code className="bg-blue-100 px-2 py-0.5 rounded">{'{'}description{'}'}</code> - Article/event description</p>
+          <p><code className="bg-blue-100 px-2 py-0.5 rounded">{'{'}content{'}'}</code> - Full article content</p>
+          <p><code className="bg-blue-100 px-2 py-0.5 rounded">{'{'}date{'}'}</code> - Campaign date</p>
+          <p><code className="bg-blue-100 px-2 py-0.5 rounded">{'{'}headline{'}'}</code> - Newsletter article headline</p>
+          <p className="mt-3 text-xs text-blue-700">
+            ⚠️ <strong>Important:</strong> Changes take effect immediately. Test prompts carefully before saving.
+          </p>
+        </div>
+      </div>
     </div>
   )
 }

@@ -592,7 +592,7 @@ export class RSSProcessor {
   }
 
   private async evaluatePost(post: RssPost): Promise<ContentEvaluation> {
-    const prompt = AI_PROMPTS.contentEvaluator({
+    const prompt = await AI_PROMPTS.contentEvaluator({
       title: post.title,
       description: post.description || '',
       content: post.content || ''
@@ -964,7 +964,7 @@ export class RSSProcessor {
   }
 
   private async generateNewsletterContent(post: RssPost): Promise<NewsletterContent> {
-    const prompt = AI_PROMPTS.newsletterWriter({
+    const prompt = await AI_PROMPTS.newsletterWriter({
       title: post.title,
       description: post.description || '',
       content: post.content || '',
@@ -1070,7 +1070,7 @@ export class RSSProcessor {
 
       // Generate subject line using AI
       const timestamp = new Date().toISOString()
-      const subjectPrompt = AI_PROMPTS.subjectLineGenerator([topArticle]) + `\n\nTimestamp: ${timestamp}`
+      const subjectPrompt = await AI_PROMPTS.subjectLineGenerator([topArticle]) + `\n\nTimestamp: ${timestamp}`
 
       console.log('Generating AI subject line...')
       const aiResponse = await callOpenAI(subjectPrompt, 100, 0.8)

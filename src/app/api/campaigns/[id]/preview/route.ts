@@ -185,8 +185,11 @@ async function generateNewsletterHtml(campaign: any): Promise<string> {
           sectionsHtml += generateLocalScoopSection(activeArticles, campaign.date)
         } else if (section.name === 'Local Events') {
           sectionsHtml += await generateLocalEventsSection(campaign)
-          // Add feedback section after Local Events
-          sectionsHtml += await generatePollSection(campaign.id)
+        } else if (section.name === 'Poll') {
+          const pollHtml = await generatePollSection(campaign.id)
+          if (pollHtml) {
+            sectionsHtml += pollHtml
+          }
         } else if (section.name === 'Local Weather') {
           const weatherHtml = await getWeatherForCampaign(campaign.id)
           if (weatherHtml) {

@@ -95,7 +95,7 @@ export default function RssSourcesPage() {
             RSS Sources Management
           </h1>
           <p className="text-sm text-gray-600">
-            Manage which RSS post sources/authors are excluded from processing. Excluded sources will be skipped during RSS feed processing.
+            Block images from specific RSS sources. Posts from blocked sources will still be processed, but their images won't be used. This typically lowers their AI interest score, making them lower priority.
           </p>
         </div>
 
@@ -136,11 +136,11 @@ export default function RssSourcesPage() {
                     <td className="px-6 py-4 whitespace-nowrap text-sm">
                       {source.excluded ? (
                         <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-red-100 text-red-800">
-                          Excluded
+                          Images Blocked
                         </span>
                       ) : (
                         <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
-                          Active
+                          Images Allowed
                         </span>
                       )}
                     </td>
@@ -153,7 +153,7 @@ export default function RssSourcesPage() {
                             : 'text-red-600 hover:text-red-900'
                         }`}
                       >
-                        {source.excluded ? 'Include' : 'Exclude'}
+                        {source.excluded ? 'Unblock Images' : 'Block Images'}
                       </button>
                     </td>
                   </tr>
@@ -167,8 +167,8 @@ export default function RssSourcesPage() {
           <div className="mt-4 text-sm text-gray-600">
             <p>
               Total Sources: {sources.length} |
-              Active: {sources.filter(s => !s.excluded).length} |
-              Excluded: {sources.filter(s => s.excluded).length}
+              Images Allowed: {sources.filter(s => !s.excluded).length} |
+              Images Blocked: {sources.filter(s => s.excluded).length}
             </p>
           </div>
         )}

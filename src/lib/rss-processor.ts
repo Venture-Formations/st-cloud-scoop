@@ -348,11 +348,11 @@ export class RSSProcessor {
 
       for (const item of recentPosts) {
         try {
-          // Check if author is excluded
+          // Check if author's images should be blocked
           const author = item.creator || (item as any)['dc:creator'] || '(No Author)'
-          if (excludedSources.includes(author)) {
-            console.log(`Skipping post from excluded source: "${author}" - "${item.title}"`)
-            continue
+          const blockImages = excludedSources.includes(author)
+          if (blockImages) {
+            console.log(`Blocking images from source: "${author}" - "${item.title}"`)
           }
           console.log(`\n=== DEBUGGING ITEM: "${item.title}" ===`)
           console.log('Raw item keys:', Object.keys(item))
@@ -430,8 +430,9 @@ export class RSSProcessor {
           }
 
           // Attempt to download and re-host image immediately if it's a Facebook URL
+          // But only if images are not blocked for this source
           let finalImageUrl = imageUrl
-          if (imageUrl && imageUrl.includes('fbcdn.net')) {
+          if (!blockImages && imageUrl && imageUrl.includes('fbcdn.net')) {
             console.log(`Attempting to re-host Facebook image immediately: ${imageUrl}`)
             try {
               const githubUrl = await this.githubStorage.uploadImage(imageUrl, item.title || 'Untitled')
@@ -444,6 +445,12 @@ export class RSSProcessor {
             } catch (error) {
               console.warn(`Error re-hosting Facebook image: ${error}`)
             }
+          }
+
+          // Block image if source is in excluded list
+          if (blockImages) {
+            finalImageUrl = null
+            console.log(`Image blocked for excluded source: ${author}`)
           }
 
           // Insert new post

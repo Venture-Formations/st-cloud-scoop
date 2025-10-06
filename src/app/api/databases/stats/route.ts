@@ -97,7 +97,7 @@ export async function GET(request: NextRequest) {
       },
       {
         name: 'RSS Sources',
-        description: 'Manage excluded RSS post sources and authors',
+        description: 'Block images from specific RSS sources',
         count: uniqueSources,
         href: '/dashboard/databases/rss-sources'
       }

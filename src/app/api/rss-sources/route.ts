@@ -4,7 +4,7 @@ import { authOptions } from '@/lib/auth'
 import { supabaseAdmin } from '@/lib/supabase'
 
 /**
- * GET - Fetch all RSS sources (authors) with post counts and exclusion status
+ * GET - Fetch all RSS sources (authors) with post counts and image blocking status
  */
 export async function GET(request: NextRequest) {
   try {
@@ -121,7 +121,7 @@ export async function PATCH(request: NextRequest) {
       .upsert({
         key: 'excluded_rss_sources',
         value: JSON.stringify(excludedSources),
-        description: 'List of RSS post authors/sources to exclude from processing',
+        description: 'List of RSS post authors/sources whose images should be blocked (posts still processed, but without images)',
         updated_at: new Date().toISOString()
       }, {
         onConflict: 'key'
@@ -134,7 +134,7 @@ export async function PATCH(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      message: `Source "${author}" ${excluded ? 'excluded' : 'included'} successfully`
+      message: `Images from "${author}" ${excluded ? 'blocked' : 'unblocked'} successfully`
     })
 
   } catch (error) {

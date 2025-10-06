@@ -79,10 +79,11 @@ export default function EventsDatabasePage() {
 
   const fetchPendingCount = async () => {
     try {
-      const response = await fetch('/api/events?submission_status=pending')
+      const response = await fetch('/api/events/submissions?status=pending')
       if (response.ok) {
         const data = await response.json()
-        setPendingCount(data.events?.length || 0)
+        // Use the count from counts object if available, otherwise count submissions array
+        setPendingCount(data.counts?.pending || data.submissions?.length || 0)
       }
     } catch (error) {
       console.error('Failed to fetch pending count:', error)
@@ -321,10 +322,10 @@ export default function EventsDatabasePage() {
           </div>
           <div className="flex space-x-3">
             <Link
-              href="/dashboard/events"
+              href="/dashboard/events/review"
               className="relative bg-orange-600 hover:bg-orange-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors inline-flex items-center"
             >
-              Event Approvals
+              Review Submissions
               {pendingCount > 0 && (
                 <span className="ml-2 bg-white text-orange-600 text-xs font-bold px-2 py-0.5 rounded-full">
                   {pendingCount}

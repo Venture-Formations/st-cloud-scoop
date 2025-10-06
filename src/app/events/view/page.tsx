@@ -31,6 +31,7 @@ export default function ViewEventsPage() {
   const [venues, setVenues] = useState<Venue[]>([])
   const [selectedVenue, setSelectedVenue] = useState<string>('all')
   const [searchQuery, setSearchQuery] = useState<string>('')
+  const [selectedDate, setSelectedDate] = useState<string>('')
   const [loading, setLoading] = useState(true)
   const [pricing, setPricing] = useState({ paidPlacement: 5, featured: 15 })
   const [expandedEventId, setExpandedEventId] = useState<string | null>(null)
@@ -44,10 +45,10 @@ export default function ViewEventsPage() {
     updateCartCount()
   }, [])
 
-  // Filter events when search query or venue changes
+  // Filter events when search query, venue, or date changes
   useEffect(() => {
     filterEvents()
-  }, [searchQuery, selectedVenue, allEvents])
+  }, [searchQuery, selectedVenue, selectedDate, allEvents])
 
   const updateCartCount = () => {
     const cartJson = sessionStorage.getItem('eventCart')
@@ -90,6 +91,14 @@ export default function ViewEventsPage() {
     // Apply venue filter
     if (selectedVenue !== 'all') {
       filtered = filtered.filter(event => event.venue === selectedVenue)
+    }
+
+    // Apply date filter
+    if (selectedDate) {
+      filtered = filtered.filter(event => {
+        const eventDate = new Date(event.start_date).toISOString().split('T')[0]
+        return eventDate === selectedDate
+      })
     }
 
     // Apply search filter
@@ -320,44 +329,44 @@ export default function ViewEventsPage() {
         {/* Search and Filters */}
         <div className="bg-white shadow rounded-lg p-4 mb-6">
           <div className="space-y-4">
-            {/* Search Bar and Venue Filter on Same Line */}
-            <div className="flex flex-col md:flex-row gap-4">
-              {/* Search Bar */}
-              <div className="flex-1">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Search Events
-                </label>
-                <div className="relative">
-                  <input
-                    type="text"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder="Search by title, description, venue, or address..."
-                    className="w-full px-4 py-2 pl-10 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                  <svg
-                    className="absolute left-3 top-2.5 w-5 h-5 text-gray-400"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
+            {/* Search Bar */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Search Events
+              </label>
+              <div className="relative">
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Search by title, description, venue, or address..."
+                  className="w-full px-4 py-2 pl-10 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+                <svg
+                  className="absolute left-3 top-2.5 w-5 h-5 text-gray-400"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+                {searchQuery && (
+                  <button
+                    onClick={() => setSearchQuery('')}
+                    className="absolute right-3 top-2.5 text-gray-400 hover:text-gray-600"
                   >
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                  </svg>
-                  {searchQuery && (
-                    <button
-                      onClick={() => setSearchQuery('')}
-                      className="absolute right-3 top-2.5 text-gray-400 hover:text-gray-600"
-                    >
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                      </svg>
-                    </button>
-                  )}
-                </div>
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                )}
               </div>
+            </div>
 
+            {/* Venue and Date Filters on Same Line */}
+            <div className="flex flex-col md:flex-row gap-4">
               {/* Venue Filter */}
-              <div className="md:w-96">
+              <div className="flex-1">
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Filter by Venue
                 </label>
@@ -374,13 +383,40 @@ export default function ViewEventsPage() {
                   ))}
                 </select>
               </div>
+
+              {/* Date Filter */}
+              <div className="flex-1">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Filter by Date
+                </label>
+                <div className="relative">
+                  <input
+                    type="date"
+                    value={selectedDate}
+                    onChange={(e) => setSelectedDate(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                  {selectedDate && (
+                    <button
+                      onClick={() => setSelectedDate('')}
+                      className="absolute right-3 top-2.5 text-gray-400 hover:text-gray-600"
+                      title="Clear date filter"
+                    >
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  )}
+                </div>
+              </div>
             </div>
 
             {/* Results Count */}
-            {(searchQuery || selectedVenue !== 'all') && (
+            {(searchQuery || selectedVenue !== 'all' || selectedDate) && (
               <div className="text-sm text-gray-600">
                 Showing {events.length} of {allEvents.length} events
                 {searchQuery && ` matching "${searchQuery}"`}
+                {selectedDate && ` on ${new Date(selectedDate).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}`}
               </div>
             )}
           </div>

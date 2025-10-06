@@ -1417,6 +1417,28 @@ function AIPromptsSettings() {
     }
   }
 
+  const handleTestPrompt = (key: string) => {
+    // Map prompt keys to their test endpoint type parameter
+    const promptTypeMap: Record<string, string> = {
+      'ai_prompt_content_evaluator': 'contentEvaluator',
+      'ai_prompt_newsletter_writer': 'newsletterWriter',
+      'ai_prompt_subject_line': 'subjectLineGenerator',
+      'ai_prompt_event_summary': 'eventSummarizer',
+      'ai_prompt_road_work': 'roadWorkGenerator',
+      'ai_prompt_image_analyzer': 'imageAnalyzer'
+    }
+
+    const testType = promptTypeMap[key]
+    if (!testType) {
+      alert('Test not available for this prompt type')
+      return
+    }
+
+    // Open test endpoint in new tab
+    const testUrl = `/api/debug/test-ai-prompts?type=${testType}`
+    window.open(testUrl, '_blank')
+  }
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -1525,12 +1547,20 @@ function AIPromptsSettings() {
                                 {saving === prompt.key ? 'Saving...' : 'Save as Default'}
                               </button>
                             </div>
-                            <button
-                              onClick={() => handleEdit(prompt)}
-                              className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700"
-                            >
-                              Edit Prompt
-                            </button>
+                            <div className="flex items-center space-x-3">
+                              <button
+                                onClick={() => handleTestPrompt(prompt.key)}
+                                className="px-4 py-2 text-sm font-medium text-purple-700 bg-white border border-purple-300 rounded-md hover:bg-purple-50"
+                              >
+                                Test Prompt
+                              </button>
+                              <button
+                                onClick={() => handleEdit(prompt)}
+                                className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700"
+                              >
+                                Edit Prompt
+                              </button>
+                            </div>
                           </div>
                         </>
                       )}

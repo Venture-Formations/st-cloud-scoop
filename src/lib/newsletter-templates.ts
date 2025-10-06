@@ -558,17 +558,46 @@ export async function generateMinnesotaGetawaysSection(campaign: any): Promise<s
   }
 }
 
-// ==================== FEEDBACK CARD ====================
+// ==================== POLL SECTION ====================
 
-export function generateFeedbackSection(campaignDate: string): string {
+export async function generatePollSection(campaignId: string): Promise<string> {
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://st-cloud-scoop.vercel.app'
 
-  return `
-<!-- Feedback card -->
+  try {
+    // Get active poll
+    const { data: pollData } = await supabaseAdmin
+      .from('polls')
+      .select('*')
+      .eq('is_active', true)
+      .limit(1)
+      .single()
+
+    if (!pollData) {
+      console.log('No active poll found, skipping poll section')
+      return ''
+    }
+
+    // Generate button HTML for each option
+    const optionsHtml = pollData.options.map((option: string, index: number) => {
+      const isLast = index === pollData.options.length - 1
+      const paddingStyle = isLast ? 'padding:0;' : 'padding:0 0 8px 0;'
+
+      return `
+              <tr>
+                <td style="${paddingStyle}">
+                  <a href="${baseUrl}/api/polls/${pollData.id}/respond?option=${encodeURIComponent(option)}&amp;campaign_id=${campaignId}&amp;email={$email}"
+                     style="display:block; text-decoration:none; background:#1877F2; color:#ffffff; font-weight:bold;
+                            font-size:16px; line-height:20px; padding:12px; border-radius:8px; text-align:center;">${option}</a>
+                </td>
+              </tr>`
+    }).join('')
+
+    return `
+<!-- Poll card -->
 <table width="100%" cellpadding="0" cellspacing="0" border="0" role="presentation">
   <tr>
     <td style="padding:5px;">
-      <!-- Feedback Box -->
+      <!-- Poll Box -->
       <table width="100%" cellpadding="0" cellspacing="0" border="0" role="presentation"
              style="width:100%; max-width:650px; margin:10px auto; background-color:#E8F0FE;
                     border:2px solid #1877F2; border-radius:10px; font-family:Arial, sans-serif;">
@@ -576,55 +605,14 @@ export function generateFeedbackSection(campaignDate: string): string {
           <td style="padding:14px; color:#1a1a1a; font-size:16px; line-height:1.5; text-align:center;">
 
             <!-- Text Sections -->
-            <p style="margin:0 0 6px 0; font-weight:bold; font-size:20px; color:#1877F2; text-align:center;">Your opinion matters!</p>
+            <p style="margin:0 0 6px 0; font-weight:bold; font-size:20px; color:#1877F2; text-align:center;">${pollData.title}</p>
             <p style="margin:0 0 14px 0; font-size:16px; color:#333; text-align:center;">
-              Which section of today's Scoop did you find the most valuable?
+              ${pollData.question}
             </p>
 
             <!-- Button Stack: 1 per row, centered -->
             <table cellpadding="0" cellspacing="0" border="0" role="presentation" align="center" style="margin:0 auto; width:100%; max-width:350px;">
-              <tr>
-                <td style="padding:0 0 8px 0;">
-                  <a href="${baseUrl}/api/feedback/track?date=${campaignDate}&amp;choice=Weather&amp;email={$email}"
-                     style="display:block; text-decoration:none; background:#1877F2; color:#ffffff; font-weight:bold;
-                            font-size:16px; line-height:20px; padding:12px; border-radius:8px; text-align:center;">Weather</a>
-                </td>
-              </tr>
-              <tr>
-                <td style="padding:0 0 8px 0;">
-                  <a href="${baseUrl}/api/feedback/track?date=${campaignDate}&amp;choice=The%20Local%20Scoop&amp;email={$email}"
-                     style="display:block; text-decoration:none; background:#1877F2; color:#ffffff; font-weight:bold;
-                            font-size:16px; line-height:20px; padding:12px; border-radius:8px; text-align:center;">The Local Scoop</a>
-                </td>
-              </tr>
-              <tr>
-                <td style="padding:0 0 8px 0;">
-                  <a href="${baseUrl}/api/feedback/track?date=${campaignDate}&amp;choice=Local%20Events&amp;email={$email}"
-                     style="display:block; text-decoration:none; background:#1877F2; color:#ffffff; font-weight:bold;
-                            font-size:16px; line-height:20px; padding:12px; border-radius:8px; text-align:center;">Local Events</a>
-                </td>
-              </tr>
-              <tr>
-                <td style="padding:0 0 8px 0;">
-                  <a href="${baseUrl}/api/feedback/track?date=${campaignDate}&amp;choice=Dining%20Deals&amp;email={$email}"
-                     style="display:block; text-decoration:none; background:#1877F2; color:#ffffff; font-weight:bold;
-                            font-size:16px; line-height:20px; padding:12px; border-radius:8px; text-align:center;">Dining Deals</a>
-                </td>
-              </tr>
-              <tr>
-                <td style="padding:0 0 8px 0;">
-                  <a href="${baseUrl}/api/feedback/track?date=${campaignDate}&amp;choice=Yesterdays%20Wordle&amp;email={$email}"
-                     style="display:block; text-decoration:none; background:#1877F2; color:#ffffff; font-weight:bold;
-                            font-size:16px; line-height:20px; padding:12px; border-radius:8px; text-align:center;">Yesterday's Wordle</a>
-                </td>
-              </tr>
-              <tr>
-                <td style="padding:0;">
-                  <a href="${baseUrl}/api/feedback/track?date=${campaignDate}&amp;choice=Road%20Work&amp;email={$email}"
-                     style="display:block; text-decoration:none; background:#1877F2; color:#ffffff; font-weight:bold;
-                            font-size:16px; line-height:20px; padding:12px; border-radius:8px; text-align:center;">Road Work</a>
-                </td>
-              </tr>
+${optionsHtml}
             </table>
 
           </td>
@@ -634,6 +622,10 @@ export function generateFeedbackSection(campaignDate: string): string {
   </tr>
 </table>
 <br>`
+  } catch (error) {
+    console.error('Error generating poll section:', error)
+    return ''
+  }
 }
 
 // ==================== DINING DEALS ====================

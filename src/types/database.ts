@@ -241,6 +241,25 @@ export interface LinkClick {
   created_at: string
 }
 
+export interface Poll {
+  id: string
+  title: string
+  question: string
+  options: string[]
+  is_active: boolean
+  created_at: string
+  updated_at: string
+}
+
+export interface PollResponse {
+  id: string
+  poll_id: string
+  campaign_id: string | null
+  subscriber_email: string
+  selected_option: string
+  responded_at: string
+}
+
 // Combined types for API responses
 export interface ArticleWithPost extends Article {
   rss_post: RssPost & {

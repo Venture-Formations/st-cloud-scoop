@@ -12,7 +12,7 @@ import {
   generateMinnesotaGetawaysSection,
   generateDiningDealsSection,
   generateRoadWorkSection,
-  generateFeedbackSection
+  generatePollSection
 } from './newsletter-templates'
 
 const MAILERLITE_API_BASE = 'https://connect.mailerlite.com/api'
@@ -271,8 +271,8 @@ export class MailerLiteService {
           sectionsHtml += generateLocalScoopSection(activeArticles, campaign.date, undefined)
         } else if (section.name === 'Local Events') {
           sectionsHtml += eventsHtml
-          // Add feedback section after Local Events
-          sectionsHtml += generateFeedbackSection(campaign.date)
+          // Add poll section after Local Events
+          sectionsHtml += await generatePollSection(campaign.id)
         } else if (section.name === 'Local Weather') {
           const weatherHtml = await getWeatherForCampaign(campaign.id)
           if (weatherHtml) {
@@ -860,6 +860,51 @@ ${sectionsHtml}
 
     } catch (error) {
       console.error('Error sending event rejection email:', error)
+      return { success: false, error }
+    }
+  }
+
+  /**
+   * Update a subscriber's custom field in MailerLite
+   * @param email Subscriber email address
+   * @param fieldName Name of the custom field (e.g., "poll_responses")
+   * @param fieldValue Value to set for the field
+   */
+  async updateSubscriberField(email: string, fieldName: string, fieldValue: any): Promise<{ success: boolean, error?: any }> {
+    try {
+      console.log(`Updating MailerLite subscriber field: ${email}, ${fieldName} = ${fieldValue}`)
+
+      // Find subscriber by email
+      const searchResponse = await mailerliteClient.get(`/subscribers`, {
+        params: { filter: { email } }
+      })
+
+      if (!searchResponse.data || !searchResponse.data.data || searchResponse.data.data.length === 0) {
+        console.log(`Subscriber ${email} not found in MailerLite`)
+        return { success: false, error: 'Subscriber not found' }
+      }
+
+      const subscriberId = searchResponse.data.data[0].id
+
+      // Update subscriber with custom field
+      const updateData = {
+        fields: {
+          [fieldName]: fieldValue
+        }
+      }
+
+      const updateResponse = await mailerliteClient.put(`/subscribers/${subscriberId}`, updateData)
+
+      if (updateResponse.status === 200 || updateResponse.status === 201) {
+        console.log(`Successfully updated ${fieldName} for ${email}`)
+        return { success: true }
+      }
+
+      console.error('Unexpected response status:', updateResponse.status)
+      return { success: false, error: `Unexpected status: ${updateResponse.status}` }
+
+    } catch (error) {
+      console.error('Error updating MailerLite subscriber field:', error)
       return { success: false, error }
     }
   }

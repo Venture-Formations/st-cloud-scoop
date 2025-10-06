@@ -12,7 +12,7 @@ import {
   generateMinnesotaGetawaysSection,
   generateDiningDealsSection,
   generateRoadWorkSection,
-  generateFeedbackSection
+  generatePollSection
 } from '@/lib/newsletter-templates'
 
 export async function GET(
@@ -186,7 +186,7 @@ async function generateNewsletterHtml(campaign: any): Promise<string> {
         } else if (section.name === 'Local Events') {
           sectionsHtml += await generateLocalEventsSection(campaign)
           // Add feedback section after Local Events
-          sectionsHtml += generateFeedbackSection(campaign.date)
+          sectionsHtml += await generatePollSection(campaign.id)
         } else if (section.name === 'Local Weather') {
           const weatherHtml = await getWeatherForCampaign(campaign.id)
           if (weatherHtml) {

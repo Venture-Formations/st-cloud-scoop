@@ -72,10 +72,10 @@ export async function GET(request: NextRequest) {
         href: '/dashboard/databases/events'
       },
       {
-        name: 'Polls',
-        description: 'Newsletter polls and subscriber responses',
-        count: pollsCount?.length || 0,
-        href: '/dashboard/polls'
+        name: 'Dining Deals',
+        description: 'Restaurant specials organized by day of week',
+        count: diningCount?.length || 0,
+        href: '/dashboard/databases/dining'
       },
       {
         name: 'VRBO Listings',
@@ -84,16 +84,16 @@ export async function GET(request: NextRequest) {
         href: '/dashboard/databases/vrbo'
       },
       {
-        name: 'Dining Deals',
-        description: 'Restaurant specials organized by day of week',
-        count: diningCount?.length || 0,
-        href: '/dashboard/databases/dining'
-      },
-      {
         name: 'Images',
         description: 'AI-tagged image library with crop and tag management',
         count: imagesCount?.length || 0,
         href: '/dashboard/databases/images'
+      },
+      {
+        name: 'Polls',
+        description: 'Newsletter polls and subscriber responses',
+        count: pollsCount?.length || 0,
+        href: '/dashboard/polls'
       },
       {
         name: 'RSS Sources',

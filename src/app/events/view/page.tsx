@@ -556,7 +556,7 @@ export default function ViewEventsPage() {
         <div className="mt-8 bg-blue-50 border border-blue-200 rounded-lg p-6">
           <h3 className="text-xl font-semibold text-blue-900 mb-3">Do You Have an Event Coming Up?</h3>
           <p className="text-sm text-gray-700 mb-6">
-            Each newsletter features 8 events for today, tomorrow, and the following day. If submitted at least 4 days in advance, your event can appear in up to 3 newsletters leading up to the event date. Free events may be randomly selected if space allows, while promoted events are guaranteed placement. Featured events get top visibility with details and an image.
+            Each newsletter features 8 events for today, tomorrow, and the following day. *If submitted at least 4 days in advance, your event can appear in up to 3 newsletters leading up to the event date. Free events may be randomly selected if space allows, while promoted events are guaranteed placement. Featured events get top visibility with details and an image.
           </p>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
             {/* Free Listing */}
@@ -572,7 +572,7 @@ export default function ViewEventsPage() {
 
             {/* Guaranteed Placement */}
             <div className="bg-white rounded-lg p-4 border-2 border-blue-500">
-              <h4 className="font-semibold text-gray-900 mb-2">Guaranteed Placement – ${pricing.paidPlacement}</h4>
+              <h4 className="font-semibold text-gray-900 mb-2">Guaranteed Placement (3 days*) – ${pricing.paidPlacement}</h4>
               <p className="text-sm text-gray-600 mb-2">Promotion includes:</p>
               <ul className="text-sm text-gray-700 space-y-1">
                 <li>• Guaranteed spot in the newsletter's daily list of 8 events</li>
@@ -583,7 +583,7 @@ export default function ViewEventsPage() {
 
             {/* Featured Event */}
             <div className="bg-yellow-50 rounded-lg p-4 border-2 border-yellow-500">
-              <h4 className="font-semibold text-gray-900 mb-2">Featured Event – ${pricing.featured}</h4>
+              <h4 className="font-semibold text-gray-900 mb-2">Featured Event (3 days*) – ${pricing.featured}</h4>
               <p className="text-sm text-gray-600 mb-2">Promotion includes:</p>
               <ul className="text-sm text-gray-700 space-y-1">
                 <li>• Guaranteed top placement in the newsletter</li>
@@ -660,7 +660,7 @@ export default function ViewEventsPage() {
                             onChange={() => setSelectedPromotion('paid')}
                             className="mr-2"
                           />
-                          <h5 className="font-semibold text-gray-900">Guaranteed Placement – ${pricing.paidPlacement}</h5>
+                          <h5 className="font-semibold text-gray-900">Guaranteed Placement (3 days*) – ${pricing.paidPlacement}</h5>
                         </div>
                         <p className="text-xs text-gray-600 mb-2 ml-6">Promotion includes:</p>
                         <ul className="text-sm text-gray-700 space-y-1 ml-6">
@@ -692,7 +692,7 @@ export default function ViewEventsPage() {
                           className="mr-2"
                         />
                         <h5 className="font-semibold text-gray-900">
-                          Featured Event – ${promotingEvent.paid_placement ? '10' : pricing.featured}
+                          Featured Event (3 days*) – ${promotingEvent.paid_placement ? '10' : pricing.featured}
                           {promotingEvent.paid_placement && (
                             <span className="ml-2 text-sm text-green-600 font-normal">
                               (Upgrade price)
@@ -713,7 +713,7 @@ export default function ViewEventsPage() {
                 {/* Newsletter Information */}
                 <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 mt-4">
                   <p className="text-xs text-gray-600">
-                    Each newsletter features 8 events for today, tomorrow, and the following day. If submitted at least 4 days in advance, your event can appear in up to 3 newsletters leading up to the event date. Free events may be randomly selected if space allows, while promoted events are guaranteed placement. Featured events get top visibility with details and an image.
+                    Each newsletter features 8 events for today, tomorrow, and the following day. *If submitted at least 4 days in advance, your event can appear in up to 3 newsletters leading up to the event date. Free events may be randomly selected if space allows, while promoted events are guaranteed placement. Featured events get top visibility with details and an image.
                   </p>
                 </div>
               </div>

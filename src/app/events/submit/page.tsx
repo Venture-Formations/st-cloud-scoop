@@ -676,7 +676,7 @@ export default function SubmitEventPage() {
                     onChange={(e) => setFormData(prev => ({ ...prev, placement_type: 'paid' }))}
                     className="mr-2"
                   />
-                  <span>Paid Placement - ${pricing.paidPlacement}</span>
+                  <span>Paid Placement (3 days*) - ${pricing.paidPlacement}</span>
                 </label>
                 <label className="flex items-center">
                   <input
@@ -687,7 +687,7 @@ export default function SubmitEventPage() {
                     onChange={(e) => setFormData(prev => ({ ...prev, placement_type: 'featured' }))}
                     className="mr-2"
                   />
-                  <span>Featured Event - ${pricing.featured}</span>
+                  <span>Featured Event (3 days*) - ${pricing.featured}</span>
                 </label>
               </div>
             </div>

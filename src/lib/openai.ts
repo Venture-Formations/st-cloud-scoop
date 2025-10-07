@@ -505,10 +505,15 @@ export const AI_PROMPTS = {
 
       console.log('Using database prompt for contentEvaluator')
       // Database template uses {{}} placeholders
+      const imagePenaltyText = post.hasImage
+        ? 'This post HAS an image.'
+        : 'This post has NO image - subtract 5 points from interest_level.'
+
       return data.value
         .replace(/\{\{title\}\}/g, post.title)
         .replace(/\{\{description\}\}/g, post.description || 'No description available')
         .replace(/\{\{content\}\}/g, post.content ? post.content.substring(0, 1000) + '...' : 'No content available')
+        .replace(/\{\{imagePenalty\}\}/g, imagePenaltyText)
     } catch (error) {
       console.error('Error fetching contentEvaluator prompt, using fallback:', error)
       return FALLBACK_PROMPTS.contentEvaluator(post)

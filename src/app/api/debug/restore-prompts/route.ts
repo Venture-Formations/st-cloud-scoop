@@ -16,6 +16,8 @@ CRITICAL: You MUST use these exact scoring scales:
 - local_relevance: Integer between 1 and 10
 - community_impact: Integer between 1 and 10
 
+IMAGE PENALTY: {{imagePenalty}}
+
 INTEREST LEVEL (1-20 scale, NOT 1-10):
 Rate from 1 to 20 where 20 is most interesting. Use the full range 1-20.
 HIGH SCORING (15-20): Unexpected developments, human interest stories, breaking news, unique events, broad appeal, fun/entertaining

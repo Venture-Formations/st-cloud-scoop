@@ -165,14 +165,21 @@ async function handleCheckoutSessionCompleted(session: any) {
       }
     }
 
+    // Fix malformed timestamps (remove extra :00 at the end)
+    const fixTimestamp = (timestamp: string) => {
+      if (!timestamp) return timestamp
+      // Fix format like "2025-10-08T15:15:00:00" to "2025-10-08T15:15:00"
+      return timestamp.replace(/T(\d{2}:\d{2}:\d{2}):\d{2}$/, 'T$1')
+    }
+
     const { data: insertedEvent, error: insertError } = await supabaseAdmin
       .from('events')
       .insert({
         external_id: `submitted_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
         title: event.title,
         description: event.description,
-        start_date: event.start_date,
-        end_date: event.end_date,
+        start_date: fixTimestamp(event.start_date),
+        end_date: fixTimestamp(event.end_date),
         venue: event.venue,
         address: event.address,
         url: event.url,

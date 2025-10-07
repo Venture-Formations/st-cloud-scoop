@@ -17,8 +17,6 @@ export async function GET(request: Request) {
         id,
         title,
         description,
-        source,
-        published_at,
         campaign_id,
         post_rating:post_ratings(
           interest_level,
@@ -29,7 +27,7 @@ export async function GET(request: Request) {
         )
       `)
       .eq('campaign_id', campaignId)
-      .order('created_at', { ascending: false })
+      .order('processed_at', { ascending: false })
 
     if (postsError) {
       return NextResponse.json({ error: postsError.message }, { status: 500 })
@@ -59,14 +57,12 @@ export async function GET(request: Request) {
       posts_sample: postsWithRatings.slice(0, 5).map(p => ({
         id: p.id,
         title: p.title,
-        source: p.source,
         rating: p.post_rating?.[0],
         has_article: articles?.some(a => a.rss_post_id === p.id)
       })),
       posts_without_ratings_sample: postsWithoutRatings.slice(0, 5).map(p => ({
         id: p.id,
-        title: p.title,
-        source: p.source
+        title: p.title
       }))
     })
 

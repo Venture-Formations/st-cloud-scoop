@@ -701,7 +701,7 @@ export class RSSProcessor {
   private async generateNewsletterArticles(campaignId: string) {
     console.log('Starting newsletter article generation...')
 
-    // Get posts with ratings (simplified query first)
+    // Get posts with ratings and check for duplicates
     const { data: topPosts, error: queryError } = await supabaseAdmin
       .from('rss_posts')
       .select(`
@@ -710,6 +710,18 @@ export class RSSProcessor {
       `)
       .eq('campaign_id', campaignId)
       .limit(20) // Get more posts to filter later
+
+    // Get duplicate post IDs to exclude
+    const { data: duplicatePosts } = await supabaseAdmin
+      .from('duplicate_posts')
+      .select(`
+        post_id,
+        group:duplicate_groups!inner(campaign_id)
+      `)
+      .eq('group.campaign_id', campaignId)
+
+    const duplicatePostIds = new Set(duplicatePosts?.map(d => d.post_id) || [])
+    console.log(`Found ${duplicatePostIds.size} duplicate posts to exclude`)
 
     if (queryError) {
       console.error('Error fetching top posts:', queryError)
@@ -727,7 +739,7 @@ export class RSSProcessor {
     await this.logInfo(`Found ${topPosts.length} top posts for article generation`, { campaignId, topPostsCount: topPosts.length })
 
     const postsWithRatings = topPosts
-      .filter(post => post.post_ratings?.[0])
+      .filter(post => post.post_ratings?.[0] && !duplicatePostIds.has(post.id)) // Exclude duplicates
       .sort((a, b) => {
         const scoreA = a.post_ratings?.[0]?.total_score || 0
         const scoreB = b.post_ratings?.[0]?.total_score || 0
@@ -756,8 +768,9 @@ export class RSSProcessor {
       await this.logInfo(`Alternative query found ${allRatedPosts?.length || 0} posts with ratings`, { campaignId, alternativePostsCount: allRatedPosts?.length || 0 })
 
       if (allRatedPosts && allRatedPosts.length > 0) {
-        // Use these posts instead
-        for (const post of allRatedPosts.slice(0, 12)) {
+        // Use these posts instead, excluding duplicates
+        const filteredPosts = allRatedPosts.filter(post => !duplicatePostIds.has(post.id))
+        for (const post of filteredPosts.slice(0, 12)) {
           await this.processPostIntoArticle(post, campaignId)
         }
       }

@@ -18,7 +18,7 @@ export async function GET() {
         description,
         content,
         source_url,
-        post_ratings!inner(
+        post_ratings(
           total_score,
           interest_level,
           local_relevance,
@@ -26,8 +26,8 @@ export async function GET() {
         )
       `)
       .eq('campaign_id', campaignId)
-      .order('post_ratings(total_score)', { ascending: false })
-      .limit(1)
+      .not('post_ratings', 'is', null)
+      .limit(10)
 
     if (postsError || !posts || posts.length === 0) {
       return NextResponse.json({
@@ -37,7 +37,23 @@ export async function GET() {
       }, { status: 404 })
     }
 
-    const post = posts[0] as any
+    // Find post with highest rating
+    const sortedPosts = posts
+      .filter((p: any) => p.post_ratings && p.post_ratings.length > 0)
+      .sort((a: any, b: any) => {
+        const scoreA = a.post_ratings[0]?.total_score || 0
+        const scoreB = b.post_ratings[0]?.total_score || 0
+        return scoreB - scoreA
+      })
+
+    if (sortedPosts.length === 0) {
+      return NextResponse.json({
+        success: false,
+        error: 'No posts with ratings found'
+      }, { status: 404 })
+    }
+
+    const post = sortedPosts[0] as any
     console.log('Testing with post:', {
       id: post.id,
       title: post.title.substring(0, 100),

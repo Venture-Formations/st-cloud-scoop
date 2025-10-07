@@ -541,8 +541,16 @@ export class RSSProcessor {
 
           const evaluation = await this.evaluatePost(post)
 
-          // Store evaluation
-          await supabaseAdmin
+          // Basic validation: ensure scores exist and are numbers
+          if (typeof evaluation.interest_level !== 'number' ||
+              typeof evaluation.local_relevance !== 'number' ||
+              typeof evaluation.community_impact !== 'number') {
+            console.error(`AI returned non-numeric scores: interest=${evaluation.interest_level}, local=${evaluation.local_relevance}, impact=${evaluation.community_impact}`)
+            throw new Error(`Invalid score types returned by AI`)
+          }
+
+          // Store evaluation with error handling
+          const { error: ratingError } = await supabaseAdmin
             .from('post_ratings')
             .insert([{
               post_id: post.id,
@@ -551,6 +559,11 @@ export class RSSProcessor {
               community_impact: evaluation.community_impact,
               ai_reasoning: evaluation.reasoning,
             }])
+
+          if (ratingError) {
+            console.error(`Failed to insert rating for post ${post.id}:`, ratingError)
+            throw new Error(`Rating insert failed: ${ratingError.message}`)
+          }
 
           console.log(`Successfully evaluated post ${overallIndex}/${posts.length}`)
           return { success: true, post: post }

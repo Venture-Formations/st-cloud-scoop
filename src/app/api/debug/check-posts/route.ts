@@ -36,7 +36,7 @@ export async function GET(request: Request) {
     // Get articles for this campaign
     const { data: articles, error: articlesError } = await supabaseAdmin
       .from('articles')
-      .select('id, headline, is_active, rss_post_id')
+      .select('id, headline, is_active, post_id')
       .eq('campaign_id', campaignId)
 
     if (articlesError) {
@@ -58,7 +58,7 @@ export async function GET(request: Request) {
         id: p.id,
         title: p.title,
         rating: p.post_rating?.[0],
-        has_article: articles?.some(a => a.rss_post_id === p.id)
+        has_article: articles?.some(a => a.post_id === p.id)
       })),
       posts_without_ratings_sample: postsWithoutRatings.slice(0, 5).map(p => ({
         id: p.id,

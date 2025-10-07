@@ -543,9 +543,15 @@ export const AI_PROMPTS = {
   },
 
   // Non-editable prompts (not stored in database)
-  topicDeduper: FALLBACK_PROMPTS.topicDeduper,
-  factChecker: FALLBACK_PROMPTS.factChecker,
-  roadWorkValidator: FALLBACK_PROMPTS.roadWorkValidator
+  topicDeduper: async (posts: Array<{ title: string; description: string }>) => {
+    return FALLBACK_PROMPTS.topicDeduper(posts)
+  },
+  factChecker: async (newsletterContent: string, originalContent: string) => {
+    return FALLBACK_PROMPTS.factChecker(newsletterContent, originalContent)
+  },
+  roadWorkValidator: async (roadWorkItems: any[], date: string) => {
+    return FALLBACK_PROMPTS.roadWorkValidator(roadWorkItems, date)
+  }
 }
 
 // This function is no longer needed since we use web scraping instead of AI

@@ -611,10 +611,25 @@ export class RSSProcessor {
   }
 
   private async evaluatePost(post: RssPost): Promise<ContentEvaluation> {
+    // Check if this post's author is in excluded sources (images intentionally blocked)
+    const { data: excludedSettings } = await supabaseAdmin
+      .from('app_settings')
+      .select('value')
+      .eq('key', 'excluded_rss_sources')
+      .single()
+
+    const excludedSources: string[] = excludedSettings?.value
+      ? JSON.parse(excludedSettings.value)
+      : []
+
+    const isExcludedSource = post.author ? excludedSources.includes(post.author) : false
+
     const prompt = await AI_PROMPTS.contentEvaluator({
       title: post.title,
       description: post.description || '',
-      content: post.content || ''
+      content: post.content || '',
+      hasImage: !!post.image_url,
+      isExcludedSource: isExcludedSource
     })
 
     const result = await callOpenAI(prompt)

@@ -29,13 +29,15 @@ async function getPrompt(key: string, fallback: string): Promise<string> {
 
 // AI Prompts - Static fallbacks when database is unavailable
 const FALLBACK_PROMPTS = {
-  contentEvaluator: (post: { title: string; description: string; content?: string }) => `
+  contentEvaluator: (post: { title: string; description: string; content?: string; hasImage?: boolean; isExcludedSource?: boolean }) => `
 You are evaluating a news article for inclusion in a local St. Cloud, Minnesota newsletter.
 
 CRITICAL: You MUST use these exact scoring scales:
 - interest_level: Integer between 1 and 20 (NOT 1-10, MUST BE 1-20)
 - local_relevance: Integer between 1 and 10
 - community_impact: Integer between 1 and 10
+
+IMAGE PENALTY: ${post.hasImage ? 'This post HAS an image.' : post.isExcludedSource ? 'This post has no image (source does not provide images - no penalty).' : 'This post has NO image - subtract 2 points from interest_level.'}
 
 INTEREST LEVEL (1-20 scale, NOT 1-10):
 Rate from 1 to 20 where 20 is most interesting. Use the full range 1-20.
@@ -488,7 +490,7 @@ Respond with valid JSON in this exact format:
 
 // Dynamic AI Prompts - Uses database with fallbacks (Oct 7 2025 - Force cache bust)
 export const AI_PROMPTS = {
-  contentEvaluator: async (post: { title: string; description: string; content?: string }) => {
+  contentEvaluator: async (post: { title: string; description: string; content?: string; hasImage?: boolean; isExcludedSource?: boolean }) => {
     try {
       const { data, error } = await supabaseAdmin
         .from('app_settings')

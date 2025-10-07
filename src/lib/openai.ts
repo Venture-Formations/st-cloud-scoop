@@ -478,27 +478,53 @@ Respond with valid JSON in this exact format:
 // Dynamic AI Prompts - Uses database with fallbacks
 export const AI_PROMPTS = {
   contentEvaluator: async (post: { title: string; description: string; content?: string }) => {
-    const template = await getPrompt(
-      'ai_prompt_content_evaluator',
-      FALLBACK_PROMPTS.contentEvaluator(post)
-    )
-    // Replace placeholders with actual values
-    return template
-      .replace(/\{\{title\}\}/g, post.title)
-      .replace(/\{\{description\}\}/g, post.description || 'No description available')
-      .replace(/\{\{content\}\}/g, post.content ? post.content.substring(0, 1000) + '...' : 'No content available')
+    try {
+      const { data, error } = await supabaseAdmin
+        .from('app_settings')
+        .select('value')
+        .eq('key', 'ai_prompt_content_evaluator')
+        .single()
+
+      if (error || !data) {
+        console.log('Using code fallback for contentEvaluator prompt')
+        return FALLBACK_PROMPTS.contentEvaluator(post)
+      }
+
+      console.log('Using database prompt for contentEvaluator')
+      // Database template uses {{}} placeholders
+      return data.value
+        .replace(/\{\{title\}\}/g, post.title)
+        .replace(/\{\{description\}\}/g, post.description || 'No description available')
+        .replace(/\{\{content\}\}/g, post.content ? post.content.substring(0, 1000) + '...' : 'No content available')
+    } catch (error) {
+      console.error('Error fetching contentEvaluator prompt, using fallback:', error)
+      return FALLBACK_PROMPTS.contentEvaluator(post)
+    }
   },
 
   newsletterWriter: async (post: { title: string; description: string; content?: string; source_url?: string }) => {
-    const template = await getPrompt(
-      'ai_prompt_newsletter_writer',
-      FALLBACK_PROMPTS.newsletterWriter(post)
-    )
-    return template
-      .replace(/\{\{title\}\}/g, post.title)
-      .replace(/\{\{description\}\}/g, post.description || 'No description available')
-      .replace(/\{\{content\}\}/g, post.content ? post.content.substring(0, 1500) + '...' : 'No additional content')
-      .replace(/\{\{url\}\}/g, post.source_url || '')
+    try {
+      const { data, error } = await supabaseAdmin
+        .from('app_settings')
+        .select('value')
+        .eq('key', 'ai_prompt_newsletter_writer')
+        .single()
+
+      if (error || !data) {
+        console.log('Using code fallback for newsletterWriter prompt')
+        return FALLBACK_PROMPTS.newsletterWriter(post)
+      }
+
+      console.log('Using database prompt for newsletterWriter')
+      return data.value
+        .replace(/\{\{title\}\}/g, post.title)
+        .replace(/\{\{description\}\}/g, post.description || 'No description available')
+        .replace(/\{\{content\}\}/g, post.content ? post.content.substring(0, 1500) + '...' : 'No additional content')
+        .replace(/\{\{url\}\}/g, post.source_url || '')
+    } catch (error) {
+      console.error('Error fetching newsletterWriter prompt, using fallback:', error)
+      return FALLBACK_PROMPTS.newsletterWriter(post)
+    }
   },
 
   eventSummarizer: async (event: { title: string; description: string | null; venue?: string | null }) => {

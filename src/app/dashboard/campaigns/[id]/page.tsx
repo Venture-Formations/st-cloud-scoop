@@ -1176,7 +1176,7 @@ function RegularArticle({
             {article.rss_post?.post_rating?.[0] && (
               <div className="flex space-x-1 text-xs flex-shrink-0">
                 <span className={`font-medium ${getScoreColor(article.rss_post.post_rating[0].total_score)}`}>
-                  Score: {article.rss_post.post_rating[0].total_score}/30
+                  Score: {article.rss_post.post_rating[0].total_score}/40
                 </span>
               </div>
             )}
@@ -1326,7 +1326,7 @@ function SortableArticle({
                 {article.rss_post?.post_rating?.[0] && (
                   <div className="flex space-x-1 text-xs flex-shrink-0">
                     <span className={`font-medium ${getScoreColor(article.rss_post.post_rating[0].total_score)}`}>
-                      Score: {article.rss_post.post_rating[0].total_score}/30
+                      Score: {article.rss_post.post_rating[0].total_score}/40
                     </span>
                   </div>
                 )}
@@ -1385,7 +1385,7 @@ function SortableArticle({
             <div className="mt-3 grid grid-cols-3 gap-4 text-xs">
               <div>
                 <span className="text-gray-600">Interest:</span>
-                <span className="ml-1 font-medium">{article.rss_post.post_rating[0].interest_level}/10</span>
+                <span className="ml-1 font-medium">{article.rss_post.post_rating[0].interest_level}/20</span>
               </div>
               <div>
                 <span className="text-gray-600">Relevance:</span>
@@ -2026,8 +2026,8 @@ export default function CampaignDetailPage() {
   }
 
   const getScoreColor = (score: number) => {
-    if (score >= 25) return 'text-green-600'
-    if (score >= 20) return 'text-yellow-600'
+    if (score >= 32) return 'text-green-600'  // 80% of 40
+    if (score >= 26) return 'text-yellow-600' // 65% of 40
     return 'text-red-600'
   }
 

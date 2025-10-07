@@ -659,6 +659,12 @@ export class RSSProcessor {
       const prompt = await AI_PROMPTS.topicDeduper(postSummaries)
       const result = await callOpenAI(prompt)
 
+      console.log('=== TOPIC DEDUPER RESULT ===')
+      console.log('Result type:', typeof result)
+      console.log('Has groups?', !!result.groups)
+      console.log('Groups length:', result.groups?.length || 0)
+      console.log('Full result:', JSON.stringify(result, null, 2))
+
       if (result.groups) {
         for (const group of result.groups) {
           const primaryPost = posts[group.primary_article_index]

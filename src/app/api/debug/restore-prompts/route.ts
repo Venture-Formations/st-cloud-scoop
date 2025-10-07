@@ -5,9 +5,10 @@ export async function POST() {
   try {
     console.log('Restoring AI prompts to database with correct 1-20 scale...')
 
-    const prompts = [
+    const prompts: Array<{ key: string; description: string; value: string }> = [
       {
         key: 'ai_prompt_content_evaluator',
+        description: 'Newsletter - Content Evaluator: Evaluates RSS posts and assigns interest (1-20), local relevance (1-10), and community impact (1-10) scores',
         value: `You are evaluating a news article for inclusion in a local St. Cloud, Minnesota newsletter.
 
 CRITICAL: You MUST use these exact scoring scales:
@@ -58,6 +59,7 @@ Response format:
       },
       {
         key: 'ai_prompt_newsletter_writer',
+        description: 'Newsletter - Newsletter Writer: Generates article headlines and content (40-75 words) from RSS posts with strict rewriting rules',
         value: `CRITICAL: You are writing a news article that MUST follow strict content rules. Violations will result in rejection.
 
 Original Source Post:
@@ -112,6 +114,7 @@ Respond with valid JSON in this exact format:
         .upsert({
           key: prompt.key,
           value: prompt.value,
+          description: prompt.description,
           updated_at: new Date().toISOString()
         }, {
           onConflict: 'key'

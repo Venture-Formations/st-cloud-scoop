@@ -1,6 +1,6 @@
 import Parser from 'rss-parser'
 import { supabaseAdmin } from './supabase'
-import { AI_PROMPTS, callOpenAI } from './openai'
+import { AI_PROMPTS, callOpenAI } from './openai' // Oct 7 2025 - Cache bust for 1-20 scale
 import { ErrorHandler, SlackNotificationService } from './slack'
 import { GitHubImageStorage } from './github-storage'
 import { ArticleArchiveService } from './article-archive'

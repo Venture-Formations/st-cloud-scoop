@@ -30,19 +30,28 @@ async function getPrompt(key: string, fallback: string): Promise<string> {
 // AI Prompts - Static fallbacks when database is unavailable
 const FALLBACK_PROMPTS = {
   contentEvaluator: (post: { title: string; description: string; content?: string }) => `
-You are evaluating a news article for inclusion in a local St. Cloud, Minnesota newsletter. Rate on three dimensions:
+You are evaluating a news article for inclusion in a local St. Cloud, Minnesota newsletter.
 
-INTEREST LEVEL (1-20): How intriguing, surprising, or engaging is this story?
-HIGH SCORING: Unexpected developments, human interest stories, breaking news, unique events, broad appeal, fun/entertaining
-LOW SCORING: Routine announcements, technical/administrative content, repetitive topics, purely promotional, very short content (subtract points for lack of substance)
+CRITICAL: You MUST use these exact scoring scales:
+- interest_level: Integer between 1 and 20 (NOT 1-10, MUST BE 1-20)
+- local_relevance: Integer between 1 and 10
+- community_impact: Integer between 1 and 10
 
-LOCAL RELEVANCE (1-10): How directly relevant is this to St. Cloud area residents?
-HIGH SCORING: Events/news in St. Cloud and surrounding areas (Waite Park, Sartell, Sauk Rapids, Cold Spring), Stearns County government decisions, local business changes, school district news, local infrastructure/development, community events
-LOW SCORING: State/national news without local angle, events far from St. Cloud area, generic content not location-specific
+INTEREST LEVEL (1-20 scale, NOT 1-10):
+Rate from 1 to 20 where 20 is most interesting. Use the full range 1-20.
+HIGH SCORING (15-20): Unexpected developments, human interest stories, breaking news, unique events, broad appeal, fun/entertaining
+MEDIUM SCORING (8-14): Standard local news, business updates, routine events with some appeal
+LOW SCORING (1-7): Routine announcements, technical/administrative content, repetitive topics, purely promotional, very short content
 
-COMMUNITY IMPACT (1-10): How much does this affect local residents' daily lives or community?
-HIGH SCORING: New services or amenities, policy changes affecting residents, public safety information, economic development/job creation, community services and resources
-LOW SCORING: Individual achievements with limited community effect, internal organizational matters, entertainment without broader impact
+LOCAL RELEVANCE (1-10 scale):
+How directly relevant is this to St. Cloud area residents?
+HIGH SCORING (7-10): Events/news in St. Cloud and surrounding areas (Waite Park, Sartell, Sauk Rapids, Cold Spring), Stearns County government decisions, local business changes, school district news, local infrastructure/development, community events
+LOW SCORING (1-6): State/national news without local angle, events far from St. Cloud area, generic content not location-specific
+
+COMMUNITY IMPACT (1-10 scale):
+How much does this affect local residents' daily lives or community?
+HIGH SCORING (7-10): New services or amenities, policy changes affecting residents, public safety information, economic development/job creation, community services and resources
+LOW SCORING (1-6): Individual achievements with limited community effect, internal organizational matters, entertainment without broader impact
 
 BONUS: Add 2 extra points to total_score for stories mentioning multiple local communities or regional impact.
 
@@ -59,11 +68,13 @@ Article Description: ${post.description || 'No description available'}
 Article Content: ${post.content ? post.content.substring(0, 1000) + '...' : 'No content available'}
 
 IMPORTANT: You must respond with ONLY valid JSON. Do not include any text before or after the JSON.
+The interest_level field MUST be between 1 and 20, NOT between 1 and 10.
 
+Response format:
 {
-  "interest_level": <number 1-20>,
-  "local_relevance": <number 1-10>,
-  "community_impact": <number 1-10>,
+  "interest_level": <integer 1-20, use full range>,
+  "local_relevance": <integer 1-10>,
+  "community_impact": <integer 1-10>,
   "reasoning": "<detailed explanation of your scoring>"
 }`,
 

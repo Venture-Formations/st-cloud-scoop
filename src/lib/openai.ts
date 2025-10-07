@@ -754,9 +754,17 @@ export async function callOpenAI(prompt: string, maxTokens = 1000, temperature =
 
       // Try to parse as JSON, fallback to raw content
       try {
+        // Strip markdown code fences first (```json ... ``` or ``` ... ```)
+        let cleanedContent = content
+        const codeFenceMatch = content.match(/```(?:json)?\s*([\s\S]*?)\s*```/)
+        if (codeFenceMatch) {
+          cleanedContent = codeFenceMatch[1]
+          console.log('Stripped markdown code fences from response')
+        }
+
         // Clean the content - remove any text before/after JSON (support both objects {} and arrays [])
-        const objectMatch = content.match(/\{[\s\S]*\}/)
-        const arrayMatch = content.match(/\[[\s\S]*\]/)
+        const objectMatch = cleanedContent.match(/\{[\s\S]*\}/)
+        const arrayMatch = cleanedContent.match(/\[[\s\S]*\]/)
 
         if (arrayMatch) {
           // Prefer array match for prompts that expect arrays (like road work)
@@ -766,7 +774,7 @@ export async function callOpenAI(prompt: string, maxTokens = 1000, temperature =
           return JSON.parse(objectMatch[0])
         } else {
           // Try parsing the entire content
-          return JSON.parse(content.trim())
+          return JSON.parse(cleanedContent.trim())
         }
       } catch (parseError) {
         console.warn('Failed to parse OpenAI response as JSON. Content length:', content.length)

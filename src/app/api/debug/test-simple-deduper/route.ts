@@ -41,11 +41,27 @@ export async function GET() {
     console.log('Groups length:', result.groups?.length || 0)
     console.log('Full result:', JSON.stringify(result, null, 2))
 
+    // If result has .raw, try to extract JSON manually
+    let parsedResult = result
+    if (result.raw && !result.groups) {
+      console.log('Result has .raw field, attempting manual JSON extraction...')
+      const jsonMatch = result.raw.match(/\{[\s\S]*\}/)
+      if (jsonMatch) {
+        try {
+          parsedResult = JSON.parse(jsonMatch[0])
+          console.log('Successfully parsed JSON from .raw field')
+        } catch (e) {
+          console.error('Failed to parse JSON from .raw:', e)
+        }
+      }
+    }
+
     return NextResponse.json({
       success: true,
       test_posts: testPosts.map((p, i) => ({ index: i, title: p.title.substring(0, 80) + '...' })),
       deduper_result: result,
-      duplicate_groups_found: result.groups?.length || 0,
+      parsed_result: parsedResult,
+      duplicate_groups_found: parsedResult.groups?.length || 0,
       analysis: {
         expected_duplicates: "Articles 1, 2, and 3 are all about Fire Department open houses",
         article_0: "Rockville Fire Chief award (different topic)",

@@ -194,12 +194,11 @@ export class RSSProcessor {
         .update({ status: 'draft' })
         .eq('id', campaignId)
 
-      // Get final article count to report to Slack
+      // Get final article count to report to Slack (total articles, not just active)
       const { data: finalArticles, error: countError } = await supabaseAdmin
         .from('articles')
         .select('id')
         .eq('campaign_id', campaignId)
-        .eq('is_active', true)
 
       const articleCount = finalArticles?.length || 0
 

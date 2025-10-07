@@ -17,7 +17,7 @@ export async function GET(request: Request) {
         id,
         title,
         description,
-        source_feed,
+        source,
         published_at,
         campaign_id,
         post_rating:post_ratings(
@@ -59,14 +59,14 @@ export async function GET(request: Request) {
       posts_sample: postsWithRatings.slice(0, 5).map(p => ({
         id: p.id,
         title: p.title,
-        source: p.source_feed,
+        source: p.source,
         rating: p.post_rating?.[0],
         has_article: articles?.some(a => a.rss_post_id === p.id)
       })),
       posts_without_ratings_sample: postsWithoutRatings.slice(0, 5).map(p => ({
         id: p.id,
         title: p.title,
-        source: p.source_feed
+        source: p.source
       }))
     })
 

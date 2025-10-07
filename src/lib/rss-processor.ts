@@ -980,6 +980,12 @@ export class RSSProcessor {
 
     } catch (error) {
       console.error(`Error generating article for post ${post.id}:`, error)
+      await this.logError(`Error generating article for post: ${post.title}`, {
+        postId: post.id,
+        campaignId,
+        error: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined
+      })
     }
   }
 

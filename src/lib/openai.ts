@@ -475,7 +475,7 @@ Respond with valid JSON in this exact format:
 }`
 }
 
-// Dynamic AI Prompts - Uses database with fallbacks
+// Dynamic AI Prompts - Uses database with fallbacks (Oct 7 2025 - Force cache bust)
 export const AI_PROMPTS = {
   contentEvaluator: async (post: { title: string; description: string; content?: string }) => {
     try {

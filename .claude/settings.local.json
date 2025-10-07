@@ -74,7 +74,8 @@
       "Bash(VERCEL_API_KEY=b2rRlFmL9kPxMPl6ZA7pgGDX curl -s \"https://api.vercel.com/v6/deployments?limit=3\" -H \"Authorization: Bearer b2rRlFmL9kPxMPl6ZA7pgGDX\")",
       "Bash(while read file)",
       "Bash(do echo \"=== $file ===\")",
-      "Bash(done)"
+      "Bash(done)",
+      "Bash(git cherry-pick:*)"
     ],
     "deny": [],
     "ask": []

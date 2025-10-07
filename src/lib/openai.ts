@@ -733,7 +733,7 @@ export async function callOpenAI(prompt: string, maxTokens = 1000, temperature =
     const timeoutId = setTimeout(() => controller.abort(), 30000) // 30 second timeout
 
     try {
-      console.log('Using GPT-4o model...')
+      console.log('Using GPT-4o model with improved JSON parsing...')
       const response = await openai.chat.completions.create({
         model: 'gpt-4o',
         messages: [{ role: 'user', content: prompt }],

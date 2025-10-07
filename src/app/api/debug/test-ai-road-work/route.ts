@@ -82,7 +82,7 @@ export async function GET(request: NextRequest) {
     if (roadWorkItems.length > 0) {
       try {
         console.log('🔍 Testing validation logic...')
-        const validationPrompt = AI_PROMPTS.roadWorkValidator(roadWorkItems, targetDate)
+        const validationPrompt = await AI_PROMPTS.roadWorkValidator(roadWorkItems, targetDate)
         validationResult = await callOpenAI(validationPrompt, 2000, 0)
         console.log('Validation result:', JSON.stringify(validationResult, null, 2))
       } catch (error) {

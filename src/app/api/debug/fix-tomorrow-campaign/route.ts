@@ -76,7 +76,7 @@ export async function POST(request: NextRequest) {
 
         // Generate subject line using AI
         const timestamp = new Date().toISOString()
-        const subjectPrompt = AI_PROMPTS.subjectLineGenerator([topArticle]) + `\n\nTimestamp: ${timestamp}`
+        const subjectPrompt = await AI_PROMPTS.subjectLineGenerator([topArticle]) + `\n\nTimestamp: ${timestamp}`
 
         const aiResponse = await callOpenAI(subjectPrompt, 100, 0.8)
 

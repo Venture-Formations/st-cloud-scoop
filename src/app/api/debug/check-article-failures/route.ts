@@ -19,8 +19,6 @@ export async function GET(request: NextRequest) {
         post_ratings(total_score, interest_level, local_relevance, community_impact)
       `)
       .eq('campaign_id', campaignId)
-      .not('post_ratings', 'is', null)
-      .order('post_ratings(total_score)', { ascending: false })
 
     // Get all articles
     const { data: articles } = await supabaseAdmin
@@ -31,7 +29,8 @@ export async function GET(request: NextRequest) {
     const articlePostIds = new Set(articles?.map(a => a.post_id) || [])
 
     // Find posts that were rated but didn't get articles
-    const missingArticles = ratedPosts?.filter(p => !articlePostIds.has(p.id)) || []
+    const postsWithRatings = ratedPosts?.filter((p: any) => p.post_ratings && p.post_ratings.length > 0) || []
+    const missingArticles = postsWithRatings.filter(p => !articlePostIds.has(p.id))
 
     // Check for duplicate groups
     const { data: duplicateGroups } = await supabaseAdmin
@@ -63,7 +62,7 @@ export async function GET(request: NextRequest) {
       success: true,
       campaign_id: campaignId,
       summary: {
-        total_rated_posts: ratedPosts?.length || 0,
+        total_rated_posts: postsWithRatings.length,
         total_articles: articles?.length || 0,
         missing_articles: missingArticles.length,
         duplicate_groups: duplicateGroups?.length || 0,

@@ -20,13 +20,15 @@ export async function GET(request: Request) {
         id,
         title,
         description,
-        post_rating:post_ratings(total_score)
+        post_ratings!inner(total_score)
       `)
       .eq('campaign_id', campaignId)
-      .not('post_rating', 'is', null)
       .order('created_at', { ascending: false })
 
-    if (error) throw error
+    if (error) {
+      console.error('Query error:', error)
+      throw error
+    }
 
     console.log(`Found ${posts?.length || 0} rated posts`)
 

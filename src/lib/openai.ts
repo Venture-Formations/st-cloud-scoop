@@ -30,9 +30,9 @@ async function getPrompt(key: string, fallback: string): Promise<string> {
 // AI Prompts - Static fallbacks when database is unavailable
 const FALLBACK_PROMPTS = {
   contentEvaluator: (post: { title: string; description: string; content?: string }) => `
-You are evaluating a news article for inclusion in a local St. Cloud, Minnesota newsletter. Rate on three dimensions using a 1-10 scale:
+You are evaluating a news article for inclusion in a local St. Cloud, Minnesota newsletter. Rate on three dimensions:
 
-INTEREST LEVEL (1-10): How intriguing, surprising, or engaging is this story?
+INTEREST LEVEL (1-20): How intriguing, surprising, or engaging is this story?
 HIGH SCORING: Unexpected developments, human interest stories, breaking news, unique events, broad appeal, fun/entertaining
 LOW SCORING: Routine announcements, technical/administrative content, repetitive topics, purely promotional, very short content (subtract points for lack of substance)
 
@@ -61,7 +61,7 @@ Article Content: ${post.content ? post.content.substring(0, 1000) + '...' : 'No 
 IMPORTANT: You must respond with ONLY valid JSON. Do not include any text before or after the JSON.
 
 {
-  "interest_level": <number 1-10>,
+  "interest_level": <number 1-20>,
   "local_relevance": <number 1-10>,
   "community_impact": <number 1-10>,
   "reasoning": "<detailed explanation of your scoring>"

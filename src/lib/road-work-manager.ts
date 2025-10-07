@@ -573,7 +573,7 @@ CRITICAL REQUIREMENTS:
     console.log('🔍 Validating road work items for date accuracy and completeness...')
 
     try {
-      const validationPrompt = AI_PROMPTS.roadWorkValidator(roadWorkItems, formattedDate)
+      const validationPrompt = await AI_PROMPTS.roadWorkValidator(roadWorkItems, formattedDate)
       const validationResponse = await callOpenAI(validationPrompt, 2000, 0)
 
       console.log('Validation response:', JSON.stringify(validationResponse, null, 2))

@@ -657,7 +657,7 @@ export class RSSProcessor {
     }))
 
     try {
-      const prompt = AI_PROMPTS.topicDeduper(postSummaries)
+      const prompt = await AI_PROMPTS.topicDeduper(postSummaries)
       const result = await callOpenAI(prompt)
 
       if (result.groups) {
@@ -1007,7 +1007,7 @@ export class RSSProcessor {
   }
 
   private async factCheckContent(newsletterContent: string, originalContent: string): Promise<FactCheckResult> {
-    const prompt = AI_PROMPTS.factChecker(newsletterContent, originalContent)
+    const prompt = await AI_PROMPTS.factChecker(newsletterContent, originalContent)
     const result = await callOpenAI(prompt)
 
     if (typeof result.score !== 'number' || typeof result.passed !== 'boolean') {

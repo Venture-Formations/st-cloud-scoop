@@ -528,37 +528,37 @@ export const AI_PROMPTS = {
   },
 
   eventSummarizer: async (event: { title: string; description: string | null; venue?: string | null }) => {
-    const template = await getPrompt(
-      'ai_prompt_event_summary',
-      FALLBACK_PROMPTS.eventSummarizer(event)
-    )
-    return template
-      .replace(/\{\{title\}\}/g, event.title)
-      .replace(/\{\{description\}\}/g, event.description || 'No description available')
-      .replace(/\{\{venue\}\}/g, event.venue || 'No venue specified')
+    try {
+      const { data, error } = await supabaseAdmin
+        .from('app_settings')
+        .select('value')
+        .eq('key', 'ai_prompt_event_summary')
+        .single()
+
+      if (error || !data) {
+        console.log('Using code fallback for eventSummarizer prompt')
+        return FALLBACK_PROMPTS.eventSummarizer(event)
+      }
+
+      console.log('Using database prompt for eventSummarizer')
+      return data.value
+        .replace(/\{\{title\}\}/g, event.title)
+        .replace(/\{\{description\}\}/g, event.description || 'No description available')
+        .replace(/\{\{venue\}\}/g, event.venue || 'No venue specified')
+    } catch (error) {
+      console.error('Error fetching eventSummarizer prompt, using fallback:', error)
+      return FALLBACK_PROMPTS.eventSummarizer(event)
+    }
   },
 
   subjectLineGenerator: async (articles: Array<{ headline: string; content: string }>) => {
-    const template = await getPrompt(
-      'ai_prompt_subject_line',
-      FALLBACK_PROMPTS.subjectLineGenerator(articles)
-    )
-    // For subject line, we need to include the articles list in the prompt
-    const articlesText = articles.map((article, i) =>
-      `${i + 1}. ${article.headline}\n   ${article.content.substring(0, 100)}...`
-    ).join('\n\n')
-    return template
-      .replace(/\{\{headline\}\}/g, articles[0]?.headline || '')
-      .replace(/\{\{content\}\}/g, articles[0]?.content || '')
-      .replace(/Articles in this newsletter:[\s\S]*?HARD RULES:/g, `Articles in this newsletter:\n${articlesText}\n\nHARD RULES:`)
+    // subjectLineGenerator doesn't support database templates - always use fallback
+    return FALLBACK_PROMPTS.subjectLineGenerator(articles)
   },
 
   roadWorkGenerator: async (campaignDate: string) => {
-    const template = await getPrompt(
-      'ai_prompt_road_work',
-      FALLBACK_PROMPTS.roadWorkGenerator(campaignDate)
-    )
-    return template.replace(/\{\{date\}\}/g, campaignDate)
+    // roadWorkGenerator doesn't support database templates - always use fallback
+    return FALLBACK_PROMPTS.roadWorkGenerator(campaignDate)
   },
 
   imageAnalyzer: async () => {

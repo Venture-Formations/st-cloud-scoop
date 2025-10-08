@@ -55,6 +55,15 @@ export async function GET(request: NextRequest) {
       // Don't fail the request if table doesn't exist yet
     }
 
+    const { data: adsCount, error: adsError } = await supabaseAdmin
+      .from('advertisements')
+      .select('id', { count: 'exact' })
+
+    if (adsError) {
+      console.error('Error fetching Ads count:', adsError)
+      // Don't fail the request if table doesn't exist yet
+    }
+
     // Get unique RSS sources count
     const { data: rssPosts, error: rssError } = await supabaseAdmin
       .from('rss_posts')
@@ -82,6 +91,12 @@ export async function GET(request: NextRequest) {
         description: 'Minnesota Getaways properties for newsletters',
         count: vrboCount?.length || 0,
         href: '/dashboard/databases/vrbo'
+      },
+      {
+        name: 'Advertisements',
+        description: 'Community Business Spotlight submissions',
+        count: adsCount?.length || 0,
+        href: '/dashboard/databases/ads'
       },
       {
         name: 'Images',

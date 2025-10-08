@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import Layout from '@/components/Layout'
 import RichTextEditor from '@/components/RichTextEditor'
+import AdImageCropper from '@/components/AdImageCropper'
 import type { Advertisement } from '@/types/database'
 
 export default function AdsManagementPage() {
@@ -341,18 +342,55 @@ function AddAdModal({ onClose, onSuccess }: { onClose: () => void; onSuccess: ()
     times_paid: 1,
     preferred_start_date: ''
   })
+  const [imageFile, setImageFile] = useState<File | null>(null)
+  const [croppedImageBlob, setCroppedImageBlob] = useState<Blob | null>(null)
+  const [croppedImageDataUrl, setCroppedImageDataUrl] = useState<string>('')
+  const [cropOffset, setCropOffset] = useState(0.5)
   const [submitting, setSubmitting] = useState(false)
+
+  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (file && file.type.startsWith('image/')) {
+      setImageFile(file)
+    }
+  }
+
+  const handleCropComplete = (blob: Blob, dataUrl: string) => {
+    setCroppedImageBlob(blob)
+    setCroppedImageDataUrl(dataUrl)
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setSubmitting(true)
 
     try {
+      let imageUrl = null
+
+      // Upload image if present
+      if (croppedImageBlob) {
+        const formData = new FormData()
+        formData.append('image', croppedImageBlob, 'ad-image.jpg')
+
+        const uploadResponse = await fetch('/api/ads/upload-image', {
+          method: 'POST',
+          body: formData
+        })
+
+        if (uploadResponse.ok) {
+          const { url } = await uploadResponse.json()
+          imageUrl = url
+        } else {
+          throw new Error('Failed to upload image')
+        }
+      }
+
       const response = await fetch('/api/ads', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           ...formData,
+          image_url: imageUrl,
           payment_amount: 0, // Admin-created ads are free
           payment_status: 'manual',
           status: 'approved' // Auto-approve admin-created ads
@@ -413,6 +451,34 @@ function AddAdModal({ onClose, onSuccess }: { onClose: () => void; onSuccess: ()
               maxWords={100}
             />
           </div>
+
+          {/* Image Upload and Cropper */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Advertisement Image (Optional)
+            </label>
+            <input
+              type="file"
+              accept="image/*"
+              onChange={handleImageSelect}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md"
+            />
+            <p className="text-xs text-gray-500 mt-1">
+              Upload an image for your ad. It will be cropped to 5:4 ratio.
+            </p>
+          </div>
+
+          {/* Image Cropper */}
+          {imageFile && (
+            <div className="p-4 border-2 border-blue-300 rounded-lg bg-blue-50">
+              <AdImageCropper
+                imageFile={imageFile}
+                onCropComplete={handleCropComplete}
+                cropOffset={cropOffset}
+                onCropOffsetChange={setCropOffset}
+              />
+            </div>
+          )}
 
           {/* Business Information */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

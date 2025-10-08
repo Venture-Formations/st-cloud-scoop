@@ -651,6 +651,7 @@ export interface Advertisement {
   contact_phone: string | null
   business_address: string | null
   business_website: string | null
+  image_url: string | null  // Optional cropped image (5:4 ratio)
   frequency: AdFrequency
   times_paid: number
   times_used: number

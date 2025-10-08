@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import RichTextEditor from '@/components/RichTextEditor'
+import AdImageCropper from '@/components/AdImageCropper'
 import type { AdFrequency, AdPricingTier } from '@/types/database'
 
 interface AdFormData {
@@ -24,6 +25,10 @@ export default function SubmitAdPage() {
   const [loading, setLoading] = useState(false)
   const [pricingTiers, setPricingTiers] = useState<AdPricingTier[]>([])
   const [calculatedPrice, setCalculatedPrice] = useState<number>(0)
+  const [imageFile, setImageFile] = useState<File | null>(null)
+  const [croppedImageBlob, setCroppedImageBlob] = useState<Blob | null>(null)
+  const [croppedImageDataUrl, setCroppedImageDataUrl] = useState<string>('')
+  const [cropOffset, setCropOffset] = useState(0.5)
 
   const [formData, setFormData] = useState<AdFormData>({
     title: '',
@@ -38,6 +43,18 @@ export default function SubmitAdPage() {
     times: 1,
     preferred_start_date: ''
   })
+
+  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (file && file.type.startsWith('image/')) {
+      setImageFile(file)
+    }
+  }
+
+  const handleCropComplete = (blob: Blob, dataUrl: string) => {
+    setCroppedImageBlob(blob)
+    setCroppedImageDataUrl(dataUrl)
+  }
 
   useEffect(() => {
     loadPricingTiers()
@@ -115,12 +132,33 @@ export default function SubmitAdPage() {
     setLoading(true)
 
     try {
+      let imageUrl = null
+
+      // Upload image if present
+      if (croppedImageBlob) {
+        const imageFormData = new FormData()
+        imageFormData.append('image', croppedImageBlob, 'ad-image.jpg')
+
+        const uploadResponse = await fetch('/api/ads/upload-image', {
+          method: 'POST',
+          body: imageFormData
+        })
+
+        if (uploadResponse.ok) {
+          const { url } = await uploadResponse.json()
+          imageUrl = url
+        } else {
+          throw new Error('Failed to upload image')
+        }
+      }
+
       // Create Stripe checkout session
       const response = await fetch('/api/ads/checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           ...formData,
+          image_url: imageUrl,
           word_count: words.length,
           total_amount: calculatedPrice
         })
@@ -198,6 +236,34 @@ export default function SubmitAdPage() {
                     placeholder="Write your advertisement content here. You can use bold, italic, underline, and add links."
                   />
                 </div>
+
+                {/* Image Upload */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Advertisement Image (Optional)
+                  </label>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleImageSelect}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    Upload an image to make your ad stand out! It will be cropped to 5:4 ratio.
+                  </p>
+                </div>
+
+                {/* Image Cropper */}
+                {imageFile && (
+                  <div className="p-4 border-2 border-blue-300 rounded-lg bg-blue-50">
+                    <AdImageCropper
+                      imageFile={imageFile}
+                      onCropComplete={handleCropComplete}
+                      cropOffset={cropOffset}
+                      onCropOffsetChange={setCropOffset}
+                    />
+                  </div>
+                )}
               </div>
             </div>
 

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
+import Layout from '@/components/Layout'
 import { Poll, PollResponse } from '@/types/database'
 
 interface PollWithAnalytics extends Poll {
@@ -181,50 +182,51 @@ export default function PollsPage() {
 
   if (loading) {
     return (
-      <div className="p-6">
-        <div className="text-center">Loading polls...</div>
-      </div>
+      <Layout>
+        <div className="flex items-center justify-center h-64">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand-primary"></div>
+        </div>
+      </Layout>
     )
   }
 
   return (
-    <div className="p-6 max-w-7xl mx-auto">
-      <div className="flex justify-between items-start mb-6">
-        <div>
-          <nav className="mb-2">
-            <ol className="flex items-center space-x-2 text-sm text-gray-500">
-              <li>
-                <Link href="/dashboard" className="hover:text-brand-primary">
-                  Dashboard
-                </Link>
-              </li>
-              <li>/</li>
-              <li>
-                <Link href="/dashboard/databases" className="hover:text-brand-primary">
-                  Databases
-                </Link>
-              </li>
-              <li>/</li>
-              <li>
-                <span className="text-gray-900 font-medium">Polls</span>
-              </li>
-            </ol>
-          </nav>
-          <h1 className="text-2xl font-bold text-gray-900">Poll Management</h1>
-          <p className="text-gray-600">
-            {polls.length} {polls.length === 1 ? 'poll' : 'polls'} • {polls.filter(p => p.is_active).length} active
-          </p>
+    <Layout>
+      <div className="px-4 py-6 sm:px-0">
+        <div className="flex justify-between items-center mb-6">
+          <div>
+            <nav className="flex" aria-label="Breadcrumb">
+              <ol className="flex items-center space-x-2">
+                <li>
+                  <Link href="/dashboard/databases" className="text-gray-500 hover:text-gray-700">
+                    Databases
+                  </Link>
+                </li>
+                <li>
+                  <span className="text-gray-500">/</span>
+                </li>
+                <li>
+                  <span className="text-gray-900 font-medium">Polls</span>
+                </li>
+              </ol>
+            </nav>
+            <h1 className="text-2xl font-bold text-gray-900 mt-2">
+              Poll Management
+            </h1>
+            <p className="text-gray-600">
+              {polls.length} total polls • {polls.filter(p => p.is_active).length} active
+            </p>
+          </div>
+          <button
+            onClick={() => {
+              resetForm()
+              setShowCreateForm(true)
+            }}
+            className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+          >
+            Create New Poll
+          </button>
         </div>
-        <button
-          onClick={() => {
-            resetForm()
-            setShowCreateForm(true)
-          }}
-          className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
-        >
-          Create New Poll
-        </button>
-      </div>
 
       {/* Create/Edit Form Modal */}
       {(showCreateForm || showEditForm) && (
@@ -409,6 +411,7 @@ export default function PollsPage() {
           ))
         )}
       </div>
-    </div>
+      </div>
+    </Layout>
   )
 }

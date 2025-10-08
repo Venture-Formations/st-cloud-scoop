@@ -725,45 +725,42 @@ export default function SubmitEventPage() {
               </div>
             </div>
 
-            {/* Image Upload - Only show for Featured Events */}
-            {formData.placement_type === 'featured' && (
-              <>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Event Image <span className="text-red-500">*</span>
-                  </label>
-                  <p className="text-xs text-gray-500 mb-2">Max 5MB, JPG format, will be cropped to 5:4 ratio (900x720px)</p>
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept="image/*"
-                    onChange={handleImageUpload}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
+            {/* Image Upload - Available for all event types */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Event Image {formData.placement_type === 'featured' && <span className="text-red-500">*</span>}
+                {formData.placement_type !== 'featured' && <span className="text-gray-500 text-sm">(Optional)</span>}
+              </label>
+              <p className="text-xs text-gray-500 mb-2">Max 5MB, JPG format, will be cropped to 5:4 ratio (900x720px)</p>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                onChange={handleImageUpload}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
 
-                {/* Image Cropper */}
-                {selectedImage && (
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Crop Image (5:4 ratio)
-                    </label>
-                    <ReactCrop
-                      crop={crop}
-                      onChange={(c) => setCrop(c)}
-                      onComplete={(c) => setCompletedCrop(c)}
-                      aspect={5 / 4}
-                    >
-                      <img
-                        ref={imgRef}
-                        src={selectedImage}
-                        alt="Crop preview"
-                        style={{ maxWidth: '100%' }}
-                      />
-                    </ReactCrop>
-                  </div>
-                )}
-              </>
+            {/* Image Cropper */}
+            {selectedImage && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Crop Image (5:4 ratio)
+                </label>
+                <ReactCrop
+                  crop={crop}
+                  onChange={(c) => setCrop(c)}
+                  onComplete={(c) => setCompletedCrop(c)}
+                  aspect={5 / 4}
+                >
+                  <img
+                    ref={imgRef}
+                    src={selectedImage}
+                    alt="Crop preview"
+                    style={{ maxWidth: '100%' }}
+                  />
+                </ReactCrop>
+              </div>
             )}
 
             {/* Add to Cart Button */}

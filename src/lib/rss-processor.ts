@@ -1270,9 +1270,10 @@ export class RSSProcessor {
         // Get event IDs already selected for this date
         const alreadySelectedIds = existingForDate.map(ce => ce.event_id)
 
-        // Filter out already selected events
+        // Filter out already selected events AND ensure only active events
+        // Double-check active status as a safety measure
         const availableForSelection = eventsForDate.filter(event =>
-          !alreadySelectedIds.includes(event.id)
+          !alreadySelectedIds.includes(event.id) && event.active === true
         )
 
         if (availableForSelection.length === 0) {
@@ -1280,13 +1281,28 @@ export class RSSProcessor {
           continue
         }
 
+        // Remove duplicate titles by keeping only the earliest created event
+        // This prevents selecting test submissions or rejected duplicates
+        const seenTitles = new Set<string>()
+        const uniqueEvents = availableForSelection.filter(event => {
+          const titleKey = event.title.toLowerCase().trim()
+          if (seenTitles.has(titleKey)) {
+            console.log(`⚠️ Skipping duplicate event: "${event.title}" (ID: ${event.id})`)
+            return false
+          }
+          seenTitles.add(titleKey)
+          return true
+        })
+
+        console.log(`After removing duplicates: ${uniqueEvents.length} unique events available for ${date}`)
+
         // Separate events by priority:
         // 1. Featured events (from events.featured=true) - MUST be included and featured
         // 2. Paid placement events (from events.paid_placement=true) - MUST be included but NOT featured
         // 3. Regular events - fill remaining spots randomly
-        const featuredEvents = availableForSelection.filter(e => e.featured)
-        const paidPlacementEvents = availableForSelection.filter(e => e.paid_placement && !e.featured)
-        const regularEvents = availableForSelection.filter(e => !e.featured && !e.paid_placement)
+        const featuredEvents = uniqueEvents.filter(e => e.featured)
+        const paidPlacementEvents = uniqueEvents.filter(e => e.paid_placement && !e.featured)
+        const regularEvents = uniqueEvents.filter(e => !e.featured && !e.paid_placement)
 
         console.log(`Available for ${date}: ${featuredEvents.length} featured, ${paidPlacementEvents.length} paid placement, ${regularEvents.length} regular`)
 

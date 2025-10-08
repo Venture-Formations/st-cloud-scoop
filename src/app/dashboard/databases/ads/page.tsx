@@ -298,7 +298,436 @@ export default function AdsManagementPage() {
             )}
           </div>
         )}
+
+        {/* Add Advertisement Modal */}
+        {showAddModal && (
+          <AddAdModal
+            onClose={() => setShowAddModal(false)}
+            onSuccess={() => {
+              setShowAddModal(false)
+              fetchAds()
+            }}
+          />
+        )}
+
+        {/* Edit Advertisement Modal */}
+        {editingAd && (
+          <EditAdModal
+            ad={editingAd}
+            onClose={() => setEditingAd(null)}
+            onSuccess={() => {
+              setEditingAd(null)
+              fetchAds()
+            }}
+          />
+        )}
       </div>
     </Layout>
+  )
+}
+
+// Add Advertisement Modal Component
+function AddAdModal({ onClose, onSuccess }: { onClose: () => void; onSuccess: () => void }) {
+  const [formData, setFormData] = useState({
+    title: '',
+    body: '',
+    business_name: '',
+    contact_name: '',
+    contact_email: '',
+    contact_phone: '',
+    business_address: '',
+    business_website: '',
+    frequency: 'single' as 'single' | 'weekly' | 'monthly',
+    times_paid: 1,
+    preferred_start_date: ''
+  })
+  const [submitting, setSubmitting] = useState(false)
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setSubmitting(true)
+
+    try {
+      const response = await fetch('/api/ads', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...formData,
+          payment_amount: 0, // Admin-created ads are free
+          payment_status: 'manual',
+          status: 'approved' // Auto-approve admin-created ads
+        })
+      })
+
+      if (response.ok) {
+        alert('Advertisement created successfully!')
+        onSuccess()
+      } else {
+        const error = await response.json()
+        throw new Error(error.error || 'Failed to create advertisement')
+      }
+    } catch (error) {
+      console.error('Create error:', error)
+      alert(error instanceof Error ? error.message : 'Failed to create advertisement')
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+        <div className="p-6 border-b border-gray-200">
+          <div className="flex justify-between items-center">
+            <h2 className="text-2xl font-bold">Add Advertisement</h2>
+            <button onClick={onClose} className="text-gray-500 hover:text-gray-700 text-2xl">
+              ×
+            </button>
+          </div>
+        </div>
+
+        <form onSubmit={handleSubmit} className="p-6 space-y-6">
+          {/* Title */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Ad Title *
+            </label>
+            <input
+              type="text"
+              required
+              value={formData.title}
+              onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md"
+              placeholder="Enter ad title"
+            />
+          </div>
+
+          {/* Body */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Ad Content * (max 100 words)
+            </label>
+            <RichTextEditor
+              value={formData.body}
+              onChange={(html) => setFormData({ ...formData, body: html })}
+              maxWords={100}
+            />
+          </div>
+
+          {/* Business Information */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Business Name *
+              </label>
+              <input
+                type="text"
+                required
+                value={formData.business_name}
+                onChange={(e) => setFormData({ ...formData, business_name: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Contact Name *
+              </label>
+              <input
+                type="text"
+                required
+                value={formData.contact_name}
+                onChange={(e) => setFormData({ ...formData, contact_name: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Contact Email *
+              </label>
+              <input
+                type="email"
+                required
+                value={formData.contact_email}
+                onChange={(e) => setFormData({ ...formData, contact_email: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Contact Phone
+              </label>
+              <input
+                type="tel"
+                value={formData.contact_phone}
+                onChange={(e) => setFormData({ ...formData, contact_phone: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Business Address
+              </label>
+              <input
+                type="text"
+                value={formData.business_address}
+                onChange={(e) => setFormData({ ...formData, business_address: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Website URL
+              </label>
+              <input
+                type="url"
+                value={formData.business_website}
+                onChange={(e) => setFormData({ ...formData, business_website: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                placeholder="https://"
+              />
+            </div>
+          </div>
+
+          {/* Frequency and Quantity */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Frequency *
+              </label>
+              <select
+                required
+                value={formData.frequency}
+                onChange={(e) => setFormData({ ...formData, frequency: e.target.value as any })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md"
+              >
+                <option value="single">Single</option>
+                <option value="weekly">Weekly</option>
+                <option value="monthly">Monthly</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Times Paid *
+              </label>
+              <input
+                type="number"
+                required
+                min="1"
+                max="20"
+                value={formData.times_paid}
+                onChange={(e) => setFormData({ ...formData, times_paid: parseInt(e.target.value) })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Preferred Start Date
+              </label>
+              <input
+                type="date"
+                value={formData.preferred_start_date}
+                onChange={(e) => setFormData({ ...formData, preferred_start_date: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md"
+              />
+            </div>
+          </div>
+
+          {/* Submit Buttons */}
+          <div className="flex justify-end gap-3 pt-4 border-t">
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-4 py-2 text-gray-700 bg-gray-200 rounded hover:bg-gray-300"
+              disabled={submitting}
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              className="px-4 py-2 text-white bg-blue-600 rounded hover:bg-blue-700 disabled:bg-blue-300"
+              disabled={submitting}
+            >
+              {submitting ? 'Creating...' : 'Create Advertisement'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  )
+}
+
+// Edit Advertisement Modal Component
+function EditAdModal({ ad, onClose, onSuccess }: { ad: Advertisement; onClose: () => void; onSuccess: () => void }) {
+  const [formData, setFormData] = useState({
+    title: ad.title,
+    body: ad.body,
+    business_name: ad.business_name,
+    contact_name: ad.contact_name,
+    contact_email: ad.contact_email,
+    contact_phone: ad.contact_phone || '',
+    business_address: ad.business_address || '',
+    business_website: ad.business_website || ''
+  })
+  const [submitting, setSubmitting] = useState(false)
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setSubmitting(true)
+
+    try {
+      const response = await fetch(`/api/ads/${ad.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData)
+      })
+
+      if (response.ok) {
+        alert('Advertisement updated successfully!')
+        onSuccess()
+      } else {
+        throw new Error('Failed to update advertisement')
+      }
+    } catch (error) {
+      console.error('Update error:', error)
+      alert('Failed to update advertisement')
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+        <div className="p-6 border-b border-gray-200">
+          <div className="flex justify-between items-center">
+            <h2 className="text-2xl font-bold">Edit Advertisement</h2>
+            <button onClick={onClose} className="text-gray-500 hover:text-gray-700 text-2xl">
+              ×
+            </button>
+          </div>
+        </div>
+
+        <form onSubmit={handleSubmit} className="p-6 space-y-6">
+          {/* Title */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Ad Title *
+            </label>
+            <input
+              type="text"
+              required
+              value={formData.title}
+              onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md"
+            />
+          </div>
+
+          {/* Body */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Ad Content * (max 100 words)
+            </label>
+            <RichTextEditor
+              value={formData.body}
+              onChange={(html) => setFormData({ ...formData, body: html })}
+              maxWords={100}
+            />
+          </div>
+
+          {/* Business Information */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Business Name *
+              </label>
+              <input
+                type="text"
+                required
+                value={formData.business_name}
+                onChange={(e) => setFormData({ ...formData, business_name: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Contact Name *
+              </label>
+              <input
+                type="text"
+                required
+                value={formData.contact_name}
+                onChange={(e) => setFormData({ ...formData, contact_name: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Contact Email *
+              </label>
+              <input
+                type="email"
+                required
+                value={formData.contact_email}
+                onChange={(e) => setFormData({ ...formData, contact_email: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Contact Phone
+              </label>
+              <input
+                type="tel"
+                value={formData.contact_phone}
+                onChange={(e) => setFormData({ ...formData, contact_phone: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Business Address
+              </label>
+              <input
+                type="text"
+                value={formData.business_address}
+                onChange={(e) => setFormData({ ...formData, business_address: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Website URL
+              </label>
+              <input
+                type="url"
+                value={formData.business_website}
+                onChange={(e) => setFormData({ ...formData, business_website: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                placeholder="https://"
+              />
+            </div>
+          </div>
+
+          {/* Submit Buttons */}
+          <div className="flex justify-end gap-3 pt-4 border-t">
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-4 py-2 text-gray-700 bg-gray-200 rounded hover:bg-gray-300"
+              disabled={submitting}
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              className="px-4 py-2 text-white bg-blue-600 rounded hover:bg-blue-700 disabled:bg-blue-300"
+              disabled={submitting}
+            >
+              {submitting ? 'Updating...' : 'Update Advertisement'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
   )
 }

@@ -1,10 +1,11 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import Link from 'next/link'
 import Layout from '@/components/Layout'
 import RichTextEditor from '@/components/RichTextEditor'
-import AdImageCropper from '@/components/AdImageCropper'
+import ReactCrop, { Crop, PixelCrop } from 'react-image-crop'
+import 'react-image-crop/dist/ReactCrop.css'
 import type { Advertisement } from '@/types/database'
 
 export default function AdsManagementPage() {
@@ -342,22 +343,56 @@ function AddAdModal({ onClose, onSuccess }: { onClose: () => void; onSuccess: ()
     times_paid: 1,
     preferred_start_date: ''
   })
-  const [imageFile, setImageFile] = useState<File | null>(null)
-  const [croppedImageBlob, setCroppedImageBlob] = useState<Blob | null>(null)
-  const [croppedImageDataUrl, setCroppedImageDataUrl] = useState<string>('')
-  const [cropOffset, setCropOffset] = useState(0.5)
+  const [selectedImage, setSelectedImage] = useState<string | null>(null)
+  const [crop, setCrop] = useState<Crop>()
+  const [completedCrop, setCompletedCrop] = useState<PixelCrop>()
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const imgRef = useRef<HTMLImageElement>(null)
   const [submitting, setSubmitting] = useState(false)
 
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (file && file.type.startsWith('image/')) {
-      setImageFile(file)
+      const reader = new FileReader()
+      reader.onload = () => {
+        setSelectedImage(reader.result as string)
+      }
+      reader.readAsDataURL(file)
     }
   }
 
-  const handleCropComplete = (blob: Blob, dataUrl: string) => {
-    setCroppedImageBlob(blob)
-    setCroppedImageDataUrl(dataUrl)
+  const getCroppedImage = async (): Promise<Blob | null> => {
+    if (!completedCrop || !imgRef.current) return null
+
+    const image = imgRef.current
+    const canvas = document.createElement('canvas')
+    const ctx = canvas.getContext('2d')
+
+    if (!ctx) return null
+
+    const scaleX = image.naturalWidth / image.width
+    const scaleY = image.naturalHeight / image.height
+
+    canvas.width = completedCrop.width
+    canvas.height = completedCrop.height
+
+    ctx.drawImage(
+      image,
+      completedCrop.x * scaleX,
+      completedCrop.y * scaleY,
+      completedCrop.width * scaleX,
+      completedCrop.height * scaleY,
+      0,
+      0,
+      completedCrop.width,
+      completedCrop.height
+    )
+
+    return new Promise((resolve) => {
+      canvas.toBlob((blob) => {
+        resolve(blob)
+      }, 'image/jpeg', 0.9)
+    })
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -368,20 +403,23 @@ function AddAdModal({ onClose, onSuccess }: { onClose: () => void; onSuccess: ()
       let imageUrl = null
 
       // Upload image if present
-      if (croppedImageBlob) {
-        const formData = new FormData()
-        formData.append('image', croppedImageBlob, 'ad-image.jpg')
+      if (selectedImage && completedCrop) {
+        const croppedBlob = await getCroppedImage()
+        if (croppedBlob) {
+          const imageFormData = new FormData()
+          imageFormData.append('image', croppedBlob, 'ad-image.jpg')
 
-        const uploadResponse = await fetch('/api/ads/upload-image', {
-          method: 'POST',
-          body: formData
-        })
+          const uploadResponse = await fetch('/api/ads/upload-image', {
+            method: 'POST',
+            body: imageFormData
+          })
 
-        if (uploadResponse.ok) {
-          const { url } = await uploadResponse.json()
-          imageUrl = url
-        } else {
-          throw new Error('Failed to upload image')
+          if (uploadResponse.ok) {
+            const { url } = await uploadResponse.json()
+            imageUrl = url
+          } else {
+            throw new Error('Failed to upload image')
+          }
         }
       }
 
@@ -458,6 +496,7 @@ function AddAdModal({ onClose, onSuccess }: { onClose: () => void; onSuccess: ()
               Advertisement Image (Optional)
             </label>
             <input
+              ref={fileInputRef}
               type="file"
               accept="image/*"
               onChange={handleImageSelect}
@@ -469,14 +508,24 @@ function AddAdModal({ onClose, onSuccess }: { onClose: () => void; onSuccess: ()
           </div>
 
           {/* Image Cropper */}
-          {imageFile && (
-            <div className="p-4 border-2 border-blue-300 rounded-lg bg-blue-50">
-              <AdImageCropper
-                imageFile={imageFile}
-                onCropComplete={handleCropComplete}
-                cropOffset={cropOffset}
-                onCropOffsetChange={setCropOffset}
-              />
+          {selectedImage && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Crop Image (5:4 ratio)
+              </label>
+              <ReactCrop
+                crop={crop}
+                onChange={(c) => setCrop(c)}
+                onComplete={(c) => setCompletedCrop(c)}
+                aspect={5 / 4}
+              >
+                <img
+                  ref={imgRef}
+                  src={selectedImage}
+                  alt="Crop preview"
+                  style={{ maxWidth: '100%' }}
+                />
+              </ReactCrop>
             </div>
           )}
 

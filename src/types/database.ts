@@ -671,8 +671,8 @@ export interface Advertisement {
 
 export interface CampaignAdvertisement {
   id: string
-  campaign_id: string
-  advertisement_id: string
+  campaign_id: string  // UUID stored as string in TypeScript
+  advertisement_id: string  // UUID stored as string in TypeScript
   campaign_date: string
   used_at: string
   created_at: string

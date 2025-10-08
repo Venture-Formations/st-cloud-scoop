@@ -34,7 +34,7 @@ CREATE TABLE IF NOT EXISTS advertisements (
 -- Create campaign_advertisements junction table
 CREATE TABLE IF NOT EXISTS campaign_advertisements (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  campaign_id TEXT NOT NULL REFERENCES newsletter_campaigns(id) ON DELETE CASCADE,
+  campaign_id UUID NOT NULL REFERENCES newsletter_campaigns(id) ON DELETE CASCADE,
   advertisement_id UUID NOT NULL REFERENCES advertisements(id) ON DELETE CASCADE,
   campaign_date DATE NOT NULL,
   used_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),

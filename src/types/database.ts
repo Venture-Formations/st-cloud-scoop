@@ -635,3 +635,56 @@ export interface ImageSearchFilters {
   limit?: number
   offset?: number
 }
+
+// Advertisement types
+export type AdFrequency = 'single' | 'weekly' | 'monthly'
+export type AdStatus = 'pending_payment' | 'pending_review' | 'approved' | 'active' | 'completed' | 'rejected'
+
+export interface Advertisement {
+  id: string
+  title: string
+  body: string  // Rich text HTML
+  word_count: number
+  business_name: string
+  contact_name: string
+  contact_email: string
+  contact_phone: string | null
+  business_address: string | null
+  business_website: string | null
+  frequency: AdFrequency
+  times_paid: number
+  times_used: number
+  status: AdStatus
+  preferred_start_date: string | null
+  actual_start_date: string | null
+  last_used_date: string | null
+  payment_intent_id: string | null
+  payment_amount: number | null
+  payment_status: string | null
+  submission_date: string
+  approved_by: string | null
+  approved_at: string | null
+  rejection_reason: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface CampaignAdvertisement {
+  id: string
+  campaign_id: string
+  advertisement_id: string
+  campaign_date: string
+  used_at: string
+  created_at: string
+  advertisement?: Advertisement
+}
+
+export interface AdPricingTier {
+  id: string
+  frequency: AdFrequency
+  min_quantity: number
+  max_quantity: number | null
+  price_per_unit: number
+  created_at: string
+  updated_at: string
+}

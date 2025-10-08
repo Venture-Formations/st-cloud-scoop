@@ -423,11 +423,17 @@ function AddAdModal({ onClose, onSuccess }: { onClose: () => void; onSuccess: ()
         }
       }
 
+      // Calculate word count
+      const text = formData.body.replace(/<[^>]*>/g, '').trim()
+      const words = text.split(/\s+/).filter(w => w.length > 0)
+      const wordCount = words.length
+
       const response = await fetch('/api/ads', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           ...formData,
+          word_count: wordCount,
           image_url: imageUrl,
           payment_amount: 0, // Admin-created ads are free
           payment_status: 'manual',

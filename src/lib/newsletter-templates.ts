@@ -6,6 +6,7 @@ import { selectPropertiesForCampaign, getSelectedPropertiesForCampaign } from '.
 import { selectDiningDealsForCampaign } from './dining-selector'
 import { generateDailyRoadWork, getSelectedRoadWorkItemsForCampaign, storeRoadWorkItems, generateRoadWorkHTML } from './road-work-manager'
 import { wrapTrackingUrl } from './url-tracking'
+import { AdScheduler } from './ad-scheduler'
 
 // ==================== UTILITY FUNCTIONS ====================
 
@@ -717,6 +718,96 @@ export async function generateDiningDealsSection(campaign: any): Promise<string>
 
   } catch (error) {
     console.error('Error generating Dining Deals section:', error)
+    return ''
+  }
+}
+
+// ==================== COMMUNITY BUSINESS SPOTLIGHT ====================
+
+export async function generateCommunityBusinessSpotlightSection(campaign: any): Promise<string> {
+  try {
+    console.log('Generating Community Business Spotlight section for campaign:', campaign?.id)
+
+    // Check if ad already selected for this campaign
+    const { data: existingAd } = await supabaseAdmin
+      .from('campaign_advertisements')
+      .select('*, advertisement:advertisements(*)')
+      .eq('campaign_id', campaign.id)
+      .single()
+
+    let selectedAd = existingAd?.advertisement
+
+    // If no ad selected yet, use scheduler to select one
+    if (!selectedAd) {
+      console.log('No ad selected yet, using scheduler...')
+      selectedAd = await AdScheduler.selectAdForCampaign({
+        campaignId: campaign.id,
+        campaignDate: campaign.date
+      })
+
+      // Record the usage if an ad was selected
+      if (selectedAd) {
+        await AdScheduler.recordAdUsage(campaign.id, selectedAd.id, campaign.date)
+        console.log(`Selected and recorded ad: ${selectedAd.title}`)
+      }
+    } else {
+      console.log(`Using existing ad: ${selectedAd.title}`)
+    }
+
+    // If no ad available, return empty section
+    if (!selectedAd) {
+      console.log('No advertisement available for this campaign')
+      return ''
+    }
+
+    // Generate HTML for the ad
+    const businessUrl = selectedAd.business_website || '#'
+    const trackedUrl = businessUrl !== '#'
+      ? wrapTrackingUrl(businessUrl, 'Community Business Spotlight', campaign.date, campaign.mailerlite_campaign_id)
+      : '#'
+
+    return `
+    <!-- Community Business Spotlight Section -->
+    <table cellpadding="0" cellspacing="0" border="0" width="100%" style="margin: 0 auto; max-width: 600px; background-color: #ffffff; border-radius: 0px; overflow: hidden; margin-top: 30px;">
+      <tr>
+        <td style="padding: 25px 25px 20px 25px;">
+          <h2 style="font-size: 1.625em; line-height: 1.16em; font-family: Arial, sans-serif; color: #1877F2; margin: 0; padding: 0;">Community Business Spotlight</h2>
+        </td>
+      </tr>
+
+      <tr>
+        <td style="padding: 0 25px 25px 25px;">
+          <!-- Ad Content -->
+          <div style="background-color: #f8f9fa; border-left: 4px solid #1877F2; padding: 20px; margin-bottom: 20px;">
+            <h3 style="font-family: Arial, sans-serif; font-size: 1.375em; color: #333333; margin: 0 0 15px 0;">
+              ${selectedAd.title}
+            </h3>
+
+            <div style="font-family: Arial, sans-serif; font-size: 1em; line-height: 1.6; color: #555555; margin-bottom: 15px;">
+              ${selectedAd.body}
+            </div>
+
+            <div style="font-family: Arial, sans-serif; font-size: 0.875em; color: #777777; margin-bottom: 15px;">
+              <strong>${selectedAd.business_name}</strong>
+              ${selectedAd.business_address ? `<br>${selectedAd.business_address}` : ''}
+            </div>
+
+            ${businessUrl !== '#' ? `
+            <a href="${trackedUrl}" style="display: inline-block; background-color: #1877F2; color: #ffffff; text-decoration: none; padding: 10px 20px; border-radius: 4px; font-family: Arial, sans-serif; font-size: 0.938em; font-weight: bold;">
+              Visit Website
+            </a>
+            ` : ''}
+          </div>
+
+          <p style="font-family: Arial, sans-serif; font-size: 0.75em; color: #999999; font-style: italic; margin: 10px 0 0 0;">
+            Sponsored Content
+          </p>
+        </td>
+      </tr>
+    </table>
+    `
+  } catch (error) {
+    console.error('Error generating Community Business Spotlight section:', error)
     return ''
   }
 }

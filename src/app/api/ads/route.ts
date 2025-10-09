@@ -54,6 +54,30 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
     }
 
+    // Determine display_order if status is active
+    let display_order = null
+    const requestedStatus = body.status || 'approved'
+
+    if (requestedStatus === 'active') {
+      // Get the highest display_order for active ads
+      const { data: activeAds, error: fetchError } = await supabaseAdmin
+        .from('advertisements')
+        .select('display_order')
+        .eq('status', 'active')
+        .not('display_order', 'is', null)
+        .order('display_order', { ascending: false })
+        .limit(1)
+
+      if (fetchError) {
+        console.error('Error fetching active ads:', fetchError)
+      }
+
+      // Set display_order to next available position
+      display_order = activeAds && activeAds.length > 0
+        ? (activeAds[0].display_order || 0) + 1
+        : 1
+    }
+
     const { data: ad, error } = await supabaseAdmin
       .from('advertisements')
       .insert({
@@ -69,7 +93,8 @@ export async function POST(request: NextRequest) {
         frequency: frequency || 'single', // Default to 'single' if not provided
         times_paid: times_paid || 1, // Default to 1 if not provided
         times_used: 0,
-        status: body.status || 'approved', // Use provided status or default to approved
+        status: requestedStatus,
+        display_order: display_order,
         payment_status: body.payment_status || 'paid',
         paid: body.paid !== undefined ? body.paid : true,
         image_url: body.image_url || null,

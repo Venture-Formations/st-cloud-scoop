@@ -683,6 +683,14 @@ function AddAdModal({ onClose, onSuccess }: { onClose: () => void; onSuccess: ()
       const reader = new FileReader()
       reader.onload = () => {
         setSelectedImage(reader.result as string)
+        // Set initial crop to show crop box immediately (5:4 aspect ratio, centered)
+        setCrop({
+          unit: '%',
+          x: 10,
+          y: 10,
+          width: 80,
+          height: 64 // 80 * (4/5) = 64 to maintain 5:4 aspect ratio
+        })
       }
       reader.readAsDataURL(file)
     }

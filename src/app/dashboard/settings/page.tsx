@@ -1992,9 +1992,12 @@ function AdsSettings() {
   const [message, setMessage] = useState('')
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editPrice, setEditPrice] = useState('')
+  const [adsPerNewsletter, setAdsPerNewsletter] = useState<number>(1)
+  const [savingAdsPerNewsletter, setSavingAdsPerNewsletter] = useState(false)
 
   useEffect(() => {
     loadTiers()
+    loadAdsPerNewsletter()
   }, [])
 
   const loadTiers = async () => {
@@ -2008,6 +2011,53 @@ function AdsSettings() {
       console.error('Failed to load pricing tiers:', error)
     } finally {
       setLoading(false)
+    }
+  }
+
+  const loadAdsPerNewsletter = async () => {
+    try {
+      const response = await fetch('/api/settings/email')
+      if (response.ok) {
+        const data = await response.json()
+        const setting = data.settings.find((s: any) => s.key === 'ads_per_newsletter')
+        if (setting) {
+          setAdsPerNewsletter(parseInt(setting.value))
+        }
+      }
+    } catch (error) {
+      console.error('Failed to load ads per newsletter:', error)
+    }
+  }
+
+  const saveAdsPerNewsletter = async () => {
+    if (adsPerNewsletter < 1 || adsPerNewsletter > 5) {
+      alert('Ads per newsletter must be between 1 and 5')
+      return
+    }
+
+    setSavingAdsPerNewsletter(true)
+    setMessage('')
+
+    try {
+      const response = await fetch('/api/settings/email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ads_per_newsletter: adsPerNewsletter.toString()
+        })
+      })
+
+      if (response.ok) {
+        setMessage('Ads per newsletter updated successfully!')
+        setTimeout(() => setMessage(''), 3000)
+      } else {
+        throw new Error('Failed to update setting')
+      }
+    } catch (error) {
+      setMessage('Failed to update ads per newsletter. Please try again.')
+      console.error('Save error:', error)
+    } finally {
+      setSavingAdsPerNewsletter(false)
     }
   }
 
@@ -2279,6 +2329,40 @@ function AdsSettings() {
             {message}
           </div>
         )}
+      </div>
+
+      {/* Ads Per Newsletter Configuration */}
+      <div className="bg-white shadow rounded-lg p-6">
+        <h3 className="text-lg font-medium text-gray-900 mb-4">Newsletter Ad Settings</h3>
+        <p className="text-sm text-gray-600 mb-6">
+          Configure how many advertisements appear in each newsletter. Total newsletter items (ads + articles) = 5.
+        </p>
+
+        <div className="flex items-center gap-4">
+          <label className="font-medium text-gray-700">Ads per newsletter:</label>
+          <input
+            type="number"
+            min="1"
+            max="5"
+            value={adsPerNewsletter}
+            onChange={(e) => setAdsPerNewsletter(parseInt(e.target.value) || 1)}
+            className="w-20 px-3 py-2 border border-gray-300 rounded-md"
+            disabled={savingAdsPerNewsletter}
+          />
+          <button
+            onClick={saveAdsPerNewsletter}
+            disabled={savingAdsPerNewsletter}
+            className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 disabled:bg-blue-300"
+          >
+            {savingAdsPerNewsletter ? 'Saving...' : 'Save'}
+          </button>
+        </div>
+
+        <div className="mt-4 bg-blue-50 p-4 rounded-lg">
+          <p className="text-sm text-blue-800">
+            <strong>Current configuration:</strong> {adsPerNewsletter} {adsPerNewsletter === 1 ? 'ad' : 'ads'} + {5 - adsPerNewsletter} articles = 5 total items
+          </p>
+        </div>
       </div>
 
       {/* Information Section */}

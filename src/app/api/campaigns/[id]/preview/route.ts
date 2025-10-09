@@ -217,7 +217,7 @@ async function generateNewsletterHtml(campaign: any): Promise<string> {
             sectionsHtml += roadWorkHtml
           }
         } else if (section.name === 'Community Business Spotlight') {
-          const spotlightHtml = await generateCommunityBusinessSpotlightSection(campaign)
+          const spotlightHtml = await generateCommunityBusinessSpotlightSection(campaign, false) // Don't record usage during preview
           if (spotlightHtml) {
             sectionsHtml += spotlightHtml
           }

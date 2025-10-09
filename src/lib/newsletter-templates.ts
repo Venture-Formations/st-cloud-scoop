@@ -724,9 +724,9 @@ export async function generateDiningDealsSection(campaign: any): Promise<string>
 
 // ==================== COMMUNITY BUSINESS SPOTLIGHT ====================
 
-export async function generateCommunityBusinessSpotlightSection(campaign: any): Promise<string> {
+export async function generateCommunityBusinessSpotlightSection(campaign: any, recordUsage: boolean = false): Promise<string> {
   try {
-    console.log('Generating Community Business Spotlight section for campaign:', campaign?.id)
+    console.log('Generating Community Business Spotlight section for campaign:', campaign?.id, 'recordUsage:', recordUsage)
 
     // Check if ad already selected for this campaign
     const { data: existingAd } = await supabaseAdmin
@@ -745,10 +745,12 @@ export async function generateCommunityBusinessSpotlightSection(campaign: any): 
         campaignDate: campaign.date
       })
 
-      // Record the usage if an ad was selected
-      if (selectedAd) {
+      // Record the usage ONLY if recordUsage is true (final campaign creation)
+      if (selectedAd && recordUsage) {
         await AdScheduler.recordAdUsage(campaign.id, selectedAd.id, campaign.date)
-        console.log(`Selected and recorded ad: ${selectedAd.title}`)
+        console.log(`Selected and recorded ad usage: ${selectedAd.title}`)
+      } else if (selectedAd) {
+        console.log(`Selected ad (usage NOT recorded - preview only): ${selectedAd.title}`)
       }
     } else {
       console.log(`Using existing ad: ${selectedAd.title}`)

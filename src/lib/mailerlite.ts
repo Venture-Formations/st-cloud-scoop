@@ -12,7 +12,8 @@ import {
   generateMinnesotaGetawaysSection,
   generateDiningDealsSection,
   generateRoadWorkSection,
-  generatePollSection
+  generatePollSection,
+  generateCommunityBusinessSpotlightSection
 } from './newsletter-templates'
 
 const MAILERLITE_API_BASE = 'https://connect.mailerlite.com/api'
@@ -297,6 +298,11 @@ export class MailerLiteService {
           const roadWorkHtml = await generateRoadWorkSection(campaign)
           if (roadWorkHtml) {
             sectionsHtml += roadWorkHtml
+          }
+        } else if (section.name === 'Community Business Spotlight') {
+          const spotlightHtml = await generateCommunityBusinessSpotlightSection(campaign, !isReview) // Record usage for final campaigns only
+          if (spotlightHtml) {
+            sectionsHtml += spotlightHtml
           }
         }
       }

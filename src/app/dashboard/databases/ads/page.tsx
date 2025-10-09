@@ -57,11 +57,18 @@ export default function AdsManagementPage() {
         const data = await response.json()
         let fetchedAds = data.ads || []
 
-        // Sort active ads by display_order
+        // Sort active ads by display_order (show all, even without display_order)
         if (activeTab === 'active') {
-          fetchedAds = fetchedAds
-            .filter((ad: Advertisement) => ad.display_order !== null)
-            .sort((a: Advertisement, b: Advertisement) => (a.display_order || 0) - (b.display_order || 0))
+          fetchedAds = fetchedAds.sort((a: Advertisement, b: Advertisement) => {
+            // Ads with display_order come first, sorted by their order
+            if (a.display_order !== null && b.display_order !== null) {
+              return a.display_order - b.display_order
+            }
+            // Ads without display_order go to the end
+            if (a.display_order === null) return 1
+            if (b.display_order === null) return -1
+            return 0
+          })
         }
 
         setAds(fetchedAds)

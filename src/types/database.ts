@@ -656,6 +656,7 @@ export interface Advertisement {
   times_paid: number
   times_used: number
   status: AdStatus
+  display_order: number | null  // Position in rotation queue (only for active ads)
   preferred_start_date: string | null
   actual_start_date: string | null
   last_used_date: string | null

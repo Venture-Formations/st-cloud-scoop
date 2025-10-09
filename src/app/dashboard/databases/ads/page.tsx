@@ -675,6 +675,7 @@ function AddAdModal({ onClose, onSuccess }: { onClose: () => void; onSuccess: ()
   const fileInputRef = useRef<HTMLInputElement>(null)
   const imgRef = useRef<HTMLImageElement>(null)
   const [submitting, setSubmitting] = useState(false)
+  const [useInNextNewsletter, setUseInNextNewsletter] = useState(false)
 
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -731,7 +732,8 @@ function AddAdModal({ onClose, onSuccess }: { onClose: () => void; onSuccess: ()
           payment_amount: 0,
           payment_status: 'manual',
           paid: true,
-          status: 'active' // Admin-created ads go directly to active status
+          status: 'active', // Admin-created ads go directly to active status
+          useInNextNewsletter: useInNextNewsletter // Flag for special positioning
         })
       })
 
@@ -828,6 +830,23 @@ function AddAdModal({ onClose, onSuccess }: { onClose: () => void; onSuccess: ()
               </ReactCrop>
             </div>
           )}
+
+          {/* Use in Next Newsletter Checkbox */}
+          <div className="flex items-center gap-3 p-4 bg-purple-50 border border-purple-200 rounded-lg">
+            <input
+              type="checkbox"
+              id="useInNextNewsletter"
+              checked={useInNextNewsletter}
+              onChange={(e) => setUseInNextNewsletter(e.target.checked)}
+              className="w-5 h-5 text-purple-600 border-gray-300 rounded focus:ring-purple-500"
+            />
+            <label htmlFor="useInNextNewsletter" className="text-sm font-medium text-gray-700 cursor-pointer">
+              Use in next newsletter
+              <p className="text-xs text-gray-600 font-normal mt-1">
+                Check this to insert the ad at the next position in the rotation queue (position immediately after the last used ad). Other ads will shift down by one.
+              </p>
+            </label>
+          </div>
 
           {/* Business Information */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

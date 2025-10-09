@@ -4,7 +4,7 @@ import { supabaseAdmin } from '@/lib/supabase'
 import { fetchWeatherData, generateWeatherHTML } from '@/lib/weather'
 import { generateWeatherImage } from '@/lib/weather-image'
 
-export async function GET(request: any) {
+export async function GET(request: NextRequest) {
   // Validate authentication
   const authResult = validateDebugAuth(request)
   if (!authResult.authorized) {

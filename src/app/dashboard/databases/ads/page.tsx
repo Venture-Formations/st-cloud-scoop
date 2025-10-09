@@ -370,7 +370,7 @@ function AddAdModal({ onClose, onSuccess }: { onClose: () => void; onSuccess: ()
       let imageUrl = null
 
       // Upload image if present
-      if (selectedImage && completedCrop) {
+      if (selectedImage && completedCrop && completedCrop.width > 0 && completedCrop.height > 0) {
         const croppedBlob = await getCroppedImage(imgRef.current, completedCrop)
         if (croppedBlob) {
           const imageFormData = new FormData()
@@ -385,7 +385,8 @@ function AddAdModal({ onClose, onSuccess }: { onClose: () => void; onSuccess: ()
             const { url } = await uploadResponse.json()
             imageUrl = url
           } else {
-            throw new Error('Failed to upload image')
+            const errorData = await uploadResponse.json().catch(() => ({ error: 'Unknown error' }))
+            throw new Error(errorData.error || 'Failed to upload image')
           }
         }
       }

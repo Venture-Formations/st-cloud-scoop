@@ -18,7 +18,7 @@ Return ONLY valid JSON in this exact format:
 IMPORTANT: Respond with valid JSON only, no additional text.`
 }
 
-export async function GET(request: any) {
+export async function GET(request: NextRequest) {
   // Validate authentication
   const authResult = validateDebugAuth(request)
   if (!authResult.authorized) {

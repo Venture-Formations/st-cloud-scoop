@@ -3,7 +3,7 @@ import { validateDebugAuth } from '@/lib/debug-auth'
 import { supabaseAdmin } from '@/lib/supabase'
 import { AI_PROMPTS, callOpenAI } from '@/lib/openai'
 
-export async function POST(request: any) {
+export async function POST(request: NextRequest) {
   // Validate authentication
   const authResult = validateDebugAuth(request)
   if (!authResult.authorized) {

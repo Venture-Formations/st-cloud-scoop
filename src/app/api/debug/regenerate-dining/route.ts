@@ -3,7 +3,7 @@ import { validateDebugAuth } from '@/lib/debug-auth'
 import { supabaseAdmin } from '@/lib/supabase'
 import { selectDiningDealsForCampaign } from '@/lib/dining-selector'
 
-export async function GET(request: any) {
+export async function GET(request: NextRequest) {
   // Validate authentication
   const authResult = validateDebugAuth(request)
   if (!authResult.authorized) {

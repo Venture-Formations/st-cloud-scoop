@@ -43,10 +43,15 @@ export function validateDebugAuth(request: Request): DebugAuthResult {
   // Validate authorization header
   const expectedAuth = `Bearer ${debugSecret}`
   if (!authHeader || authHeader !== expectedAuth) {
+    // Sanitize URL before logging to avoid exposing sensitive headers
+    const sanitizedUrl = new URL(request.url)
+    // Don't log query params that might contain sensitive data
+
     console.warn('Unauthorized debug route access attempt', {
       ip: request.headers.get('x-forwarded-for'),
       userAgent: request.headers.get('user-agent'),
-      url: request.url
+      path: sanitizedUrl.pathname,
+      timestamp: new Date().toISOString()
     })
 
     return {
@@ -90,9 +95,14 @@ export function validateDebugSecret(request: Request): DebugAuthResult {
   }
 
   if (providedSecret !== debugSecret) {
+    // Sanitize URL before logging to avoid exposing the secret value
+    const sanitizedUrl = new URL(request.url)
+    sanitizedUrl.searchParams.delete('secret') // Remove secret from logged URL
+
     console.warn('Unauthorized debug route access attempt via query param', {
       ip: request.headers.get('x-forwarded-for'),
-      url: request.url
+      path: sanitizedUrl.pathname,
+      timestamp: new Date().toISOString()
     })
 
     return {

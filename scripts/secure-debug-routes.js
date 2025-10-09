@@ -71,11 +71,12 @@ mutationRoutes.forEach(routeName => {
     // Add auth check to each handler function (GET, POST, PATCH, DELETE)
     const handlers = ['GET', 'POST', 'PATCH', 'DELETE', 'PUT']
     handlers.forEach(method => {
-      const regex = new RegExp(`export async function ${method}\\(request[^)]*\\) \\{`, 'g')
-      if (regex.test(content)) {
+      const testRegex = new RegExp(`export async function ${method}\\(request[^)]*\\) \\{`)
+      if (testRegex.test(content)) {
+        const replaceRegex = new RegExp(`export async function ${method}\\(request[^)]*\\) \\{`)
         content = content.replace(
-          regex,
-          `export async function ${method}(request: any) {\n  // Validate authentication\n  const authResult = validateDebugAuth(request)\n  if (!authResult.authorized) {\n    return authResult.response\n  }\n`
+          replaceRegex,
+          `export async function ${method}(request: NextRequest) {\n  // Validate authentication\n  const authResult = validateDebugAuth(request)\n  if (!authResult.authorized) {\n    return authResult.response\n  }\n`
         )
       }
     })

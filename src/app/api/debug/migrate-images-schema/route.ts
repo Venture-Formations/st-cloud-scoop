@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { validateDebugAuth } from '@/lib/debug-auth'
 import { supabaseAdmin } from '@/lib/supabase'
 
-export async function GET(request: any) {
+export async function GET(request: NextRequest) {
   // Validate authentication
   const authResult = validateDebugAuth(request)
   if (!authResult.authorized) {
@@ -110,7 +110,7 @@ export async function GET(request: any) {
   }
 }
 
-export async function POST(request: any) {
+export async function POST(request: NextRequest) {
   // Validate authentication
   const authResult = validateDebugAuth(request)
   if (!authResult.authorized) {

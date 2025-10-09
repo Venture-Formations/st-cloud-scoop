@@ -1,8 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { validateDebugAuth } from '@/lib/debug-auth'
 import { supabaseAdmin } from '@/lib/supabase'
 import { selectDiningDealsForCampaign } from '@/lib/dining-selector'
 
 export async function GET(request: NextRequest) {
+  // Validate authentication
+  const authResult = validateDebugAuth(request)
+  if (!authResult.authorized) {
+    return authResult.response
+  }
+
   try {
     const { searchParams } = new URL(request.url)
     const campaignId = searchParams.get('campaign_id')

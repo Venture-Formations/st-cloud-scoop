@@ -4,6 +4,18 @@ import type { NextRequest } from 'next/server'
 export function middleware(request: NextRequest) {
   const hostname = request.headers.get('host') || ''
 
+  // Detect staging environment
+  const isStaging = process.env.VERCEL_ENV === 'preview' ||
+                    process.env.VERCEL_GIT_COMMIT_REF === 'staging' ||
+                    hostname.includes('staging') ||
+                    hostname.includes('git-staging')
+
+  // Skip authentication for staging environment
+  if (isStaging) {
+    console.log('[Middleware] Staging environment detected - authentication bypassed')
+    return NextResponse.next()
+  }
+
   // Check subdomain types
   const isEventsSubdomain = hostname.startsWith('events.')
   const isAdminSubdomain = hostname.startsWith('admin.')

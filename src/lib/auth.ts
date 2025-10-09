@@ -2,6 +2,7 @@ import NextAuth, { type NextAuthOptions } from 'next-auth'
 import GoogleProvider from 'next-auth/providers/google'
 import { supabaseAdmin } from '@/lib/supabase'
 import type { User } from '@/types/database'
+import { shouldBypassAuth, getMockSession } from '@/lib/auth-bypass'
 
 export const authOptions: NextAuthOptions = {
   providers: [
@@ -142,6 +143,12 @@ export const authOptions: NextAuthOptions = {
       return token
     },
     async session({ session, token }) {
+      // Bypass authentication for staging environment
+      if (shouldBypassAuth()) {
+        console.log('[Auth] Staging environment detected - using mock session')
+        return getMockSession() as any
+      }
+
       if (session.user) {
         session.user.role = token.role as string
         session.user.isActive = token.isActive as boolean

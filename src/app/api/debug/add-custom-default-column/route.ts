@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { validateDebugAuth } from '@/lib/debug-auth'
 import { supabaseAdmin } from '@/lib/supabase'
 
 // This endpoint adds a custom_default column to app_settings table

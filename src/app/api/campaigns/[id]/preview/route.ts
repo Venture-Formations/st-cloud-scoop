@@ -8,6 +8,7 @@ import {
   generateNewsletterFooter,
   generateLocalScoopSection,
   generateLocalEventsSection,
+  generateCommunityBusinessSpotlightSection,
   generateWordleSection,
   generateMinnesotaGetawaysSection,
   generateDiningDealsSection,
@@ -214,6 +215,11 @@ async function generateNewsletterHtml(campaign: any): Promise<string> {
           const roadWorkHtml = await generateRoadWorkSection(campaign)
           if (roadWorkHtml) {
             sectionsHtml += roadWorkHtml
+          }
+        } else if (section.name === 'Community Business Spotlight') {
+          const spotlightHtml = await generateCommunityBusinessSpotlightSection(campaign)
+          if (spotlightHtml) {
+            sectionsHtml += spotlightHtml
           }
         }
       }

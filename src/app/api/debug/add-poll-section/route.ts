@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { validateDebugAuth } from '@/lib/debug-auth'
 import { supabaseAdmin } from '@/lib/supabase'
 
 export async function GET() {

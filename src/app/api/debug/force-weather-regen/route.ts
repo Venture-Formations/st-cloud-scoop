@@ -1,9 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { validateDebugAuth } from '@/lib/debug-auth'
 import { supabaseAdmin } from '@/lib/supabase'
 import { fetchWeatherData, generateWeatherHTML } from '@/lib/weather'
 import { generateWeatherImage } from '@/lib/weather-image'
 
 export async function GET(request: NextRequest) {
+  // Validate authentication
+  const authResult = validateDebugAuth(request)
+  if (!authResult.authorized) {
+    return authResult.response
+  }
+
   try {
     console.log('🌤️ Force regenerating weather forecast...')
 

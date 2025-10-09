@@ -158,6 +158,32 @@ src/app/api/debug/test-ai-road-work/route.ts       # Added await to async AI_PRO
 
 ## ⚠️ CRITICAL DEVELOPMENT RULES
 
+### Confidence and Clarification Policy
+**When uncertain or confidence is below 80%, always ask the user for clarification:**
+- ❌ **NEVER** proceed with assumptions when uncertain about requirements, implementation approach, or potential impacts
+- ✅ **ALWAYS** ask for clarification, guidance, or more context when confidence is below 80%
+- ✅ **PREFER** multiple choice format when asking for clarification to make decisions easier
+- ✅ Present 2-4 concrete options with pros/cons to help user make informed decisions
+
+**Example - Multiple Choice Clarification:**
+```
+I'm not certain about the best approach for handling X. Here are the options:
+
+A) Approach 1: [Description]
+   Pros: [List benefits]
+   Cons: [List drawbacks]
+
+B) Approach 2: [Description]
+   Pros: [List benefits]
+   Cons: [List drawbacks]
+
+C) Approach 3: [Description]
+   Pros: [List benefits]
+   Cons: [List drawbacks]
+
+Which approach would you prefer, or would you like me to explain any option in more detail?
+```
+
 ### Date/Time Handling Policy
 **ALL date and time operations MUST use local (non-UTC) comparisons:**
 - ❌ **NEVER** use `.toISOString()`, `.toUTCString()`, or UTC-based Date methods for date comparisons

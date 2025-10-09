@@ -6,322 +6,182 @@ interface ScheduleContext {
   campaignId: string
 }
 
-interface ScoredAd extends Advertisement {
-  priority_score: number
-  reason: string
-}
-
 /**
  * Ad Scheduler - Selects which advertisement should appear in a given campaign
  *
- * Priority Logic:
- * 1. Closest to preferred start date (highest priority)
- * 2. Earliest submission date (tiebreaker)
- * 3. Furthest behind schedule (tiebreaker)
- *
- * Frequency Rules:
- * - Single: Can appear any day, only once total
- * - Weekly: Once per Sunday-Saturday week
- * - Monthly: Once per calendar month
+ * New Sequential Ordering System:
+ * - Ads are selected based on display_order (1, 2, 3, etc.)
+ * - Tracks next_ad_position in app_settings
+ * - Loops back to position 1 when reaching the end
+ * - Only selects from active ads with valid display_order
  */
 export class AdScheduler {
   /**
-   * Select the best ad for a given campaign date
+   * Select the next ad in the rotation queue
    */
   static async selectAdForCampaign(context: ScheduleContext): Promise<Advertisement | null> {
-    const { campaignDate, campaignId } = context
+    const { campaignId } = context
 
-    // Get all approved/active ads
-    const { data: allAds, error } = await supabaseAdmin
-      .from('advertisements')
-      .select('*')
-      .in('status', ['approved', 'active'])
+    try {
+      // Get the current next_ad_position from app_settings
+      const { data: settingsData, error: settingsError } = await supabaseAdmin
+        .from('app_settings')
+        .select('value')
+        .eq('key', 'next_ad_position')
+        .single()
 
-    if (error || !allAds) {
-      console.log('[AdScheduler] Error fetching ads:', error)
-      return null
-    }
-
-    // Filter to only ads that haven't reached their limit
-    const eligibleAds = allAds.filter(ad => ad.times_used < ad.times_paid)
-
-    if (eligibleAds.length === 0) {
-      console.log('[AdScheduler] No eligible ads found')
-      return null
-    }
-
-    // Filter ads based on frequency rules and previous usage
-    const qualifiedAds = await this.filterByFrequencyRules(eligibleAds, campaignDate)
-
-    if (qualifiedAds.length === 0) {
-      console.log('[AdScheduler] No qualified ads after frequency filtering')
-      return null
-    }
-
-    // Score each ad based on priority logic
-    const scoredAds = this.scoreAds(qualifiedAds, campaignDate)
-
-    // Sort by priority score (highest first)
-    scoredAds.sort((a, b) => b.priority_score - a.priority_score)
-
-    const selectedAd = scoredAds[0]
-
-    console.log(`[AdScheduler] Selected ad: ${selectedAd.title}`)
-    console.log(`[AdScheduler] Reason: ${selectedAd.reason}`)
-    console.log(`[AdScheduler] Priority Score: ${selectedAd.priority_score}`)
-
-    return selectedAd
-  }
-
-  /**
-   * Filter ads based on frequency rules
-   */
-  private static async filterByFrequencyRules(
-    ads: Advertisement[],
-    campaignDate: string
-  ): Promise<Advertisement[]> {
-    const qualified: Advertisement[] = []
-
-    for (const ad of ads) {
-      // Check if ad has already been used today
-      const usedToday = await this.wasUsedOnDate(ad.id, campaignDate)
-      if (usedToday) {
-        continue
+      if (settingsError) {
+        console.error('[AdScheduler] Error fetching next_ad_position:', settingsError)
+        return null
       }
 
-      // Check frequency-specific rules
-      if (ad.frequency === 'single') {
-        // Single ads can appear any day (just not exceed total uses)
-        qualified.push(ad)
-      } else if (ad.frequency === 'weekly') {
-        // Check if used this week (Sunday-Saturday)
-        const usedThisWeek = await this.wasUsedThisWeek(ad.id, campaignDate)
-        if (!usedThisWeek) {
-          qualified.push(ad)
-        }
-      } else if (ad.frequency === 'monthly') {
-        // Check if used this month
-        const usedThisMonth = await this.wasUsedThisMonth(ad.id, campaignDate)
-        if (!usedThisMonth) {
-          qualified.push(ad)
+      const nextAdPosition = settingsData ? parseInt(settingsData.value) : 1
+      console.log(`[AdScheduler] Current next_ad_position: ${nextAdPosition}`)
+
+      // Get all active ads with display_order, sorted by display_order
+      const { data: activeAds, error: adsError } = await supabaseAdmin
+        .from('advertisements')
+        .select('*')
+        .eq('status', 'active')
+        .not('display_order', 'is', null)
+        .order('display_order', { ascending: true })
+
+      if (adsError || !activeAds || activeAds.length === 0) {
+        console.log('[AdScheduler] No active ads found:', adsError)
+        return null
+      }
+
+      console.log(`[AdScheduler] Found ${activeAds.length} active ads`)
+
+      // Find the ad at the current position
+      let selectedAd = activeAds.find(ad => ad.display_order === nextAdPosition)
+
+      // If no ad at current position (gap in sequence), find next available position
+      if (!selectedAd) {
+        console.log(`[AdScheduler] No ad at position ${nextAdPosition}, finding next available...`)
+        // Find the first ad with display_order >= nextAdPosition
+        selectedAd = activeAds.find(ad => (ad.display_order || 0) >= nextAdPosition)
+
+        // If still none found, we've reached the end - loop back to position 1
+        if (!selectedAd) {
+          console.log('[AdScheduler] Reached end of queue, looping back to position 1')
+          selectedAd = activeAds[0] // First ad in sorted array
         }
       }
-    }
 
-    return qualified
-  }
-
-  /**
-   * Score ads based on priority logic
-   */
-  private static scoreAds(ads: Advertisement[], campaignDate: string): ScoredAd[] {
-    const campaignTimestamp = new Date(campaignDate).getTime()
-
-    return ads.map(ad => {
-      let score = 0
-      let reason = ''
-
-      // Priority 1: Closest to preferred start date (weight: 1000)
-      if (ad.preferred_start_date) {
-        const preferredTimestamp = new Date(ad.preferred_start_date).getTime()
-        const daysDiff = Math.abs((campaignTimestamp - preferredTimestamp) / (1000 * 60 * 60 * 24))
-
-        // Closer = higher score (max 1000 points)
-        const proximityScore = Math.max(0, 1000 - (daysDiff * 10))
-        score += proximityScore
-
-        reason += `Preferred start: ${daysDiff.toFixed(0)} days away (+${proximityScore.toFixed(0)}). `
+      if (!selectedAd) {
+        console.log('[AdScheduler] No ad could be selected')
+        return null
       }
 
-      // Priority 2: Earliest submission date (weight: 500)
-      const submissionTimestamp = new Date(ad.submission_date).getTime()
-      const daysSinceSubmission = (campaignTimestamp - submissionTimestamp) / (1000 * 60 * 60 * 24)
+      console.log(`[AdScheduler] Selected ad: ${selectedAd.title} (position ${selectedAd.display_order})`)
 
-      // Older submissions = higher priority (max 500 points)
-      const submissionScore = Math.min(500, daysSinceSubmission * 5)
-      score += submissionScore
-
-      reason += `Submitted ${daysSinceSubmission.toFixed(0)} days ago (+${submissionScore.toFixed(0)}). `
-
-      // Priority 3: Behind schedule (weight: 300)
-      const expectedUsage = this.calculateExpectedUsage(ad, campaignDate)
-      const behindBy = expectedUsage - ad.times_used
-
-      if (behindBy > 0) {
-        const scheduleScore = Math.min(300, behindBy * 100)
-        score += scheduleScore
-
-        reason += `Behind schedule by ${behindBy} (+${scheduleScore.toFixed(0)}).`
-      } else {
-        reason += 'On track.'
-      }
-
-      return {
-        ...ad,
-        priority_score: score,
-        reason
-      }
-    })
-  }
-
-  /**
-   * Calculate expected usage by this date based on frequency
-   */
-  private static calculateExpectedUsage(ad: Advertisement, currentDate: string): number {
-    if (!ad.actual_start_date && !ad.preferred_start_date) {
-      return 0
+      return selectedAd
+    } catch (error) {
+      console.error('[AdScheduler] Error selecting ad:', error)
+      return null
     }
-
-    const startDate = ad.actual_start_date || ad.preferred_start_date
-    if (!startDate) return 0
-
-    const start = new Date(startDate)
-    const current = new Date(currentDate)
-
-    if (current < start) {
-      return 0 // Haven't started yet
-    }
-
-    const daysSinceStart = Math.floor((current.getTime() - start.getTime()) / (1000 * 60 * 60 * 24))
-
-    if (ad.frequency === 'single') {
-      // For single ads, we expect linear distribution over time
-      // If they paid for 5 appearances over 30 days, we expect ~1 every 6 days
-      const expectedDaysPerUse = 30 / ad.times_paid // Assume 30-day campaign
-      return Math.floor(daysSinceStart / expectedDaysPerUse)
-    } else if (ad.frequency === 'weekly') {
-      // Expect one use per week
-      const weeksSinceStart = Math.floor(daysSinceStart / 7)
-      return Math.min(weeksSinceStart, ad.times_paid)
-    } else if (ad.frequency === 'monthly') {
-      // Expect one use per month
-      const monthsSinceStart = Math.floor(daysSinceStart / 30)
-      return Math.min(monthsSinceStart, ad.times_paid)
-    }
-
-    return 0
   }
 
   /**
-   * Check if ad was used on a specific date
-   */
-  private static async wasUsedOnDate(adId: string, date: string): Promise<boolean> {
-    const { data } = await supabaseAdmin
-      .from('campaign_advertisements')
-      .select('id')
-      .eq('advertisement_id', adId)
-      .eq('campaign_date', date)
-      .limit(1)
-
-    return (data?.length || 0) > 0
-  }
-
-  /**
-   * Check if ad was used this week (Sunday-Saturday)
-   */
-  private static async wasUsedThisWeek(adId: string, date: string): Promise<boolean> {
-    const currentDate = new Date(date)
-    const dayOfWeek = currentDate.getDay()
-
-    // Get Sunday of this week
-    const sunday = new Date(currentDate)
-    sunday.setDate(currentDate.getDate() - dayOfWeek)
-
-    // Get Saturday of this week
-    const saturday = new Date(sunday)
-    saturday.setDate(sunday.getDate() + 6)
-
-    const sundayStr = sunday.toISOString().split('T')[0]
-    const saturdayStr = saturday.toISOString().split('T')[0]
-
-    const { data } = await supabaseAdmin
-      .from('campaign_advertisements')
-      .select('id')
-      .eq('advertisement_id', adId)
-      .gte('campaign_date', sundayStr)
-      .lte('campaign_date', saturdayStr)
-      .limit(1)
-
-    return (data?.length || 0) > 0
-  }
-
-  /**
-   * Check if ad was used this month
-   */
-  private static async wasUsedThisMonth(adId: string, date: string): Promise<boolean> {
-    const currentDate = new Date(date)
-    const year = currentDate.getFullYear()
-    const month = currentDate.getMonth()
-
-    // First day of month
-    const firstDay = new Date(year, month, 1).toISOString().split('T')[0]
-
-    // Last day of month
-    const lastDay = new Date(year, month + 1, 0).toISOString().split('T')[0]
-
-    const { data } = await supabaseAdmin
-      .from('campaign_advertisements')
-      .select('id')
-      .eq('advertisement_id', adId)
-      .gte('campaign_date', firstDay)
-      .lte('campaign_date', lastDay)
-      .limit(1)
-
-    return (data?.length || 0) > 0
-  }
-
-  /**
-   * Record that an ad was used in a campaign
+   * Record that an ad was used in a campaign and increment next_ad_position
    */
   static async recordAdUsage(
     campaignId: string,
     adId: string,
     campaignDate: string
   ): Promise<void> {
-    // Insert into campaign_advertisements
-    const { error: insertError } = await supabaseAdmin
-      .from('campaign_advertisements')
-      .insert({
-        campaign_id: campaignId,
-        advertisement_id: adId,
-        campaign_date: campaignDate,
-        used_at: new Date().toISOString()
-      })
-
-    if (insertError) {
-      console.error('[AdScheduler] Failed to record usage:', insertError)
-      throw insertError
-    }
-
-    // Increment times_used counter
-    const { error: updateError } = await supabaseAdmin.rpc('increment_ad_usage', {
-      ad_id: adId
-    })
-
-    if (updateError) {
-      // Fallback: manual increment
-      const { data: ad } = await supabaseAdmin
+    try {
+      // Get the ad that was just used
+      const { data: usedAd, error: adError } = await supabaseAdmin
         .from('advertisements')
-        .select('times_used, times_paid')
+        .select('display_order, times_used')
         .eq('id', adId)
         .single()
 
-      if (ad) {
-        const newTimesUsed = ad.times_used + 1
-        const newStatus = newTimesUsed >= ad.times_paid ? 'completed' : 'active'
-
-        await supabaseAdmin
-          .from('advertisements')
-          .update({
-            times_used: newTimesUsed,
-            status: newStatus,
-            last_used_date: campaignDate,
-            actual_start_date: ad.times_used === 0 ? campaignDate : undefined
-          })
-          .eq('id', adId)
+      if (adError || !usedAd) {
+        console.error('[AdScheduler] Failed to fetch used ad:', adError)
+        throw adError
       }
-    }
 
-    console.log(`[AdScheduler] Recorded usage for ad ${adId} in campaign ${campaignId}`)
+      console.log(`[AdScheduler] Recording usage for ad at position ${usedAd.display_order}`)
+
+      // Insert into campaign_advertisements
+      const { error: insertError } = await supabaseAdmin
+        .from('campaign_advertisements')
+        .insert({
+          campaign_id: campaignId,
+          advertisement_id: adId,
+          campaign_date: campaignDate,
+          used_at: new Date().toISOString()
+        })
+
+      if (insertError) {
+        console.error('[AdScheduler] Failed to record usage:', insertError)
+        throw insertError
+      }
+
+      // Update the ad: increment times_used and set last_used_date
+      const newTimesUsed = (usedAd.times_used || 0) + 1
+      const { error: updateAdError } = await supabaseAdmin
+        .from('advertisements')
+        .update({
+          times_used: newTimesUsed,
+          last_used_date: campaignDate,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', adId)
+
+      if (updateAdError) {
+        console.error('[AdScheduler] Failed to update ad times_used:', updateAdError)
+      }
+
+      // Calculate next position
+      const currentPosition = usedAd.display_order || 1
+
+      // Get all active ads to determine next position
+      const { data: activeAds, error: adsError } = await supabaseAdmin
+        .from('advertisements')
+        .select('display_order')
+        .eq('status', 'active')
+        .not('display_order', 'is', null)
+        .order('display_order', { ascending: true })
+
+      if (adsError || !activeAds || activeAds.length === 0) {
+        console.error('[AdScheduler] Failed to fetch active ads for next position:', adsError)
+        return
+      }
+
+      // Find the next position in the sequence
+      let nextPosition = currentPosition + 1
+      const maxPosition = Math.max(...activeAds.map(ad => ad.display_order || 0))
+
+      // If we've gone past the max position, loop back to 1
+      if (nextPosition > maxPosition) {
+        nextPosition = 1
+        console.log('[AdScheduler] Reached end of rotation, looping back to position 1')
+      } else {
+        console.log(`[AdScheduler] Moving to next position: ${nextPosition}`)
+      }
+
+      // Update next_ad_position in app_settings
+      const { error: settingsError } = await supabaseAdmin
+        .from('app_settings')
+        .update({
+          value: nextPosition.toString(),
+          updated_at: new Date().toISOString()
+        })
+        .eq('key', 'next_ad_position')
+
+      if (settingsError) {
+        console.error('[AdScheduler] Failed to update next_ad_position:', settingsError)
+        throw settingsError
+      }
+
+      console.log(`[AdScheduler] Successfully recorded usage and updated next_ad_position to ${nextPosition}`)
+    } catch (error) {
+      console.error('[AdScheduler] Error in recordAdUsage:', error)
+      throw error
+    }
   }
 }

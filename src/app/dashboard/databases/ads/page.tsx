@@ -10,24 +10,44 @@ import type { Advertisement } from '@/types/database'
 import { getCroppedImage } from '@/utils/imageCrop'
 
 export default function AdsManagementPage() {
-  const [activeTab, setActiveTab] = useState<'active' | 'completed' | 'review'>('active')
+  const [activeTab, setActiveTab] = useState<'active' | 'inactive' | 'review'>('active')
   const [ads, setAds] = useState<Advertisement[]>([])
   const [loading, setLoading] = useState(true)
   const [showAddModal, setShowAddModal] = useState(false)
   const [editingAd, setEditingAd] = useState<Advertisement | null>(null)
+  const [nextAdPosition, setNextAdPosition] = useState<number>(1)
+  const [draggedItem, setDraggedItem] = useState<number | null>(null)
 
   useEffect(() => {
     fetchAds()
+    if (activeTab === 'active') {
+      fetchNextAdPosition()
+    }
   }, [activeTab])
+
+  const fetchNextAdPosition = async () => {
+    try {
+      const response = await fetch('/api/settings/email')
+      if (response.ok) {
+        const data = await response.json()
+        const nextPos = data.settings.find((s: any) => s.key === 'next_ad_position')
+        if (nextPos) {
+          setNextAdPosition(parseInt(nextPos.value))
+        }
+      }
+    } catch (error) {
+      console.error('Failed to fetch next ad position:', error)
+    }
+  }
 
   const fetchAds = async () => {
     setLoading(true)
     try {
       let status = ''
       if (activeTab === 'active') {
-        status = '?status=approved'
-      } else if (activeTab === 'completed') {
-        status = '?status=completed'
+        status = '?status=active'
+      } else if (activeTab === 'inactive') {
+        status = '?status=rejected,completed'
       } else if (activeTab === 'review') {
         status = '?status=pending_review'
       }
@@ -35,12 +55,125 @@ export default function AdsManagementPage() {
       const response = await fetch(`/api/ads${status}`)
       if (response.ok) {
         const data = await response.json()
-        setAds(data.ads || [])
+        let fetchedAds = data.ads || []
+
+        // Sort active ads by display_order
+        if (activeTab === 'active') {
+          fetchedAds = fetchedAds
+            .filter((ad: Advertisement) => ad.display_order !== null)
+            .sort((a: Advertisement, b: Advertisement) => (a.display_order || 0) - (b.display_order || 0))
+        }
+
+        setAds(fetchedAds)
       }
     } catch (error) {
       console.error('Failed to fetch ads:', error)
     } finally {
       setLoading(false)
+    }
+  }
+
+  const handleResetOrder = async () => {
+    if (!confirm('Reset the next ad position to 1? This will start the rotation from the beginning.')) return
+
+    try {
+      const response = await fetch('/api/ads/reset-position', {
+        method: 'POST'
+      })
+
+      if (response.ok) {
+        alert('Ad position reset to 1!')
+        setNextAdPosition(1)
+      } else {
+        throw new Error('Failed to reset position')
+      }
+    } catch (error) {
+      console.error('Reset error:', error)
+      alert('Failed to reset position')
+    }
+  }
+
+  const handleDragStart = (e: React.DragEvent<HTMLDivElement>, index: number) => {
+    setDraggedItem(index)
+    e.dataTransfer.effectAllowed = 'move'
+  }
+
+  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault()
+    e.dataTransfer.dropEffect = 'move'
+  }
+
+  const handleDrop = async (e: React.DragEvent<HTMLDivElement>, dropIndex: number) => {
+    e.preventDefault()
+
+    if (draggedItem === null || draggedItem === dropIndex) {
+      setDraggedItem(null)
+      return
+    }
+
+    // Reorder ads array
+    const newAds = [...ads]
+    const [removed] = newAds.splice(draggedItem, 1)
+    newAds.splice(dropIndex, 0, removed)
+
+    // Update display_order values
+    const updates = newAds.map((ad, index) => ({
+      id: ad.id,
+      display_order: index + 1
+    }))
+
+    // Optimistically update UI
+    setAds(newAds)
+    setDraggedItem(null)
+
+    // Save to backend
+    try {
+      const response = await fetch('/api/ads/reorder', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ updates })
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to reorder ads')
+      }
+
+      // Refresh to ensure consistency
+      fetchAds()
+    } catch (error) {
+      console.error('Reorder error:', error)
+      alert('Failed to reorder ads')
+      fetchAds()
+    }
+  }
+
+  const handleOrderChange = async (adId: string, newOrder: number) => {
+    if (newOrder < 1) {
+      alert('Order must be at least 1')
+      return
+    }
+
+    if (newOrder > ads.length) {
+      alert(`Order cannot exceed ${ads.length}`)
+      return
+    }
+
+    try {
+      const response = await fetch('/api/ads/update-order', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ adId, newOrder })
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to update order')
+      }
+
+      // Refresh ads to show updated ordering
+      fetchAds()
+    } catch (error) {
+      console.error('Order update error:', error)
+      alert('Failed to update order')
     }
   }
 
@@ -51,7 +184,7 @@ export default function AdsManagementPage() {
       const response = await fetch(`/api/ads/${adId}/approve`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ approved_by: 'Admin' }) // TODO: Get from session
+        body: JSON.stringify({ approved_by: 'Admin' })
       })
 
       if (response.ok) {
@@ -76,7 +209,7 @@ export default function AdsManagementPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           rejection_reason: reason,
-          rejected_by: 'Admin' // TODO: Get from session
+          rejected_by: 'Admin'
         })
       })
 
@@ -89,6 +222,26 @@ export default function AdsManagementPage() {
     } catch (error) {
       console.error('Rejection error:', error)
       alert('Failed to reject ad')
+    }
+  }
+
+  const handleActivate = async (adId: string) => {
+    if (!confirm('Activate this advertisement?')) return
+
+    try {
+      const response = await fetch(`/api/ads/${adId}/activate`, {
+        method: 'POST'
+      })
+
+      if (response.ok) {
+        alert('Ad activated successfully!')
+        fetchAds()
+      } else {
+        throw new Error('Failed to activate ad')
+      }
+    } catch (error) {
+      console.error('Activation error:', error)
+      alert('Failed to activate ad')
     }
   }
 
@@ -129,10 +282,6 @@ export default function AdsManagementPage() {
     )
   }
 
-  const getFrequencyLabel = (frequency: string) => {
-    return frequency === 'single' ? 'Single' : frequency === 'weekly' ? 'Weekly' : 'Monthly'
-  }
-
   return (
     <Layout>
       <div className="px-4 py-6 sm:px-0">
@@ -162,12 +311,22 @@ export default function AdsManagementPage() {
                 {ads.length} {activeTab} {ads.length === 1 ? 'advertisement' : 'advertisements'}
               </p>
             </div>
-            <button
-              onClick={() => setShowAddModal(true)}
-              className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
-            >
-              Add Advertisement
-            </button>
+            <div className="flex gap-3">
+              {activeTab === 'active' && (
+                <button
+                  onClick={handleResetOrder}
+                  className="bg-purple-600 text-white px-4 py-2 rounded hover:bg-purple-700"
+                >
+                  Reset Order
+                </button>
+              )}
+              <button
+                onClick={() => setShowAddModal(true)}
+                className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+              >
+                Add Advertisement
+              </button>
+            </div>
           </div>
         </div>
 
@@ -182,7 +341,7 @@ export default function AdsManagementPage() {
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
               }`}
             >
-              Active Ads
+              Active Ads (Ordered)
             </button>
             <button
               onClick={() => setActiveTab('review')}
@@ -195,17 +354,31 @@ export default function AdsManagementPage() {
               Review Submissions
             </button>
             <button
-              onClick={() => setActiveTab('completed')}
+              onClick={() => setActiveTab('inactive')}
               className={`py-2 px-1 border-b-2 font-medium text-sm ${
-                activeTab === 'completed'
+                activeTab === 'inactive'
                   ? 'border-blue-500 text-blue-600'
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
               }`}
             >
-              Completed
+              Inactive & Rejected
             </button>
           </nav>
         </div>
+
+        {/* Next Ad Position Indicator (Active Tab Only) */}
+        {activeTab === 'active' && !loading && ads.length > 0 && (
+          <div className="mb-4 bg-purple-50 border border-purple-200 rounded-lg p-4">
+            <p className="text-sm text-purple-800">
+              <strong>Next ad in rotation:</strong> Position {nextAdPosition}
+              {nextAdPosition <= ads.length && (
+                <span className="ml-2 text-purple-600">
+                  ({ads[nextAdPosition - 1]?.business_name})
+                </span>
+              )}
+            </p>
+          </div>
+        )}
 
         {/* Loading State */}
         {loading && (
@@ -214,43 +387,55 @@ export default function AdsManagementPage() {
           </div>
         )}
 
-        {/* Ads List */}
-        {!loading && (
+        {/* Active Ads List (Drag & Drop) */}
+        {!loading && activeTab === 'active' && (
           <div className="space-y-4">
             {ads.length === 0 ? (
               <div className="text-center py-12 bg-white rounded-lg shadow">
-                <p className="text-gray-500">No {activeTab} advertisements found.</p>
+                <p className="text-gray-500">No active advertisements found.</p>
               </div>
             ) : (
-              ads.map(ad => (
-                <div key={ad.id} className="bg-white rounded-lg shadow p-6">
+              ads.map((ad, index) => (
+                <div
+                  key={ad.id}
+                  draggable
+                  onDragStart={(e) => handleDragStart(e, index)}
+                  onDragOver={handleDragOver}
+                  onDrop={(e) => handleDrop(e, index)}
+                  className={`bg-white rounded-lg shadow p-6 cursor-move hover:shadow-lg transition-shadow ${
+                    ad.display_order === nextAdPosition ? 'ring-4 ring-purple-400 bg-purple-50' : ''
+                  }`}
+                >
                   <div className="flex justify-between items-start mb-4">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-3 mb-2">
-                        <h3 className="text-xl font-semibold">{ad.title}</h3>
-                        {getStatusBadge(ad.status)}
+                    <div className="flex-1 flex items-center gap-4">
+                      <div className="flex items-center gap-2">
+                        <span className="text-2xl font-bold text-gray-400">☰</span>
+                        <input
+                          type="number"
+                          min="1"
+                          max={ads.length}
+                          value={ad.display_order || 0}
+                          onChange={(e) => handleOrderChange(ad.id, parseInt(e.target.value))}
+                          onClick={(e) => e.stopPropagation()}
+                          className="w-16 px-2 py-1 border border-gray-300 rounded text-center font-bold"
+                        />
                       </div>
-                      <p className="text-sm text-gray-600">
-                        {ad.business_name} • {getFrequencyLabel(ad.frequency)} • {ad.times_used} / {ad.times_paid} used
-                      </p>
+                      <div>
+                        <div className="flex items-center gap-3 mb-2">
+                          <h3 className="text-xl font-semibold">{ad.title}</h3>
+                          {getStatusBadge(ad.status)}
+                          {ad.display_order === nextAdPosition && (
+                            <span className="px-2 py-1 text-xs font-semibold rounded-full bg-purple-200 text-purple-800">
+                              NEXT IN ROTATION
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-sm text-gray-600">
+                          {ad.business_name} • {ad.times_used} times used
+                        </p>
+                      </div>
                     </div>
                     <div className="flex gap-2">
-                      {activeTab === 'review' && (
-                        <>
-                          <button
-                            onClick={() => handleApprove(ad.id)}
-                            className="bg-green-600 text-white px-3 py-1 rounded hover:bg-green-700 text-sm"
-                          >
-                            Approve
-                          </button>
-                          <button
-                            onClick={() => handleReject(ad.id)}
-                            className="bg-red-600 text-white px-3 py-1 rounded hover:bg-red-700 text-sm"
-                          >
-                            Reject
-                          </button>
-                        </>
-                      )}
                       <button
                         onClick={() => setEditingAd(ad)}
                         className="bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700 text-sm"
@@ -273,17 +458,11 @@ export default function AdsManagementPage() {
                     />
                   </div>
 
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-4 border-t text-sm">
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4 pt-4 border-t text-sm">
                     <div>
                       <span className="font-medium">Contact:</span>
                       <p className="text-gray-600">{ad.contact_name}</p>
                       <p className="text-gray-600">{ad.contact_email}</p>
-                    </div>
-                    <div>
-                      <span className="font-medium">Preferred Start:</span>
-                      <p className="text-gray-600">
-                        {ad.preferred_start_date ? new Date(ad.preferred_start_date).toLocaleDateString() : 'N/A'}
-                      </p>
                     </div>
                     <div>
                       <span className="font-medium">Last Used:</span>
@@ -292,8 +471,157 @@ export default function AdsManagementPage() {
                       </p>
                     </div>
                     <div>
-                      <span className="font-medium">Payment:</span>
-                      <p className="text-gray-600">${ad.payment_amount?.toFixed(2) || '0.00'}</p>
+                      <span className="font-medium">Word Count:</span>
+                      <p className="text-gray-600">{ad.word_count} words</p>
+                    </div>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        )}
+
+        {/* Review Ads List */}
+        {!loading && activeTab === 'review' && (
+          <div className="space-y-4">
+            {ads.length === 0 ? (
+              <div className="text-center py-12 bg-white rounded-lg shadow">
+                <p className="text-gray-500">No advertisements pending review.</p>
+              </div>
+            ) : (
+              ads.map(ad => (
+                <div key={ad.id} className="bg-white rounded-lg shadow p-6">
+                  <div className="flex justify-between items-start mb-4">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-3 mb-2">
+                        <h3 className="text-xl font-semibold">{ad.title}</h3>
+                        {getStatusBadge(ad.status)}
+                      </div>
+                      <p className="text-sm text-gray-600">
+                        {ad.business_name} • Submitted {new Date(ad.created_at).toLocaleDateString()}
+                      </p>
+                    </div>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => handleApprove(ad.id)}
+                        className="bg-green-600 text-white px-3 py-1 rounded hover:bg-green-700 text-sm"
+                      >
+                        Approve
+                      </button>
+                      <button
+                        onClick={() => handleReject(ad.id)}
+                        className="bg-red-600 text-white px-3 py-1 rounded hover:bg-red-700 text-sm"
+                      >
+                        Reject
+                      </button>
+                      <button
+                        onClick={() => setEditingAd(ad)}
+                        className="bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700 text-sm"
+                      >
+                        Edit
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="mb-4">
+                    <div
+                      className="prose prose-sm max-w-none"
+                      dangerouslySetInnerHTML={{ __html: ad.body }}
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4 pt-4 border-t text-sm">
+                    <div>
+                      <span className="font-medium">Contact:</span>
+                      <p className="text-gray-600">{ad.contact_name}</p>
+                      <p className="text-gray-600">{ad.contact_email}</p>
+                    </div>
+                    <div>
+                      <span className="font-medium">Word Count:</span>
+                      <p className="text-gray-600">{ad.word_count} words</p>
+                    </div>
+                    {ad.image_url && (
+                      <div>
+                        <span className="font-medium">Has Image:</span>
+                        <p className="text-gray-600">Yes</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        )}
+
+        {/* Inactive & Rejected Ads List */}
+        {!loading && activeTab === 'inactive' && (
+          <div className="space-y-4">
+            {ads.length === 0 ? (
+              <div className="text-center py-12 bg-white rounded-lg shadow">
+                <p className="text-gray-500">No inactive or rejected advertisements found.</p>
+              </div>
+            ) : (
+              ads.map(ad => (
+                <div key={ad.id} className="bg-white rounded-lg shadow p-6">
+                  <div className="flex justify-between items-start mb-4">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-3 mb-2">
+                        <h3 className="text-xl font-semibold">{ad.title}</h3>
+                        {getStatusBadge(ad.status)}
+                      </div>
+                      <p className="text-sm text-gray-600">
+                        {ad.business_name} • {ad.times_used} times used
+                      </p>
+                      {ad.status === 'rejected' && ad.rejection_reason && (
+                        <p className="text-sm text-red-600 mt-2">
+                          <strong>Rejection reason:</strong> {ad.rejection_reason}
+                        </p>
+                      )}
+                    </div>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => handleActivate(ad.id)}
+                        className="bg-green-600 text-white px-3 py-1 rounded hover:bg-green-700 text-sm"
+                      >
+                        Activate
+                      </button>
+                      <button
+                        onClick={() => setEditingAd(ad)}
+                        className="bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700 text-sm"
+                      >
+                        Edit
+                      </button>
+                      <button
+                        onClick={() => handleDelete(ad.id)}
+                        className="bg-gray-600 text-white px-3 py-1 rounded hover:bg-gray-700 text-sm"
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="mb-4">
+                    <div
+                      className="prose prose-sm max-w-none"
+                      dangerouslySetInnerHTML={{ __html: ad.body }}
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4 pt-4 border-t text-sm">
+                    <div>
+                      <span className="font-medium">Contact:</span>
+                      <p className="text-gray-600">{ad.contact_name}</p>
+                      <p className="text-gray-600">{ad.contact_email}</p>
+                    </div>
+                    <div>
+                      <span className="font-medium">Last Used:</span>
+                      <p className="text-gray-600">
+                        {ad.last_used_date ? new Date(ad.last_used_date).toLocaleDateString() : 'Never'}
+                      </p>
+                    </div>
+                    <div>
+                      <span className="font-medium">Word Count:</span>
+                      <p className="text-gray-600">{ad.word_count} words</p>
                     </div>
                   </div>
                 </div>
@@ -329,7 +657,7 @@ export default function AdsManagementPage() {
   )
 }
 
-// Add Advertisement Modal Component
+// Add Advertisement Modal Component (Simplified - No frequency/payment fields)
 function AddAdModal({ onClose, onSuccess }: { onClose: () => void; onSuccess: () => void }) {
   const [formData, setFormData] = useState({
     title: '',
@@ -339,10 +667,7 @@ function AddAdModal({ onClose, onSuccess }: { onClose: () => void; onSuccess: ()
     contact_email: '',
     contact_phone: '',
     business_address: '',
-    business_website: '',
-    frequency: 'single' as 'single' | 'weekly' | 'monthly',
-    times_paid: 1,
-    preferred_start_date: ''
+    business_website: ''
   })
   const [selectedImage, setSelectedImage] = useState<string | null>(null)
   const [crop, setCrop] = useState<Crop>()
@@ -403,9 +728,10 @@ function AddAdModal({ onClose, onSuccess }: { onClose: () => void; onSuccess: ()
           ...formData,
           word_count: wordCount,
           image_url: imageUrl,
-          payment_amount: 0, // Admin-created ads are free
+          payment_amount: 0,
           payment_status: 'manual',
-          status: 'approved' // Auto-approve admin-created ads
+          paid: true,
+          status: 'active' // Admin-created ads go directly to active status
         })
       })
 
@@ -573,50 +899,6 @@ function AddAdModal({ onClose, onSuccess }: { onClose: () => void; onSuccess: ()
                 onChange={(e) => setFormData({ ...formData, business_website: e.target.value })}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md"
                 placeholder="https://"
-              />
-            </div>
-          </div>
-
-          {/* Frequency and Quantity */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Frequency *
-              </label>
-              <select
-                required
-                value={formData.frequency}
-                onChange={(e) => setFormData({ ...formData, frequency: e.target.value as any })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md"
-              >
-                <option value="single">Single</option>
-                <option value="weekly">Weekly</option>
-                <option value="monthly">Monthly</option>
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Times Paid *
-              </label>
-              <input
-                type="number"
-                required
-                min="1"
-                max="20"
-                value={formData.times_paid}
-                onChange={(e) => setFormData({ ...formData, times_paid: parseInt(e.target.value) })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Preferred Start Date
-              </label>
-              <input
-                type="date"
-                value={formData.preferred_start_date}
-                onChange={(e) => setFormData({ ...formData, preferred_start_date: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md"
               />
             </div>
           </div>

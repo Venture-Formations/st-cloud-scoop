@@ -802,7 +802,35 @@ export class RSSProcessor {
 
   private async selectTop5Articles(campaignId: string) {
     try {
-      console.log('Selecting top 5 articles for campaign:', campaignId)
+      console.log('Selecting top articles for campaign (dynamic count based on ad settings):', campaignId)
+
+      // Check if Community Business Spotlight section is active
+      const { data: spotlightSection } = await supabaseAdmin
+        .from('newsletter_sections')
+        .select('is_active')
+        .eq('name', 'Community Business Spotlight')
+        .single()
+
+      const isSpotlightActive = spotlightSection?.is_active || false
+      console.log('Community Business Spotlight section is active:', isSpotlightActive)
+
+      // Get ads_per_newsletter setting (defaults to 1)
+      const { data: adsPerNewsletterSetting } = await supabaseAdmin
+        .from('app_settings')
+        .select('value')
+        .eq('key', 'ads_per_newsletter')
+        .single()
+
+      const adsPerNewsletter = adsPerNewsletterSetting ? parseInt(adsPerNewsletterSetting.value) : 1
+      console.log('Ads per newsletter setting:', adsPerNewsletter)
+
+      // Calculate article count: 5 total items, minus ads if spotlight is active
+      const articleCount = isSpotlightActive ? (5 - adsPerNewsletter) : 5
+      console.log(`Article count calculation: ${isSpotlightActive ? '5 - ' + adsPerNewsletter : '5'} = ${articleCount}`)
+
+      // Validate article count is at least 1
+      const finalArticleCount = Math.max(1, Math.min(5, articleCount))
+      console.log(`Final article count (after validation): ${finalArticleCount}`)
 
       // Get all articles for this campaign with their ratings
       const { data: articles, error } = await supabaseAdmin
@@ -816,11 +844,11 @@ export class RSSProcessor {
         .eq('campaign_id', campaignId)
 
       if (error || !articles) {
-        console.error('Failed to fetch articles for top 5 selection:', error)
+        console.error('Failed to fetch articles for top selection:', error)
         return
       }
 
-      // Sort articles by rating (highest first) and take top 5
+      // Sort articles by rating (highest first) and take top N
       const sortedArticles = articles
         .map((article: any) => ({
           id: article.id,
@@ -828,17 +856,17 @@ export class RSSProcessor {
         }))
         .sort((a, b) => b.score - a.score)
 
-      const top5ArticleIds = sortedArticles.slice(0, 5).map(a => a.id)
-      const remainingArticleIds = sortedArticles.slice(5).map(a => a.id)
+      const topArticleIds = sortedArticles.slice(0, finalArticleCount).map(a => a.id)
+      const remainingArticleIds = sortedArticles.slice(finalArticleCount).map(a => a.id)
 
-      console.log(`Setting ${top5ArticleIds.length} articles as active, ${remainingArticleIds.length} as inactive`)
+      console.log(`Setting ${topArticleIds.length} articles as active, ${remainingArticleIds.length} as inactive`)
 
       // Set top 5 as active
-      if (top5ArticleIds.length > 0) {
+      if (topArticleIds.length > 0) {
         await supabaseAdmin
           .from('articles')
           .update({ is_active: true })
-          .in('id', top5ArticleIds)
+          .in('id', topArticleIds)
 
         // Generate subject line immediately after top articles are activated
         console.log('=== GENERATING SUBJECT LINE (After Top Articles Activated) ===')

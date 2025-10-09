@@ -93,12 +93,6 @@ export async function GET(request: NextRequest) {
         href: '/dashboard/databases/vrbo'
       },
       {
-        name: 'Advertisements',
-        description: 'Community Business Spotlight submissions',
-        count: adsCount?.length || 0,
-        href: '/dashboard/databases/ads'
-      },
-      {
         name: 'Images',
         description: 'AI-tagged image library with crop and tag management',
         count: imagesCount?.length || 0,
@@ -115,6 +109,12 @@ export async function GET(request: NextRequest) {
         description: 'Block images from specific RSS sources',
         count: uniqueSources,
         href: '/dashboard/databases/rss-sources'
+      },
+      {
+        name: 'Advertisements',
+        description: 'Community Business Spotlight submissions',
+        count: adsCount?.length || 0,
+        href: '/dashboard/databases/ads'
       }
     ]
 

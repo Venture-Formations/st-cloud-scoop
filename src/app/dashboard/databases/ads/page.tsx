@@ -7,6 +7,7 @@ import RichTextEditor from '@/components/RichTextEditor'
 import ReactCrop, { Crop, PixelCrop } from 'react-image-crop'
 import 'react-image-crop/dist/ReactCrop.css'
 import type { Advertisement } from '@/types/database'
+import { getCroppedImage } from '@/utils/imageCrop'
 
 export default function AdsManagementPage() {
   const [activeTab, setActiveTab] = useState<'active' | 'completed' | 'review'>('active')
@@ -361,40 +362,6 @@ function AddAdModal({ onClose, onSuccess }: { onClose: () => void; onSuccess: ()
     }
   }
 
-  const getCroppedImage = async (): Promise<Blob | null> => {
-    if (!completedCrop || !imgRef.current) return null
-
-    const image = imgRef.current
-    const canvas = document.createElement('canvas')
-    const ctx = canvas.getContext('2d')
-
-    if (!ctx) return null
-
-    const scaleX = image.naturalWidth / image.width
-    const scaleY = image.naturalHeight / image.height
-
-    canvas.width = completedCrop.width
-    canvas.height = completedCrop.height
-
-    ctx.drawImage(
-      image,
-      completedCrop.x * scaleX,
-      completedCrop.y * scaleY,
-      completedCrop.width * scaleX,
-      completedCrop.height * scaleY,
-      0,
-      0,
-      completedCrop.width,
-      completedCrop.height
-    )
-
-    return new Promise((resolve) => {
-      canvas.toBlob((blob) => {
-        resolve(blob)
-      }, 'image/jpeg', 0.9)
-    })
-  }
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setSubmitting(true)
@@ -404,7 +371,7 @@ function AddAdModal({ onClose, onSuccess }: { onClose: () => void; onSuccess: ()
 
       // Upload image if present
       if (selectedImage && completedCrop) {
-        const croppedBlob = await getCroppedImage()
+        const croppedBlob = await getCroppedImage(imgRef.current, completedCrop)
         if (croppedBlob) {
           const imageFormData = new FormData()
           imageFormData.append('image', croppedBlob, 'ad-image.jpg')

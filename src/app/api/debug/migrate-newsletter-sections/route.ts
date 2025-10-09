@@ -1,9 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { validateDebugAuth } from '@/lib/debug-auth'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { supabaseAdmin } from '@/lib/supabase'
 
-export async function GET(request: NextRequest) {
+export async function GET(request: any) {
+  // Validate authentication
+  const authResult = validateDebugAuth(request)
+  if (!authResult.authorized) {
+    return authResult.response
+  }
+
   try {
     const session = await getServerSession(authOptions)
     if (!session) {

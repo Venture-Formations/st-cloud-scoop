@@ -1,7 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { validateDebugAuth } from '@/lib/debug-auth'
 import { supabaseAdmin } from '@/lib/supabase'
 
-export async function GET(request: NextRequest) {
+export async function GET(request: any) {
+  // Validate authentication
+  const authResult = validateDebugAuth(request)
+  if (!authResult.authorized) {
+    return authResult.response
+  }
+
   try {
     console.log('Starting images table schema migration...')
 
@@ -103,7 +110,13 @@ export async function GET(request: NextRequest) {
   }
 }
 
-export async function POST(request: NextRequest) {
+export async function POST(request: any) {
+  // Validate authentication
+  const authResult = validateDebugAuth(request)
+  if (!authResult.authorized) {
+    return authResult.response
+  }
+
   // Alternative method using direct SQL execution
   try {
     const { sql } = await request.json()

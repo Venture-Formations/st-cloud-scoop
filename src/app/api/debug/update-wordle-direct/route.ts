@@ -1,8 +1,15 @@
 import { NextResponse } from 'next/server'
+import { validateDebugAuth } from '@/lib/debug-auth'
 import { supabaseAdmin } from '@/lib/supabase'
 import { callOpenAIWithWebSearch } from '@/lib/openai'
 
-export async function GET(request: Request) {
+export async function GET(request: any) {
+  // Validate authentication
+  const authResult = validateDebugAuth(request)
+  if (!authResult.authorized) {
+    return authResult.response
+  }
+
   try {
     const { searchParams } = new URL(request.url)
     const date = searchParams.get('date')

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { validateDebugAuth } from '@/lib/debug-auth'
 import { supabaseAdmin } from '@/lib/supabase'
 import { callOpenAI } from '@/lib/openai'
 
@@ -17,7 +18,13 @@ Return ONLY valid JSON in this exact format:
 IMPORTANT: Respond with valid JSON only, no additional text.`
 }
 
-export async function GET(request: NextRequest) {
+export async function GET(request: any) {
+  // Validate authentication
+  const authResult = validateDebugAuth(request)
+  if (!authResult.authorized) {
+    return authResult.response
+  }
+
   try {
     const { searchParams } = new URL(request.url)
     const targetDate = searchParams.get('date')

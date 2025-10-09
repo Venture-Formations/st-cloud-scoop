@@ -1,7 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
+import { validateDebugAuth } from '@/lib/debug-auth'
 
 export async function POST(request: NextRequest) {
+  // Validate authentication
+  const authResult = validateDebugAuth(request)
+  if (!authResult.authorized) {
+    return authResult.response
+  }
+
   try {
     console.log('=== ACTIVATING TOP ARTICLES ===')
 

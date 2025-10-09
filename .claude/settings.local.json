@@ -75,7 +75,8 @@
       "Bash(while read file)",
       "Bash(do echo \"=== $file ===\")",
       "Bash(done)",
-      "Bash(git cherry-pick:*)"
+      "Bash(git cherry-pick:*)",
+      "Bash(wsl:*)"
     ],
     "deny": [],
     "ask": []

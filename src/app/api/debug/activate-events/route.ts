@@ -1,7 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { validateDebugAuth } from '@/lib/debug-auth'
 import { supabaseAdmin } from '@/lib/supabase'
 
-export async function POST(request: NextRequest) {
+export async function POST(request: any) {
+  // Validate authentication
+  const authResult = validateDebugAuth(request)
+  if (!authResult.authorized) {
+    return authResult.response
+  }
+
   try {
     console.log('=== ACTIVATING EVENTS ===')
 

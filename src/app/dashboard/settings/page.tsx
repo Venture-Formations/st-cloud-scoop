@@ -2030,8 +2030,8 @@ function AdsSettings() {
   }
 
   const saveAdsPerNewsletter = async () => {
-    if (adsPerNewsletter < 1 || adsPerNewsletter > 5) {
-      alert('Ads per newsletter must be between 1 and 5')
+    if (adsPerNewsletter < 1 || adsPerNewsletter > 4) {
+      alert('Ads per newsletter must be between 1 and 4')
       return
     }
 
@@ -2343,7 +2343,7 @@ function AdsSettings() {
           <input
             type="number"
             min="1"
-            max="5"
+            max="4"
             value={adsPerNewsletter}
             onChange={(e) => setAdsPerNewsletter(parseInt(e.target.value) || 1)}
             className="w-20 px-3 py-2 border border-gray-300 rounded-md"
@@ -2360,7 +2360,7 @@ function AdsSettings() {
 
         <div className="mt-4 bg-blue-50 p-4 rounded-lg">
           <p className="text-sm text-blue-800">
-            <strong>Current configuration:</strong> {adsPerNewsletter} {adsPerNewsletter === 1 ? 'ad' : 'ads'} + {5 - adsPerNewsletter} articles = 5 total items
+            <strong>Current configuration:</strong> {adsPerNewsletter} {adsPerNewsletter === 1 ? 'ad' : 'ads'} + {5 - adsPerNewsletter} {5 - adsPerNewsletter === 1 ? 'article' : 'articles'} = 5 total items
           </p>
         </div>
       </div>

@@ -760,52 +760,37 @@ export async function generateCommunityBusinessSpotlightSection(campaign: any): 
       return ''
     }
 
-    // Generate HTML for the ad
+    // Generate HTML for the ad - matching Local Scoop layout
     const businessUrl = selectedAd.business_website || '#'
     const trackedUrl = businessUrl !== '#'
       ? wrapTrackingUrl(businessUrl, 'Community Business Spotlight', campaign.date, campaign.mailerlite_campaign_id)
       : '#'
 
+    const imageUrl = selectedAd.image_url || ''
+
+    // Generate image HTML if valid URL exists
+    const imageHtml = imageUrl
+      ? `<tr><td style='padding: 0 12px; text-align: center;'><img src='${imageUrl}' alt='${selectedAd.title}' style='max-width: 100%; max-height: 500px; border-radius: 4px;'></td></tr>`
+      : ''
+
     return `
-    <!-- Community Business Spotlight Section -->
-    <table cellpadding="0" cellspacing="0" border="0" width="100%" style="margin: 0 auto; max-width: 600px; background-color: #ffffff; border-radius: 0px; overflow: hidden; margin-top: 30px;">
-      <tr>
-        <td style="padding: 25px 25px 20px 25px;">
-          <h2 style="font-size: 1.625em; line-height: 1.16em; font-family: Arial, sans-serif; color: #1877F2; margin: 0; padding: 0;">Community Business Spotlight</h2>
-        </td>
-      </tr>
-
-      <tr>
-        <td style="padding: 0 25px 25px 25px;">
-          <!-- Ad Content -->
-          <div style="background-color: #f8f9fa; border-left: 4px solid #1877F2; padding: 20px; margin-bottom: 20px;">
-            <h3 style="font-family: Arial, sans-serif; font-size: 1.375em; color: #333333; margin: 0 0 15px 0;">
-              ${selectedAd.title}
-            </h3>
-
-            <div style="font-family: Arial, sans-serif; font-size: 1em; line-height: 1.6; color: #555555; margin-bottom: 15px;">
-              ${selectedAd.body}
-            </div>
-
-            <div style="font-family: Arial, sans-serif; font-size: 0.875em; color: #777777; margin-bottom: 15px;">
-              <strong>${selectedAd.business_name}</strong>
-              ${selectedAd.business_address ? `<br>${selectedAd.business_address}` : ''}
-            </div>
-
-            ${businessUrl !== '#' ? `
-            <a href="${trackedUrl}" style="display: inline-block; background-color: #1877F2; color: #ffffff; text-decoration: none; padding: 10px 20px; border-radius: 4px; font-family: Arial, sans-serif; font-size: 0.938em; font-weight: bold;">
-              Visit Website
-            </a>
-            ` : ''}
-          </div>
-
-          <p style="font-family: Arial, sans-serif; font-size: 0.75em; color: #999999; font-style: italic; margin: 10px 0 0 0;">
-            Sponsored Content
-          </p>
-        </td>
-      </tr>
-    </table>
-    `
+<table width="100%" cellpadding="0" cellspacing="0" style="border: 1px solid #f7f7f7; border-radius: 10px; margin-top: 10px; max-width: 990px; margin: 0 auto; background-color: #f7f7f7;">
+  <tr>
+    <td style="padding: 5px;">
+      <h2 style="font-size: 1.625em; line-height: 1.16em; font-family: Arial, sans-serif; color: #1877F2; margin: 0; padding: 0;">Community Business Spotlight</h2>
+    </td>
+  </tr>
+  <tr class='row'>
+    <td class='column' style='padding:8px; vertical-align: top;'>
+      <table width='100%' cellpadding='0' cellspacing='0' style='border: 1px solid #ddd; border-radius: 8px; background: #fff; font-family: Arial, sans-serif; font-size: 16px; line-height: 26px; box-shadow:0 4px 12px rgba(0,0,0,.15);'>
+        <tr><td style='padding: 12px 12px 4px; font-size: 20px; font-weight: bold;'>${selectedAd.title}</td></tr>
+        ${imageHtml}
+        <tr><td style='padding: 0 12px 20px;'>${selectedAd.body}${businessUrl !== '#' ? ` (<a href='${trackedUrl}' style='color: #0080FE; text-decoration: none;'>visit website</a>)` : ''}</td></tr>
+      </table>
+    </td>
+  </tr>
+</table>
+<br>`
   } catch (error) {
     console.error('Error generating Community Business Spotlight section:', error)
     return ''

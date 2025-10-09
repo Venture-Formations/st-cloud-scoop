@@ -66,11 +66,13 @@ export async function POST(request: NextRequest) {
         contact_phone,
         business_address,
         business_website,
-        frequency,
-        times_paid,
+        frequency: frequency || 'single', // Default to 'single' if not provided
+        times_paid: times_paid || 1, // Default to 1 if not provided
         times_used: 0,
-        status: 'approved', // Admin-created ads are pre-approved
-        payment_status: 'paid',
+        status: body.status || 'approved', // Use provided status or default to approved
+        payment_status: body.payment_status || 'paid',
+        paid: body.paid !== undefined ? body.paid : true,
+        image_url: body.image_url || null,
         submission_date: new Date().toISOString()
       })
       .select()

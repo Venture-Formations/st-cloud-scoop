@@ -36,16 +36,16 @@ export async function GET(request: NextRequest) {
       imageAnalyzer: 'Image analysis requires actual image input - use the image ingest endpoint instead'
     }
 
-    // Test Content Evaluator
+    // Test Content Evaluator (now calls OpenAI internally)
     if (promptType === 'all' || promptType === 'contentEvaluator') {
       console.log('Testing Content Evaluator...')
       try {
-        const prompt = await AI_PROMPTS.contentEvaluator(testData.contentEvaluator)
-        const response = await callOpenAI(prompt, 1000, 0.3)
+        const response = await AI_PROMPTS.contentEvaluator(testData.contentEvaluator)
         results.contentEvaluator = {
           success: true,
           response,
-          prompt_length: prompt.length
+          response_length: response.length,
+          format: 'Structured JSON (calls OpenAI internally)'
         }
       } catch (error) {
         results.contentEvaluator = {
@@ -55,16 +55,16 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // Test Newsletter Writer
+    // Test Newsletter Writer (now calls OpenAI internally)
     if (promptType === 'all' || promptType === 'newsletterWriter') {
       console.log('Testing Newsletter Writer...')
       try {
-        const prompt = await AI_PROMPTS.newsletterWriter(testData.newsletterWriter)
-        const response = await callOpenAI(prompt, 1000, 0.3)
+        const response = await AI_PROMPTS.newsletterWriter(testData.newsletterWriter)
         results.newsletterWriter = {
           success: true,
           response,
-          prompt_length: prompt.length
+          response_length: response.length,
+          format: 'Structured JSON (calls OpenAI internally)'
         }
       } catch (error) {
         results.newsletterWriter = {

@@ -1295,6 +1295,19 @@ function AIPromptsSettings() {
     loadPrompts()
   }, [])
 
+  // Helper function to detect structured JSON format
+  const isStructuredFormat = (value: any): boolean => {
+    try {
+      if (typeof value === 'string') {
+        const parsed = JSON.parse(value)
+        return parsed.messages && Array.isArray(parsed.messages)
+      }
+      return value && typeof value === 'object' && value.messages && Array.isArray(value.messages)
+    } catch {
+      return false
+    }
+  }
+
   const loadPrompts = async () => {
     try {
       const response = await fetch('/api/settings/ai-prompts')
@@ -1481,7 +1494,16 @@ function AIPromptsSettings() {
                 <div key={prompt.key} className="p-6">
                   <div className="flex items-start justify-between mb-2">
                     <div className="flex-1">
-                      <h4 className="text-base font-medium text-gray-900">{prompt.name}</h4>
+                      <div className="flex items-center gap-2">
+                        <h4 className="text-base font-medium text-gray-900">{prompt.name}</h4>
+                        <span className={`px-2 py-1 text-xs font-medium rounded-full ${
+                          isStructuredFormat(prompt.value)
+                            ? 'bg-purple-100 text-purple-800'
+                            : 'bg-gray-100 text-gray-800'
+                        }`}>
+                          {isStructuredFormat(prompt.value) ? 'Structured JSON' : 'Plain Text'}
+                        </span>
+                      </div>
                       <p className="text-sm text-gray-600 mt-1">{prompt.description}</p>
                     </div>
                     <button

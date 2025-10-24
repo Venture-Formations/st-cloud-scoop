@@ -611,14 +611,27 @@ export class RSSProcessor {
   }
 
   private async evaluatePost(post: RssPost): Promise<ContentEvaluation> {
-    const prompt = await AI_PROMPTS.contentEvaluator({
+    // AI_PROMPTS.contentEvaluator now calls OpenAI internally and returns the response
+    const responseText = await AI_PROMPTS.contentEvaluator({
       title: post.title,
       description: post.description || '',
       content: post.content || '',
       hasImage: !!post.image_url
     })
 
-    const result = await callOpenAI(prompt)
+    // Parse the response (could be JSON string or already parsed)
+    let result: any
+    try {
+      result = typeof responseText === 'string' ? JSON.parse(responseText) : responseText
+    } catch (parseError) {
+      // If parsing fails, try to extract JSON from the response
+      const jsonMatch = responseText.match(/\{[\s\S]*\}/)
+      if (jsonMatch) {
+        result = JSON.parse(jsonMatch[0])
+      } else {
+        throw new Error(`Failed to parse AI response: ${responseText}`)
+      }
+    }
 
     // Log the actual response for debugging
     console.log('AI evaluation response:', JSON.stringify(result, null, 2))
@@ -657,8 +670,22 @@ export class RSSProcessor {
     }))
 
     try {
-      const prompt = await AI_PROMPTS.topicDeduper(postSummaries)
-      const result = await callOpenAI(prompt)
+      // AI_PROMPTS.topicDeduper now calls OpenAI internally and returns the response
+      const responseText = await AI_PROMPTS.topicDeduper(postSummaries)
+
+      // Parse the response (could be JSON string or already parsed)
+      let result: any
+      try {
+        result = typeof responseText === 'string' ? JSON.parse(responseText) : responseText
+      } catch (parseError) {
+        // If parsing fails, try to extract JSON from the response
+        const jsonMatch = responseText.match(/\{[\s\S]*\}/)
+        if (jsonMatch) {
+          result = JSON.parse(jsonMatch[0])
+        } else {
+          throw new Error(`Failed to parse topic deduper response: ${responseText}`)
+        }
+      }
 
       console.log('=== TOPIC DEDUPER RESULT ===')
       console.log('Result type:', typeof result)
@@ -1037,14 +1064,27 @@ export class RSSProcessor {
   }
 
   private async generateNewsletterContent(post: RssPost): Promise<NewsletterContent> {
-    const prompt = await AI_PROMPTS.newsletterWriter({
+    // AI_PROMPTS.newsletterWriter now calls OpenAI internally and returns the response
+    const responseText = await AI_PROMPTS.newsletterWriter({
       title: post.title,
       description: post.description || '',
       content: post.content || '',
       source_url: post.source_url || ''
     })
 
-    const result = await callOpenAI(prompt)
+    // Parse the response (could be JSON string or already parsed)
+    let result: any
+    try {
+      result = typeof responseText === 'string' ? JSON.parse(responseText) : responseText
+    } catch (parseError) {
+      // If parsing fails, try to extract JSON from the response
+      const jsonMatch = responseText.match(/\{[\s\S]*\}/)
+      if (jsonMatch) {
+        result = JSON.parse(jsonMatch[0])
+      } else {
+        throw new Error(`Failed to parse newsletter writer response: ${responseText}`)
+      }
+    }
 
     if (!result.headline || !result.content || !result.word_count) {
       throw new Error('Invalid newsletter content response')

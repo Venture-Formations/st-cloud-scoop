@@ -27,6 +27,52 @@ async function getPrompt(key: string, fallback: string): Promise<string> {
   }
 }
 
+// Helper function to call OpenAI with structured prompt configuration
+// Supports structured JSON prompts with model parameters and conversation history
+async function callWithStructuredPrompt(
+  config: {
+    model?: string
+    temperature?: number
+    top_p?: number
+    presence_penalty?: number
+    frequency_penalty?: number
+    messages: Array<{ role: string; content: string }>
+  },
+  placeholders: Record<string, string>
+): Promise<string> {
+  // Replace placeholders in all messages (supports {{variable}} syntax)
+  const processedMessages = config.messages.map(msg => ({
+    ...msg,
+    content: Object.entries(placeholders).reduce(
+      (content, [key, value]) => content.replace(
+        new RegExp(`\\{\\{${key}\\}\\}`, 'g'),
+        value
+      ),
+      msg.content
+    )
+  }))
+
+  console.log('[AI] Calling OpenAI with structured prompt:', {
+    model: config.model || 'gpt-4o',
+    temperature: config.temperature ?? 0.7,
+    message_count: processedMessages.length
+  })
+
+  const response = await openai.chat.completions.create({
+    model: config.model || 'gpt-4o',
+    messages: processedMessages as any,
+    temperature: config.temperature ?? 0.7,
+    top_p: config.top_p,
+    presence_penalty: config.presence_penalty,
+    frequency_penalty: config.frequency_penalty,
+  })
+
+  const result = response.choices[0]?.message?.content || ''
+  console.log('[AI] Structured prompt response received, length:', result.length)
+
+  return result
+}
+
 // AI Prompts - Static fallbacks when database is unavailable
 const FALLBACK_PROMPTS = {
   contentEvaluator: (post: { title: string; description: string; content?: string; hasImage?: boolean }) => `
@@ -513,23 +559,52 @@ export const AI_PROMPTS = {
         .single()
 
       if (error || !data) {
-        console.log('Using code fallback for contentEvaluator prompt')
+        console.log('[AI] Using code fallback for contentEvaluator prompt')
         return FALLBACK_PROMPTS.contentEvaluator(post)
       }
 
-      console.log('Using database prompt for contentEvaluator')
-      // Database template uses {{}} placeholders
+      console.log('[AI] Using database prompt for contentEvaluator')
+
+      // Prepare placeholders
       const imagePenaltyText = post.hasImage
         ? 'This post HAS an image.'
         : 'This post has NO image - subtract 5 points from interest_level.'
 
-      return data.value
-        .replace(/\{\{title\}\}/g, post.title)
-        .replace(/\{\{description\}\}/g, post.description || 'No description available')
-        .replace(/\{\{content\}\}/g, post.content ? post.content.substring(0, 1000) + '...' : 'No content available')
-        .replace(/\{\{imagePenalty\}\}/g, imagePenaltyText)
+      const placeholders = {
+        title: post.title,
+        description: post.description || 'No description available',
+        content: post.content ? post.content.substring(0, 1000) + '...' : 'No content available',
+        imagePenalty: imagePenaltyText
+      }
+
+      // Check if structured JSON format (has messages array)
+      const promptConfig = data.value // Supabase auto-parses JSONB
+
+      if (promptConfig && typeof promptConfig === 'object' && promptConfig.messages && Array.isArray(promptConfig.messages)) {
+        console.log('[AI] Using structured JSON prompt format')
+        return await callWithStructuredPrompt(promptConfig, placeholders)
+      }
+
+      // Plain text fallback - do replacement and call OpenAI with default parameters
+      console.log('[AI] Using plain text prompt format, calling OpenAI with default parameters')
+      const promptText = typeof promptConfig === 'string' ? promptConfig : JSON.stringify(promptConfig)
+      const finalPrompt = Object.entries(placeholders).reduce(
+        (text, [key, value]) => text.replace(new RegExp(`\\{\\{${key}\\}\\}`, 'g'), value),
+        promptText
+      )
+
+      // Call OpenAI with appropriate parameters for content evaluation
+      const response = await openai.chat.completions.create({
+        model: 'gpt-4o',
+        messages: [{ role: 'user', content: finalPrompt }],
+        temperature: 0.3, // Low temperature for consistent scoring
+      })
+
+      return response.choices[0]?.message?.content || ''
+
     } catch (error) {
-      console.error('Error fetching contentEvaluator prompt, using fallback:', error)
+      console.error('[AI] Error loading contentEvaluator prompt, using fallback:', error)
+      // Fallback: return the prompt string for backward compatibility
       return FALLBACK_PROMPTS.contentEvaluator(post)
     }
   },
@@ -543,18 +618,48 @@ export const AI_PROMPTS = {
         .single()
 
       if (error || !data) {
-        console.log('Using code fallback for newsletterWriter prompt')
+        console.log('[AI] Using code fallback for newsletterWriter prompt')
         return FALLBACK_PROMPTS.newsletterWriter(post)
       }
 
-      console.log('Using database prompt for newsletterWriter')
-      return data.value
-        .replace(/\{\{title\}\}/g, post.title)
-        .replace(/\{\{description\}\}/g, post.description || 'No description available')
-        .replace(/\{\{content\}\}/g, post.content ? post.content.substring(0, 1500) + '...' : 'No additional content')
-        .replace(/\{\{url\}\}/g, post.source_url || '')
+      console.log('[AI] Using database prompt for newsletterWriter')
+
+      // Prepare placeholders
+      const placeholders = {
+        title: post.title,
+        description: post.description || 'No description available',
+        content: post.content ? post.content.substring(0, 1500) + '...' : 'No additional content',
+        url: post.source_url || ''
+      }
+
+      // Check if structured JSON format (has messages array)
+      const promptConfig = data.value // Supabase auto-parses JSONB
+
+      if (promptConfig && typeof promptConfig === 'object' && promptConfig.messages && Array.isArray(promptConfig.messages)) {
+        console.log('[AI] Using structured JSON prompt format')
+        return await callWithStructuredPrompt(promptConfig, placeholders)
+      }
+
+      // Plain text fallback - do replacement and call OpenAI with default parameters
+      console.log('[AI] Using plain text prompt format, calling OpenAI with default parameters')
+      const promptText = typeof promptConfig === 'string' ? promptConfig : JSON.stringify(promptConfig)
+      const finalPrompt = Object.entries(placeholders).reduce(
+        (text, [key, value]) => text.replace(new RegExp(`\\{\\{${key}\\}\\}`, 'g'), value),
+        promptText
+      )
+
+      // Call OpenAI with appropriate parameters for newsletter writing
+      const response = await openai.chat.completions.create({
+        model: 'gpt-4o',
+        messages: [{ role: 'user', content: finalPrompt }],
+        temperature: 0.7, // Higher temperature for creative writing
+      })
+
+      return response.choices[0]?.message?.content || ''
+
     } catch (error) {
-      console.error('Error fetching newsletterWriter prompt, using fallback:', error)
+      console.error('[AI] Error loading newsletterWriter prompt, using fallback:', error)
+      // Fallback: return the prompt string for backward compatibility
       return FALLBACK_PROMPTS.newsletterWriter(post)
     }
   },
@@ -600,10 +705,64 @@ export const AI_PROMPTS = {
     )
   },
 
-  // Non-editable prompts (not stored in database)
+  // Topic Deduper - Now supports database and structured format
   topicDeduper: async (posts: Array<{ title: string; description: string }>) => {
-    return FALLBACK_PROMPTS.topicDeduper(posts)
+    try {
+      const { data, error } = await supabaseAdmin
+        .from('app_settings')
+        .select('value')
+        .eq('key', 'ai_prompt_topic_deduper')
+        .single()
+
+      if (error || !data) {
+        console.log('[AI] Using code fallback for topicDeduper prompt')
+        return FALLBACK_PROMPTS.topicDeduper(posts)
+      }
+
+      console.log('[AI] Using database prompt for topicDeduper')
+
+      // Prepare article list for placeholder
+      const articlesText = posts.map((post, i) =>
+        `${i}. ${post.title}\n   ${post.description || 'No description'}`
+      ).join('\n\n')
+
+      const placeholders = {
+        articles: articlesText
+      }
+
+      // Check if structured JSON format (has messages array)
+      const promptConfig = data.value // Supabase auto-parses JSONB
+
+      if (promptConfig && typeof promptConfig === 'object' && promptConfig.messages && Array.isArray(promptConfig.messages)) {
+        console.log('[AI] Using structured JSON prompt format')
+        return await callWithStructuredPrompt(promptConfig, placeholders)
+      }
+
+      // Plain text fallback - do replacement and call OpenAI with default parameters
+      console.log('[AI] Using plain text prompt format, calling OpenAI with default parameters')
+      const promptText = typeof promptConfig === 'string' ? promptConfig : JSON.stringify(promptConfig)
+      const finalPrompt = Object.entries(placeholders).reduce(
+        (text, [key, value]) => text.replace(new RegExp(`\\{\\{${key}\\}\\}`, 'g'), value),
+        promptText
+      )
+
+      // Call OpenAI with appropriate parameters for deduplication
+      const response = await openai.chat.completions.create({
+        model: 'gpt-4o',
+        messages: [{ role: 'user', content: finalPrompt }],
+        temperature: 0.3, // Low temperature for consistent deduplication logic
+      })
+
+      return response.choices[0]?.message?.content || ''
+
+    } catch (error) {
+      console.error('[AI] Error loading topicDeduper prompt, using fallback:', error)
+      // Fallback: return the prompt string for backward compatibility
+      return FALLBACK_PROMPTS.topicDeduper(posts)
+    }
   },
+
+  // Non-editable prompts (not stored in database)
   factChecker: async (newsletterContent: string, originalContent: string) => {
     return FALLBACK_PROMPTS.factChecker(newsletterContent, originalContent)
   },

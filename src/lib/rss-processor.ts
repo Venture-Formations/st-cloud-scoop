@@ -332,8 +332,9 @@ export class RSSProcessor {
         .eq('key', 'excluded_rss_sources')
         .single()
 
+      // Value is already parsed as JSONB from database
       const excludedSources: string[] = excludedSettings?.value
-        ? JSON.parse(excludedSettings.value)
+        ? (Array.isArray(excludedSettings.value) ? excludedSettings.value : JSON.parse(excludedSettings.value))
         : []
 
       if (excludedSources.length > 0) {

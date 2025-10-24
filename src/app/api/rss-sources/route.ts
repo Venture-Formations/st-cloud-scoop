@@ -31,8 +31,9 @@ export async function GET(request: NextRequest) {
       .eq('key', 'excluded_rss_sources')
       .single()
 
+    // Value is already parsed as JSONB from database
     const excludedSources: string[] = excludedSettings?.value
-      ? JSON.parse(excludedSettings.value)
+      ? (Array.isArray(excludedSettings.value) ? excludedSettings.value : JSON.parse(excludedSettings.value))
       : []
 
     // Count posts by author
@@ -96,8 +97,9 @@ export async function PATCH(request: NextRequest) {
 
     console.log('Current settings fetch:', { currentSettings, fetchError })
 
+    // Value is already parsed as JSONB from database
     let excludedSources: string[] = currentSettings?.value
-      ? JSON.parse(currentSettings.value)
+      ? (Array.isArray(currentSettings.value) ? currentSettings.value : JSON.parse(currentSettings.value))
       : []
 
     console.log('Current excluded sources:', excludedSources)

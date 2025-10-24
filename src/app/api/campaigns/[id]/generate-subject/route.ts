@@ -108,17 +108,9 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       skipped: topArticle.skipped
     })
 
-    // Generate subject line using AI with just the top article
-    // Add timestamp to prompt for variation each time
-    const variationPrompt = await AI_PROMPTS.subjectLineGenerator([topArticle]) +
-      `\n\nGeneration timestamp: ${new Date().toISOString()} - Create a fresh, unique headline variation.`
-
-    console.log('=== FULL PROMPT BEING SENT TO AI ===')
-    console.log(variationPrompt)
-    console.log('=== END PROMPT ===')
-
-    // Use higher temperature for more creative variation
-    const result = await callOpenAI(variationPrompt, 1000, 0.8)
+    // Generate subject line using AI (now calls OpenAI internally)
+    console.log('=== GENERATING SUBJECT LINE FROM AI ===')
+    const result = await AI_PROMPTS.subjectLineGenerator([topArticle])
 
     console.log('=== AI RESPONSE ===')
     console.log(result)
@@ -129,10 +121,11 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     if (typeof result === 'string') {
       subjectLine = result.trim()
     } else if (result && typeof result === 'object') {
-      if (result.subject_line) {
-        subjectLine = result.subject_line.trim()
-      } else if (result.raw) {
-        subjectLine = result.raw.trim()
+      const resultObj = result as any
+      if (resultObj.subject_line) {
+        subjectLine = resultObj.subject_line.trim()
+      } else if (resultObj.raw) {
+        subjectLine = resultObj.raw.trim()
       } else {
         subjectLine = String(result).trim()
       }

@@ -93,26 +93,24 @@ export async function generateSubjectLine(campaignId: string, userEmail?: string
     const topArticle = activeArticles[0]
     console.log(`Auto-generating subject line based on current #1 article: "${topArticle.headline}" (rank: ${topArticle.rank || 'unranked'})`)
 
-    // Generate subject line using AI
-    const variationPrompt = await AI_PROMPTS.subjectLineGenerator([topArticle]) +
-      `\n\nGeneration timestamp: ${new Date().toISOString()} - Create a fresh, unique headline variation.`
-
-    const result = await callOpenAI(variationPrompt, 1000, 0.8)
+    // Generate subject line using AI (now calls OpenAI internally)
+    const aiResponse = await AI_PROMPTS.subjectLineGenerator([topArticle])
 
     // Handle both plain text and JSON responses
     let subjectLine = ''
-    if (typeof result === 'string') {
-      subjectLine = result.trim()
-    } else if (result && typeof result === 'object') {
-      if (result.subject_line) {
-        subjectLine = result.subject_line.trim()
-      } else if (result.raw) {
-        subjectLine = result.raw.trim()
+    if (typeof aiResponse === 'string') {
+      subjectLine = aiResponse.trim()
+    } else if (aiResponse && typeof aiResponse === 'object') {
+      const responseObj = aiResponse as any
+      if (responseObj.subject_line) {
+        subjectLine = responseObj.subject_line.trim()
+      } else if (responseObj.raw) {
+        subjectLine = responseObj.raw.trim()
       } else {
-        subjectLine = String(result).trim()
+        subjectLine = String(aiResponse).trim()
       }
     } else {
-      subjectLine = String(result).trim()
+      subjectLine = String(aiResponse).trim()
     }
 
     if (!subjectLine) {

@@ -106,21 +106,43 @@ export async function POST(request: NextRequest) {
     const topArticle = activeArticles[0] as any
     console.log(`Generating subject line based on #1 ranked article: "${topArticle.headline}" (rank: ${topArticle.rank || 'unranked'}, score: ${topArticle.rss_post?.post_rating?.[0]?.total_score || 0})`)
 
-    // Generate subject line using AI with just the top article
-    const prompt = await AI_PROMPTS.subjectLineGenerator([topArticle])
-    const result = await callOpenAI(prompt, 1000, 0.8)
+    // Generate subject line using AI (now calls OpenAI internally)
+    const aiResponse = await AI_PROMPTS.subjectLineGenerator([topArticle])
 
-    if (!result.subject_line) {
-      throw new Error('Invalid subject line response from AI')
+    // Handle both plain text and JSON responses
+    let subjectLine = ''
+    if (typeof aiResponse === 'string') {
+      subjectLine = aiResponse.trim()
+    } else if (aiResponse && typeof aiResponse === 'object') {
+      const responseObj = aiResponse as any
+      if (responseObj.subject_line) {
+        subjectLine = responseObj.subject_line.trim()
+      } else if (responseObj.raw) {
+        subjectLine = responseObj.raw.trim()
+      } else {
+        subjectLine = String(aiResponse).trim()
+      }
+    } else {
+      subjectLine = String(aiResponse).trim()
     }
 
-    console.log(`Generated subject line: "${result.subject_line}" (${result.character_count} chars)`)
+    if (!subjectLine) {
+      throw new Error('Empty subject line response from AI')
+    }
+
+    // Enforce character limit
+    if (subjectLine.length > 35) {
+      console.warn(`Subject line too long (${subjectLine.length} chars), truncating to 35`)
+      subjectLine = subjectLine.substring(0, 35).trim()
+    }
+
+    console.log(`Generated subject line: "${subjectLine}" (${subjectLine.length} chars)`)
 
     // Update campaign with generated subject line
     const { error: updateError } = await supabaseAdmin
       .from('newsletter_campaigns')
       .update({
-        subject_line: result.subject_line
+        subject_line: subjectLine
       })
       .eq('id', campaign.id)
 
@@ -135,8 +157,8 @@ export async function POST(request: NextRequest) {
       message: 'Subject line generated successfully',
       campaignId: campaign.id,
       campaignDate: campaignDate,
-      subjectLine: result.subject_line,
-      characterCount: result.character_count,
+      subjectLine: subjectLine,
+      characterCount: subjectLine.length,
       topArticleUsed: topArticle.headline,
       timestamp: new Date().toISOString()
     })

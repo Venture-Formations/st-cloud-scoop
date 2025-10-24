@@ -1181,14 +1181,11 @@ export class RSSProcessor {
       console.log(`- Headline: ${topArticle.headline}`)
       console.log(`- AI Score: ${topArticle.rss_post?.post_rating?.[0]?.total_score || 0}`)
 
-      // Generate subject line using AI
-      const timestamp = new Date().toISOString()
-      const subjectPrompt = await AI_PROMPTS.subjectLineGenerator([topArticle]) + `\n\nTimestamp: ${timestamp}`
-
+      // Generate subject line using AI (now calls OpenAI internally)
       console.log('Generating AI subject line...')
-      const aiResponse = await callOpenAI(subjectPrompt, 100, 0.8)
+      const aiResponse = await AI_PROMPTS.subjectLineGenerator([topArticle])
 
-      // The AI now returns plain text, not JSON
+      // Handle both plain text and JSON responses
       let generatedSubject = ''
 
       if (typeof aiResponse === 'string') {

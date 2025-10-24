@@ -101,17 +101,17 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // Test Subject Line Generator
+    // Test Subject Line Generator (now calls OpenAI internally)
     if (promptType === 'all' || promptType === 'subjectLineGenerator') {
       console.log('Testing Subject Line Generator...')
       try {
-        const prompt = await AI_PROMPTS.subjectLineGenerator(testData.subjectLineGenerator)
-        const response = await callOpenAI(prompt, 100, 0.8)
+        const response = await AI_PROMPTS.subjectLineGenerator(testData.subjectLineGenerator)
+        const responseObj = response as any
         results.subjectLineGenerator = {
           success: true,
           response,
-          character_count: typeof response === 'string' ? response.length : response?.raw?.length || 0,
-          prompt_length: prompt.length
+          character_count: typeof response === 'string' ? response.length : responseObj?.raw?.length || 0,
+          format: 'Structured JSON (calls OpenAI internally)'
         }
       } catch (error) {
         results.subjectLineGenerator = {

@@ -689,8 +689,58 @@ export const AI_PROMPTS = {
   },
 
   subjectLineGenerator: async (articles: Array<{ headline: string; content: string }>) => {
-    // subjectLineGenerator doesn't support database templates - always use fallback
-    return FALLBACK_PROMPTS.subjectLineGenerator(articles)
+    try {
+      const { data, error } = await supabaseAdmin
+        .from('app_settings')
+        .select('value')
+        .eq('key', 'ai_prompt_subject_line')
+        .single()
+
+      if (error || !data) {
+        console.log('[AI] Using code fallback for subjectLineGenerator prompt')
+        return FALLBACK_PROMPTS.subjectLineGenerator(articles)
+      }
+
+      console.log('[AI] Using database prompt for subjectLineGenerator')
+
+      // Prepare article list for placeholder
+      const articlesText = articles
+        .map((article, i) => `${i + 1}. ${article.headline}\n   ${article.content.substring(0, 100)}...`)
+        .join('\n\n')
+
+      const placeholders = {
+        articles: articlesText
+      }
+
+      // Check if structured JSON format (has messages array)
+      const promptConfig = data.value // Supabase auto-parses JSONB
+
+      if (promptConfig && typeof promptConfig === 'object' && promptConfig.messages && Array.isArray(promptConfig.messages)) {
+        console.log('[AI] Using structured JSON prompt format')
+        return await callWithStructuredPrompt(promptConfig, placeholders)
+      }
+
+      // Plain text fallback - do replacement and call OpenAI with default parameters
+      console.log('[AI] Using plain text prompt format, calling OpenAI with default parameters')
+      const promptText = typeof promptConfig === 'string' ? promptConfig : JSON.stringify(promptConfig)
+      const finalPrompt = Object.entries(placeholders).reduce(
+        (text, [key, value]) => text.replace(new RegExp(`\\{\\{${key}\\}\\}`, 'g'), value),
+        promptText
+      )
+
+      // Call OpenAI with appropriate parameters for subject line generation
+      const response = await openai.chat.completions.create({
+        model: 'gpt-4o',
+        messages: [{ role: 'user', content: finalPrompt }],
+        temperature: 0.8, // Higher temperature for creative headline variations
+      })
+
+      return response.choices[0]?.message?.content || ''
+
+    } catch (error) {
+      console.error('[AI] Error loading subjectLineGenerator prompt, using fallback:', error)
+      return FALLBACK_PROMPTS.subjectLineGenerator(articles)
+    }
   },
 
   roadWorkGenerator: async (campaignDate: string) => {

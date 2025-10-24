@@ -1350,12 +1350,27 @@ function AIPromptsSettings() {
     setMessage('')
 
     try {
+      // Try to parse the value as JSON (for structured prompts)
+      // If it parses successfully, send as object; otherwise send as string
+      let valueToSave: any = editingPrompt.value
+
+      try {
+        const parsed = JSON.parse(editingPrompt.value)
+        // If it's a structured format (has messages array), use the parsed object
+        if (parsed && typeof parsed === 'object' && parsed.messages && Array.isArray(parsed.messages)) {
+          valueToSave = parsed
+        }
+      } catch (parseError) {
+        // If parsing fails, it's a plain text prompt - keep as string
+        // This is expected and not an error
+      }
+
       const response = await fetch('/api/settings/ai-prompts', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           key: editingPrompt.key,
-          value: editingPrompt.value
+          value: valueToSave
         })
       })
 

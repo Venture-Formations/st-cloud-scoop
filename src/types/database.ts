@@ -691,3 +691,124 @@ export interface AdPricingTier {
   created_at: string
   updated_at: string
 }
+
+// =============================================================================
+// NEWSLETTER ARCHIVE TYPES
+// =============================================================================
+
+export interface ArchivedNewsletter {
+  id: string
+  campaign_id: string
+  newsletter_id: string
+  campaign_date: string  // YYYY-MM-DD format for URL
+  subject_line: string
+  send_date: string       // ISO timestamp when sent
+  recipient_count: number
+  html_backup: string | null
+
+  // Structured data
+  metadata: {
+    total_articles?: number
+    total_secondary_articles?: number
+    total_events?: number
+    has_welcome?: boolean
+    has_road_work?: boolean
+    has_ai_apps?: boolean
+    has_poll?: boolean
+    has_prompt?: boolean
+    archived_at?: string
+  }
+
+  articles: Array<{
+    id: string
+    headline: string
+    content: string
+    word_count?: number
+    rank?: number
+    final_position?: number
+    rss_post?: {
+      title?: string
+      source_url?: string
+      image_url?: string
+      publication_date?: string
+    }
+  }>
+
+  secondary_articles?: Array<{
+    id: string
+    headline: string
+    content: string
+    word_count?: number
+    rank?: number
+    final_position?: number
+    rss_post?: {
+      title?: string
+      source_url?: string
+      image_url?: string
+      publication_date?: string
+    }
+  }>
+
+  events: Array<{
+    id: string
+    title: string
+    description: string | null
+    event_summary: string | null
+    start_date: string
+    end_date: string | null
+    venue: string | null
+    address: string | null
+    url: string | null
+    image_url: string | null
+    cropped_image_url: string | null
+    featured: boolean
+    paid_placement: boolean
+  }>
+
+  sections: {
+    welcome?: {
+      intro: string
+      tagline?: string
+      summary?: string
+    }
+    road_work?: {
+      items: Array<{
+        road_name: string
+        road_range: string
+        city_or_township: string
+        reason: string
+        start_date: string
+        expected_reopen: string
+        source_url: string
+      }>
+      generated_at: string
+    }
+    ai_apps?: Array<{
+      app: {
+        id: string
+        app_name: string
+        tagline?: string
+        description: string
+        app_url: string
+        logo_url?: string
+        category?: string
+      }
+      selection_order: number
+      is_featured: boolean
+    }>
+    poll?: {
+      id: string
+      question: string
+      options?: string[]
+    }
+    prompt?: {
+      id: string
+      title: string
+      prompt_text: string
+      category?: string
+    }
+  }
+
+  created_at: string
+  updated_at: string
+}

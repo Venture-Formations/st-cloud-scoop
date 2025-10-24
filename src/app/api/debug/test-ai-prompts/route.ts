@@ -32,6 +32,33 @@ export async function GET(request: NextRequest) {
         description: 'Join us for free outdoor concerts every Thursday evening in July! Local bands will perform a variety of music styles from 6-8 PM. Bring your lawn chairs and blankets. Food trucks will be available.',
         venue: 'Lake George Amphitheater'
       },
+      topicDeduper: [
+        {
+          id: '1',
+          headline: 'Sartell Fire Department Open House This Saturday',
+          content: 'Join Sartell firefighters for station tours, equipment demonstrations, and fire safety education. Event runs from 10am-2pm at the main station.'
+        },
+        {
+          id: '2',
+          headline: 'St. Cloud Fire Station 3 Hosts Community Open House',
+          content: 'Fire Station 3 welcomes community members for an open house event this Saturday. Tour the facility and meet your local firefighters from 10am-2pm.'
+        },
+        {
+          id: '3',
+          headline: 'New Coffee Shop Opens on Fifth Avenue',
+          content: 'Local entrepreneur Sarah Johnson launched her specialty coffee business downtown. The shop features locally roasted beans and homemade pastries.'
+        },
+        {
+          id: '4',
+          headline: 'Grand Opening Celebration at City Center Cafe',
+          content: 'Ribbon cutting ceremony held for new downtown coffee shop. Owner Sarah Johnson welcomes customers to try specialty drinks and fresh baked goods.'
+        },
+        {
+          id: '5',
+          headline: 'School Board Meeting Scheduled for Tuesday',
+          content: 'District 742 School Board will discuss the 2025 budget proposal at Tuesday evening meeting. Public comment period begins at 6:30pm.'
+        }
+      ],
       roadWorkGenerator: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
       imageAnalyzer: 'Image analysis requires actual image input - use the image ingest endpoint instead'
     }
@@ -132,6 +159,32 @@ export async function GET(request: NextRequest) {
       }
     }
 
+    // Test Topic Deduper (now calls OpenAI internally)
+    if (promptType === 'all' || promptType === 'topicDeduper') {
+      console.log('Testing Topic Deduper...')
+      try {
+        // Convert test data to expected format (array of posts with title and description)
+        const postsForDeduper = testData.topicDeduper.map(article => ({
+          title: article.headline,
+          description: article.content
+        }))
+
+        const response = await AI_PROMPTS.topicDeduper(postsForDeduper)
+        results.topicDeduper = {
+          success: true,
+          response,
+          response_length: response.length,
+          format: 'Structured JSON (calls OpenAI internally)',
+          articles_analyzed: testData.topicDeduper.length
+        }
+      } catch (error) {
+        results.topicDeduper = {
+          success: false,
+          error: error instanceof Error ? error.message : 'Unknown error'
+        }
+      }
+    }
+
     // Image Analyzer note
     if (promptType === 'all' || promptType === 'imageAnalyzer') {
       results.imageAnalyzer = {
@@ -146,7 +199,7 @@ export async function GET(request: NextRequest) {
       prompt_type: promptType,
       test_data: promptType === 'all' ? 'Sample data for all prompts' : testData[promptType as keyof typeof testData],
       results,
-      usage_note: 'Add ?type=promptName to test individual prompts (contentEvaluator, newsletterWriter, subjectLineGenerator, eventSummarizer, roadWorkGenerator, imageAnalyzer)',
+      usage_note: 'Add ?type=promptName to test individual prompts (contentEvaluator, newsletterWriter, subjectLineGenerator, eventSummarizer, topicDeduper, roadWorkGenerator, imageAnalyzer)',
       timestamp: new Date().toISOString()
     })
 

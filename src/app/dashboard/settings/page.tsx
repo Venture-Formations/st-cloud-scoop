@@ -1291,6 +1291,12 @@ function AIPromptsSettings() {
   const [expandedPrompt, setExpandedPrompt] = useState<string | null>(null)
   const [editingPrompt, setEditingPrompt] = useState<{key: string, value: string} | null>(null)
 
+  // Test modal state
+  const [testModalOpen, setTestModalOpen] = useState(false)
+  const [testModalData, setTestModalData] = useState<any>(null)
+  const [testModalLoading, setTestModalLoading] = useState(false)
+  const [testModalError, setTestModalError] = useState<string | null>(null)
+
   useEffect(() => {
     loadPrompts()
   }, [])
@@ -1437,7 +1443,7 @@ function AIPromptsSettings() {
     }
   }
 
-  const handleTestPrompt = (key: string) => {
+  const handleTestPrompt = async (key: string) => {
     // Map prompt keys to their test endpoint type parameter
     const promptTypeMap: Record<string, string> = {
       'ai_prompt_content_evaluator': 'contentEvaluator',
@@ -1445,7 +1451,8 @@ function AIPromptsSettings() {
       'ai_prompt_subject_line': 'subjectLineGenerator',
       'ai_prompt_event_summary': 'eventSummarizer',
       'ai_prompt_road_work': 'roadWorkGenerator',
-      'ai_prompt_image_analyzer': 'imageAnalyzer'
+      'ai_prompt_image_analyzer': 'imageAnalyzer',
+      'ai_prompt_topic_deduper': 'topicDeduper'
     }
 
     const testType = promptTypeMap[key]
@@ -1454,9 +1461,28 @@ function AIPromptsSettings() {
       return
     }
 
-    // Open test endpoint in new tab
-    const testUrl = `/api/debug/test-ai-prompts?type=${testType}`
-    window.open(testUrl, '_blank')
+    // Open modal and fetch test results
+    setTestModalOpen(true)
+    setTestModalLoading(true)
+    setTestModalError(null)
+    setTestModalData(null)
+
+    try {
+      const testUrl = `/api/debug/test-ai-prompts?type=${testType}`
+      const response = await fetch(testUrl)
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
+
+      const data = await response.json()
+      setTestModalData(data)
+    } catch (error) {
+      console.error('Test error:', error)
+      setTestModalError(error instanceof Error ? error.message : 'Failed to test prompt')
+    } finally {
+      setTestModalLoading(false)
+    }
   }
 
   if (loading) {
@@ -1619,6 +1645,148 @@ function AIPromptsSettings() {
           </p>
         </div>
       </div>
+
+      {/* Test Results Modal */}
+      {testModalOpen && (
+        <div className="fixed inset-0 z-50 overflow-y-auto" onClick={() => setTestModalOpen(false)}>
+          <div className="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
+            {/* Background overlay */}
+            <div className="fixed inset-0 transition-opacity bg-gray-500 bg-opacity-75" aria-hidden="true"></div>
+
+            {/* Modal panel */}
+            <div
+              className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-4xl sm:w-full"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                <div className="flex items-start justify-between mb-4">
+                  <h3 className="text-xl font-semibold text-gray-900">
+                    Prompt Test Results
+                  </h3>
+                  <button
+                    onClick={() => setTestModalOpen(false)}
+                    className="text-gray-400 hover:text-gray-600 focus:outline-none"
+                  >
+                    <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+
+                {/* Loading State */}
+                {testModalLoading && (
+                  <div className="flex items-center justify-center py-12">
+                    <div className="text-center">
+                      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto mb-4"></div>
+                      <p className="text-gray-600">Testing prompt...</p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Error State */}
+                {testModalError && !testModalLoading && (
+                  <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                    <h4 className="text-red-900 font-medium mb-2">Test Failed</h4>
+                    <p className="text-red-700 text-sm">{testModalError}</p>
+                  </div>
+                )}
+
+                {/* Results Display */}
+                {testModalData && !testModalLoading && !testModalError && (
+                  <div className="space-y-4">
+                    {/* Status Banner */}
+                    <div className={`rounded-lg p-4 ${testModalData.success ? 'bg-green-50 border border-green-200' : 'bg-red-50 border border-red-200'}`}>
+                      <div className="flex items-center">
+                        <div className={`flex-shrink-0 ${testModalData.success ? 'text-green-600' : 'text-red-600'}`}>
+                          <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
+                            {testModalData.success ? (
+                              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                            ) : (
+                              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                            )}
+                          </svg>
+                        </div>
+                        <div className="ml-3">
+                          <h3 className={`text-sm font-medium ${testModalData.success ? 'text-green-800' : 'text-red-800'}`}>
+                            {testModalData.success ? 'Test Successful' : 'Test Failed'}
+                          </h3>
+                          <p className={`text-sm ${testModalData.success ? 'text-green-700' : 'text-red-700'}`}>
+                            {testModalData.message}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Test Data Used */}
+                    {testModalData.test_data && (
+                      <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                        <h4 className="font-medium text-gray-900 mb-2">Test Data Used</h4>
+                        <pre className="text-xs text-gray-700 overflow-x-auto whitespace-pre-wrap">
+                          {JSON.stringify(testModalData.test_data, null, 2)}
+                        </pre>
+                      </div>
+                    )}
+
+                    {/* Results */}
+                    {testModalData.results && (
+                      <div className="space-y-3">
+                        <h4 className="font-medium text-gray-900">AI Response</h4>
+                        {Object.entries(testModalData.results).map(([key, value]: [string, any]) => (
+                          <div key={key} className="bg-white border border-gray-200 rounded-lg p-4">
+                            <div className="flex items-center justify-between mb-2">
+                              <h5 className="font-medium text-gray-900 capitalize">{key.replace(/([A-Z])/g, ' $1').trim()}</h5>
+                              {value.success && (
+                                <span className="text-xs px-2 py-1 bg-green-100 text-green-800 rounded-full">
+                                  {value.format || 'Success'}
+                                </span>
+                              )}
+                            </div>
+                            {value.success ? (
+                              <div className="mt-2">
+                                {value.response && (
+                                  <div className="bg-gray-50 rounded p-3 overflow-x-auto">
+                                    <pre className="text-xs text-gray-700 whitespace-pre-wrap">
+                                      {typeof value.response === 'string' ? value.response : JSON.stringify(value.response, null, 2)}
+                                    </pre>
+                                  </div>
+                                )}
+                                {value.response_length && (
+                                  <p className="text-xs text-gray-500 mt-2">Response length: {value.response_length} characters</p>
+                                )}
+                                {value.articles_analyzed && (
+                                  <p className="text-xs text-gray-500 mt-2">Articles analyzed: {value.articles_analyzed}</p>
+                                )}
+                                {value.note && (
+                                  <p className="text-sm text-blue-600 mt-2">{value.note}</p>
+                                )}
+                              </div>
+                            ) : (
+                              <div className="mt-2 text-sm text-red-600">
+                                Error: {value.error}
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Modal Footer */}
+              <div className="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+                <button
+                  type="button"
+                  onClick={() => setTestModalOpen(false)}
+                  className="w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 sm:ml-3 sm:w-auto sm:text-sm"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

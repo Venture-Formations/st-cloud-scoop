@@ -1324,7 +1324,12 @@ function AIPromptsSettings() {
   }
 
   const handleEdit = (prompt: any) => {
-    setEditingPrompt({ key: prompt.key, value: prompt.value })
+    // Format value for editing - stringify objects, keep strings as-is
+    const formattedValue = typeof prompt.value === 'string'
+      ? prompt.value
+      : JSON.stringify(prompt.value, null, 2)
+
+    setEditingPrompt({ key: prompt.key, value: formattedValue })
     setExpandedPrompt(prompt.key)
   }
 
@@ -1521,7 +1526,10 @@ function AIPromptsSettings() {
                           Prompt Content
                         </label>
                         <span className="text-xs text-gray-500">
-                          {isEditing ? editingPrompt?.value.length || 0 : prompt.value.length} characters
+                          {isEditing
+                            ? (editingPrompt?.value.length || 0)
+                            : (typeof prompt.value === 'string' ? prompt.value.length : JSON.stringify(prompt.value).length)
+                          } characters
                         </span>
                       </div>
                       {isEditing ? (
@@ -1552,7 +1560,7 @@ function AIPromptsSettings() {
                       ) : (
                         <>
                           <div className="bg-gray-50 border border-gray-200 rounded-md p-4 font-mono text-xs whitespace-pre-wrap overflow-x-auto max-h-96 overflow-y-auto">
-                            {prompt.value}
+                            {typeof prompt.value === 'string' ? prompt.value : JSON.stringify(prompt.value, null, 2)}
                           </div>
                           <div className="mt-3 flex items-center justify-between">
                             <div className="flex items-center space-x-3">

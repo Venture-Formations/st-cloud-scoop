@@ -20,7 +20,16 @@ export const authOptions: NextAuthOptions = {
       })
 
       if (account?.provider === 'google') {
-        console.log('Processing Google OAuth sign-in for:', user.email)
+        // Email whitelist check
+        const allowedEmails = process.env.ALLOWED_ADMIN_EMAILS?.split(',').map(email => email.trim()) || []
+
+        if (allowedEmails.length > 0 && !allowedEmails.includes(user.email || '')) {
+          console.warn('🚫 Sign-in BLOCKED - Email not in whitelist:', user.email)
+          console.log('Allowed emails:', allowedEmails)
+          return false // Reject sign-in
+        }
+
+        console.log('✅ Email whitelisted, processing Google OAuth sign-in for:', user.email)
 
         try {
           // Mobile-safe Supabase user creation with retry logic

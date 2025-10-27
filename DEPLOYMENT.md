@@ -109,6 +109,9 @@ NEXTAUTH_SECRET=your-random-32-char-string
 GOOGLE_CLIENT_ID=your-google-client-id
 GOOGLE_CLIENT_SECRET=your-google-client-secret
 
+# Admin Access Control
+ALLOWED_ADMIN_EMAILS=admin1@gmail.com,admin2@example.com,editor@stcscoop.com
+
 # Slack (Optional)
 SLACK_WEBHOOK_URL=https://hooks.slack.com/services/your/webhook/url
 ```

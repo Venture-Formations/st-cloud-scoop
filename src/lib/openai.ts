@@ -93,9 +93,9 @@ export async function callWithStructuredPrompt(
     if (request.response_format) {
       const format = request.response_format
 
-      // Ensure json_schema has a name field (required by Responses API)
-      if (format.type === 'json_schema' && format.json_schema && !format.json_schema.name) {
-        format.json_schema.name = 'Response'  // Default name if not provided
+      // Ensure format has a name field at top level (required by Responses API)
+      if (!format.name) {
+        format.name = 'Response'  // Default name if not provided
       }
 
       request.text = { format }

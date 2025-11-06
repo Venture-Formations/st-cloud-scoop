@@ -91,7 +91,14 @@ export async function callWithStructuredPrompt(
 
     // Responses API: response_format moved to text.format
     if (request.response_format) {
-      request.text = { format: request.response_format }
+      const format = request.response_format
+
+      // Ensure json_schema has a name field (required by Responses API)
+      if (format.type === 'json_schema' && format.json_schema && !format.json_schema.name) {
+        format.json_schema.name = 'Response'  // Default name if not provided
+      }
+
+      request.text = { format }
       delete request.response_format
     }
 

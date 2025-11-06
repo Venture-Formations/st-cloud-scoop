@@ -5,7 +5,7 @@ import { NextRequest, NextResponse } from 'next/server'
  * Runs every 5 minutes to check if it's time to execute the RSS workflow
  * for St. Cloud Scoop newsletter
  *
- * Schedule: */5 * * * * (every 5 minutes)
+ * Schedule: every 5 minutes (cron: "star slash 5 star star star star")
  * Timeout: 60 seconds
  */
 export async function GET(request: NextRequest) {

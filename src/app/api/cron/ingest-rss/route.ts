@@ -161,7 +161,7 @@ function extractRSSItems(xml: string): Array<{title: string, link: string, descr
   const items: Array<{title: string, link: string, description?: string, publishedAt?: string}> = []
 
   // Try RSS 2.0 format first
-  const rssItemMatches = xml.matchAll(/<item>([\s\S]*?)<\/item>/gi)
+  const rssItemMatches = Array.from(xml.matchAll(/<item>([\s\S]*?)<\/item>/gi))
 
   for (const match of rssItemMatches) {
     const itemXml = match[1]
@@ -183,7 +183,7 @@ function extractRSSItems(xml: string): Array<{title: string, link: string, descr
 
   // If no RSS items found, try Atom format
   if (items.length === 0) {
-    const atomEntryMatches = xml.matchAll(/<entry>([\s\S]*?)<\/entry>/gi)
+    const atomEntryMatches = Array.from(xml.matchAll(/<entry>([\s\S]*?)<\/entry>/gi))
 
     for (const match of atomEntryMatches) {
       const entryXml = match[1]

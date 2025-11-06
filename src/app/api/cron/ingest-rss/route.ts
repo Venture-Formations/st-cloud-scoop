@@ -80,7 +80,7 @@ export async function GET(request: NextRequest) {
               .eq('feed_id', feed.id)
               .eq('title', item.title)
               .eq('link', item.link)
-              .single()
+              .maybeSingle()
 
             if (existingPost) {
               // Post already exists, skip

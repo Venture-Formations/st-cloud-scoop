@@ -1,8 +1,15 @@
 import OpenAI from 'openai'
 import { supabaseAdmin } from './supabase'
 
+// OpenAI client
 export const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
+})
+
+// Perplexity client (uses OpenAI SDK with custom base URL)
+export const perplexity = new OpenAI({
+  apiKey: process.env.PERPLEXITY_API_KEY,
+  baseURL: 'https://api.perplexity.ai',
 })
 
 // Helper function to fetch prompt from database with code fallback
@@ -27,7 +34,7 @@ async function getPrompt(key: string, fallback: string): Promise<string> {
   }
 }
 
-// Helper function to call OpenAI with structured prompt configuration
+// Helper function to call OpenAI or Perplexity with structured prompt configuration
 // Supports structured JSON prompts with model parameters and conversation history
 async function callWithStructuredPrompt(
   config: {
@@ -38,7 +45,8 @@ async function callWithStructuredPrompt(
     frequency_penalty?: number
     messages: Array<{ role: string; content: string }>
   },
-  placeholders: Record<string, string>
+  placeholders: Record<string, string>,
+  provider: 'openai' | 'perplexity' = 'openai'
 ): Promise<string> {
   // Replace placeholders in all messages (supports {{variable}} syntax)
   const processedMessages = config.messages.map(msg => ({
@@ -52,14 +60,22 @@ async function callWithStructuredPrompt(
     )
   }))
 
-  console.log('[AI] Calling OpenAI with structured prompt:', {
-    model: config.model || 'gpt-4o',
+  // Select client based on provider
+  const client = provider === 'perplexity' ? perplexity : openai
+
+  // Select default model based on provider
+  const defaultModel = provider === 'perplexity'
+    ? 'llama-3.1-sonar-large-128k-online'
+    : 'gpt-4o'
+
+  console.log(`[AI] Calling ${provider.toUpperCase()} with structured prompt:`, {
+    model: config.model || defaultModel,
     temperature: config.temperature ?? 0.7,
     message_count: processedMessages.length
   })
 
-  const response = await openai.chat.completions.create({
-    model: config.model || 'gpt-4o',
+  const response = await client.chat.completions.create({
+    model: config.model || defaultModel,
     messages: processedMessages as any,
     temperature: config.temperature ?? 0.7,
     top_p: config.top_p,
@@ -68,9 +84,80 @@ async function callWithStructuredPrompt(
   })
 
   const result = response.choices[0]?.message?.content || ''
-  console.log('[AI] Structured prompt response received, length:', result.length)
+  console.log(`[AI] ${provider.toUpperCase()} response received, length:`, result.length)
 
   return result
+}
+
+/**
+ * Universal AI prompt caller - works with OpenAI or Perplexity
+ * Loads complete JSON API request from database and executes it
+ *
+ * @param promptKey - Database key (e.g., 'ai_prompt_content_evaluator')
+ * @param placeholders - Dynamic content to replace in prompts (e.g., {{title}}, {{content}})
+ * @param fallbackText - Optional fallback if database prompt not found
+ * @returns AI response (parsed JSON or raw text)
+ */
+export async function callAIWithPrompt(
+  promptKey: string,
+  placeholders: Record<string, string> = {},
+  fallbackText?: string
+): Promise<any> {
+  try {
+    // Load complete JSON prompt from database
+    const { data, error } = await supabaseAdmin
+      .from('app_settings')
+      .select('value, ai_provider')
+      .eq('key', promptKey)
+      .single()
+
+    if (error || !data) {
+      console.warn(`⚠️  [AI-PROMPT] Prompt not found in database: ${promptKey}`)
+
+      if (!fallbackText) {
+        throw new Error(`Prompt ${promptKey} not found and no fallback provided`)
+      }
+
+      // Use fallback with default settings
+      return await callWithStructuredPrompt(
+        {
+          model: 'gpt-4o',
+          messages: [{ role: 'user', content: fallbackText }]
+        },
+        placeholders,
+        'openai'
+      )
+    }
+
+    console.log(`✓ [AI-PROMPT] Using database prompt: ${promptKey}`)
+
+    // Parse prompt JSON
+    const promptConfig = typeof data.value === 'string'
+      ? JSON.parse(data.value)
+      : data.value
+
+    // Validate structure
+    if (!promptConfig.messages || !Array.isArray(promptConfig.messages)) {
+      throw new Error(`Prompt ${promptKey} is missing 'messages' array`)
+    }
+
+    // Get provider (default to 'openai')
+    const provider = (data.ai_provider === 'perplexity' ? 'perplexity' : 'openai') as 'openai' | 'perplexity'
+
+    // Call AI with structured prompt
+    const response = await callWithStructuredPrompt(promptConfig, placeholders, provider)
+
+    // Try to parse as JSON, return raw if parsing fails
+    try {
+      return JSON.parse(response)
+    } catch {
+      return response
+    }
+
+  } catch (error) {
+    console.error(`❌ [AI-PROMPT] ERROR calling ${promptKey}:`, error)
+    throw error
+  }
 }
 
 // AI Prompts - Static fallbacks when database is unavailable
@@ -744,8 +831,15 @@ export const AI_PROMPTS = {
   },
 
   roadWorkGenerator: async (campaignDate: string) => {
-    // roadWorkGenerator doesn't support database templates - always use fallback
-    return FALLBACK_PROMPTS.roadWorkGenerator(campaignDate)
+    const placeholders = {
+      campaignDate: campaignDate
+    }
+
+    return await callAIWithPrompt(
+      'ai_prompt_road_work',
+      placeholders,
+      FALLBACK_PROMPTS.roadWorkGenerator(campaignDate)
+    )
   },
 
   imageAnalyzer: async () => {
@@ -812,12 +906,42 @@ export const AI_PROMPTS = {
     }
   },
 
-  // Non-editable prompts (not stored in database)
+  // Previously non-editable prompts - NOW EDITABLE
   factChecker: async (newsletterContent: string, originalContent: string) => {
-    return FALLBACK_PROMPTS.factChecker(newsletterContent, originalContent)
+    const placeholders = {
+      newsletterContent: newsletterContent,
+      originalContent: originalContent.substring(0, 2000)
+    }
+
+    return await callAIWithPrompt(
+      'ai_prompt_fact_checker',
+      placeholders,
+      FALLBACK_PROMPTS.factChecker(newsletterContent, originalContent)
+    )
   },
-  roadWorkValidator: async (roadWorkItems: any[], date: string) => {
-    return FALLBACK_PROMPTS.roadWorkValidator(roadWorkItems, date)
+
+  roadWorkValidator: async (roadWorkItems: any[], targetDate: string) => {
+    const itemsText = roadWorkItems.map((item, i) => `
+${i + 1}. ${item.road_name}
+   Range: ${item.road_range || 'Not specified'}
+   Location: ${item.city_or_township || 'Not specified'}
+   Reason: ${item.reason || 'Not specified'}
+   Start: ${item.start_date || 'Not specified'}
+   Expected Reopen: ${item.expected_reopen || 'Not specified'}
+   Source: ${item.source_url || 'Not specified'}
+`).join('\n')
+
+    const placeholders = {
+      targetDate: targetDate,
+      currentDate: new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }),
+      items: itemsText
+    }
+
+    return await callAIWithPrompt(
+      'ai_prompt_road_work_validator',
+      placeholders,
+      FALLBACK_PROMPTS.roadWorkValidator(roadWorkItems, targetDate)
+    )
   }
 }
 

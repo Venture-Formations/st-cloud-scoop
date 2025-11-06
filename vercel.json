@@ -1,6 +1,14 @@
 {
   "crons": [
     {
+      "path": "/api/cron/ingest-rss",
+      "schedule": "0 * * * *"
+    },
+    {
+      "path": "/api/cron/trigger-workflow",
+      "schedule": "*/5 * * * *"
+    },
+    {
       "path": "/api/cron/populate-events",
       "schedule": "*/5 * * * *"
     },
@@ -50,6 +58,12 @@
     }
   ],
   "functions": {
+    "app/api/cron/ingest-rss/route.ts": {
+      "maxDuration": 300
+    },
+    "app/api/cron/trigger-workflow/route.ts": {
+      "maxDuration": 60
+    },
     "app/api/cron/populate-events/route.ts": {
       "maxDuration": 120
     },

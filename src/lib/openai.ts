@@ -37,35 +37,25 @@ async function getPrompt(key: string, fallback: string): Promise<string> {
 // Helper function to call OpenAI or Perplexity with structured prompt configuration
 // Supports structured JSON prompts with model parameters and conversation history
 export async function callWithStructuredPrompt(
-  config: {
-    model?: string
-    temperature?: number
-    top_p?: number
-    presence_penalty?: number
-    frequency_penalty?: number
-    max_output_tokens?: number
-    response_format?: any
-    messages: Array<{ role: string; content: string }>
-  },
+  config: any,  // Accept any config structure - let the API validate
   placeholders: Record<string, string>,
   provider: 'openai' | 'perplexity' = 'openai'
 ): Promise<string> {
-  // Validate config has messages array
-  if (!config.messages || !Array.isArray(config.messages)) {
-    throw new Error(`Invalid prompt configuration: 'messages' array is required. Got: ${JSON.stringify(config).substring(0, 200)}`)
-  }
+  // Replace placeholders in messages/input array if it exists
+  let processedInput = config.input || config.messages
 
-  // Replace placeholders in all messages (supports {{variable}} syntax)
-  const processedMessages = config.messages.map(msg => ({
-    ...msg,
-    content: Object.entries(placeholders).reduce(
-      (content, [key, value]) => content.replace(
-        new RegExp(`\\{\\{${key}\\}\\}`, 'g'),
-        value
-      ),
-      msg.content
-    )
-  }))
+  if (processedInput && Array.isArray(processedInput)) {
+    processedInput = processedInput.map((msg: any) => ({
+      ...msg,
+      content: Object.entries(placeholders).reduce(
+        (content, [key, value]) => content.replace(
+          new RegExp(`\\{\\{${key}\\}\\}`, 'g'),
+          value
+        ),
+        msg.content || ''
+      )
+    }))
+  }
 
   // Select client based on provider
   const client = provider === 'perplexity' ? perplexity : openai
@@ -78,21 +68,23 @@ export async function callWithStructuredPrompt(
   console.log(`[AI] Calling ${provider.toUpperCase()} with structured prompt:`, {
     model: config.model || defaultModel,
     temperature: config.temperature ?? 0.7,
-    message_count: processedMessages.length
+    input_count: processedInput?.length || 0
   })
 
   if (provider === 'openai') {
     // Use Responses API for OpenAI
-    const response = await (client as any).responses.create({
-      model: config.model || defaultModel,
-      input: processedMessages,  // Changed from "messages" to "input"
-      temperature: config.temperature ?? 0.7,
-      max_output_tokens: config.max_output_tokens,
-      top_p: config.top_p,
-      presence_penalty: config.presence_penalty,
-      frequency_penalty: config.frequency_penalty,
-      response_format: config.response_format
-    })
+    // Build request from config as-is, just override input if we processed it
+    const request: any = { ...config }
+
+    // If we processed the input/messages, use it
+    if (processedInput) {
+      request.input = processedInput
+      delete request.messages  // Remove messages if it exists (input is the new standard)
+    }
+
+    console.log('[AI] OpenAI Responses API request keys:', Object.keys(request))
+
+    const response = await (client as any).responses.create(request)
 
     // Extract content using fallback chain (handles different response structures)
     const outputArray = response.output?.[0]?.content
@@ -125,7 +117,7 @@ export async function callWithStructuredPrompt(
     // Perplexity still uses Chat Completions API
     const response = await client.chat.completions.create({
       model: config.model || defaultModel,
-      messages: processedMessages as any,
+      messages: processedInput || config.messages || config.input,
       temperature: config.temperature ?? 0.7,
       max_tokens: config.max_output_tokens || 1000,
       top_p: config.top_p,

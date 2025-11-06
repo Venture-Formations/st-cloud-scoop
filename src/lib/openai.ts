@@ -45,16 +45,23 @@ export async function callWithStructuredPrompt(
   let processedInput = config.input || config.messages
 
   if (processedInput && Array.isArray(processedInput)) {
-    processedInput = processedInput.map((msg: any) => ({
-      ...msg,
-      content: Object.entries(placeholders).reduce(
-        (content, [key, value]) => content.replace(
-          new RegExp(`\\{\\{${key}\\}\\}`, 'g'),
-          value
-        ),
-        msg.content || ''
-      )
-    }))
+    processedInput = processedInput.map((msg: any) => {
+      // Only process if content is a string
+      if (msg.content && typeof msg.content === 'string') {
+        return {
+          ...msg,
+          content: Object.entries(placeholders).reduce(
+            (content, [key, value]) => content.replace(
+              new RegExp(`\\{\\{${key}\\}\\}`, 'g'),
+              value
+            ),
+            msg.content
+          )
+        }
+      }
+      // Return message as-is if content isn't a string
+      return msg
+    })
   }
 
   // Select client based on provider

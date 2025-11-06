@@ -50,6 +50,11 @@ export async function callWithStructuredPrompt(
   placeholders: Record<string, string>,
   provider: 'openai' | 'perplexity' = 'openai'
 ): Promise<string> {
+  // Validate config has messages array
+  if (!config.messages || !Array.isArray(config.messages)) {
+    throw new Error(`Invalid prompt configuration: 'messages' array is required. Got: ${JSON.stringify(config).substring(0, 200)}`)
+  }
+
   // Replace placeholders in all messages (supports {{variable}} syntax)
   const processedMessages = config.messages.map(msg => ({
     ...msg,

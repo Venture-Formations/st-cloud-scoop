@@ -3,12 +3,31 @@ import { AI_PROMPTS, callOpenAI, callAIWithPrompt } from '@/lib/openai'
 import { supabaseAdmin } from '@/lib/supabase'
 
 // Helper function to test with custom prompt content
-async function testWithCustomPrompt(type: string, customPromptJson: string, testData: any) {
+async function testWithCustomPrompt(type: string, customPromptJson: string, testData: any, promptKey?: string) {
   try {
     // Parse the custom prompt JSON
     const customPromptConfig = JSON.parse(customPromptJson)
 
-    // Temporarily save it to test (without affecting the actual database)
+    console.log('[TEST] Custom prompt config:', {
+      hasMessages: !!customPromptConfig.messages,
+      messageCount: customPromptConfig.messages?.length,
+      keys: Object.keys(customPromptConfig)
+    })
+
+    // Get the AI provider from database for this prompt key
+    let provider: 'openai' | 'perplexity' = 'openai'
+    if (promptKey) {
+      const { data } = await supabaseAdmin
+        .from('app_settings')
+        .select('ai_provider')
+        .eq('key', promptKey)
+        .single()
+
+      if (data?.ai_provider === 'perplexity') {
+        provider = 'perplexity'
+      }
+    }
+
     // We'll use callWithStructuredPrompt directly with the custom config
     const { callWithStructuredPrompt } = await import('@/lib/openai')
 
@@ -57,13 +76,15 @@ async function testWithCustomPrompt(type: string, customPromptJson: string, test
     }
 
     // Call AI with custom prompt config
-    const result = await callWithStructuredPrompt(customPromptConfig, placeholders)
+    console.log('[TEST] Calling AI with provider:', provider)
+    const result = await callWithStructuredPrompt(customPromptConfig, placeholders, provider)
 
     return {
       success: true,
       response: result,
-      note: 'Tested with custom prompt (not saved to database)',
-      custom_prompt_used: true
+      note: `Tested with custom prompt (not saved to database). Provider: ${provider}`,
+      custom_prompt_used: true,
+      provider
     }
   } catch (error) {
     return {
@@ -77,7 +98,7 @@ async function testWithCustomPrompt(type: string, customPromptJson: string, test
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { type, customPrompt } = body
+    const { type, customPrompt, promptKey } = body
 
     if (!type || !customPrompt) {
       return NextResponse.json({
@@ -85,6 +106,8 @@ export async function POST(request: NextRequest) {
         error: 'Missing type or customPrompt in request body'
       }, { status: 400 })
     }
+
+    console.log('[TEST-API] POST request:', { type, promptKey, hasCustomPrompt: !!customPrompt })
 
     // Test data for each prompt type
     const testData = {
@@ -125,12 +148,13 @@ export async function POST(request: NextRequest) {
       roadWorkGenerator: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
     }
 
-    const result = await testWithCustomPrompt(type, customPrompt, testData)
+    const result = await testWithCustomPrompt(type, customPrompt, testData, promptKey)
 
     return NextResponse.json({
       success: true,
       message: 'Custom Prompt Test Results',
       prompt_type: type,
+      prompt_key: promptKey,
       test_data: testData[type as keyof typeof testData],
       results: { [type]: result },
       timestamp: new Date().toISOString()

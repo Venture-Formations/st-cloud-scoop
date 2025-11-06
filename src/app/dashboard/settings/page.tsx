@@ -1491,7 +1491,8 @@ function AIPromptsSettings() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             type: testType,
-            customPrompt: customPromptContent
+            customPrompt: customPromptContent,
+            promptKey: key  // Pass the actual prompt key for provider detection
           })
         })
       } else {

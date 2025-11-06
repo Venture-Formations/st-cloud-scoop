@@ -36,7 +36,7 @@ async function getPrompt(key: string, fallback: string): Promise<string> {
 
 // Helper function to call OpenAI or Perplexity with structured prompt configuration
 // Supports structured JSON prompts with model parameters and conversation history
-async function callWithStructuredPrompt(
+export async function callWithStructuredPrompt(
   config: {
     model?: string
     temperature?: number

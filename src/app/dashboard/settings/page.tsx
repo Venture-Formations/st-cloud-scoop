@@ -1458,7 +1458,7 @@ function AIPromptsSettings() {
     }
   }
 
-  const handleTestPrompt = async (key: string) => {
+  const handleTestPrompt = async (key: string, customPromptContent?: string) => {
     // Map prompt keys to their test endpoint type parameter
     const promptTypeMap: Record<string, string> = {
       'ai_prompt_content_evaluator': 'contentEvaluator',
@@ -1483,8 +1483,22 @@ function AIPromptsSettings() {
     setTestModalData(null)
 
     try {
-      const testUrl = `/api/debug/test-ai-prompts?type=${testType}`
-      const response = await fetch(testUrl)
+      let response
+      if (customPromptContent) {
+        // Testing edited content (POST with custom prompt)
+        response = await fetch('/api/debug/test-ai-prompts', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            type: testType,
+            customPrompt: customPromptContent
+          })
+        })
+      } else {
+        // Testing saved content (GET from database)
+        const testUrl = `/api/debug/test-ai-prompts?type=${testType}`
+        response = await fetch(testUrl)
+      }
 
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`)
@@ -1581,21 +1595,30 @@ function AIPromptsSettings() {
                             rows={15}
                             className="w-full px-3 py-2 border border-gray-300 rounded-md font-mono text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                           />
-                          <div className="mt-3 flex items-center justify-end space-x-3">
+                          <div className="mt-3 flex items-center justify-between">
                             <button
-                              onClick={handleCancel}
+                              onClick={() => handleTestPrompt(prompt.key, editingPrompt?.value)}
                               disabled={isSaving}
-                              className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50"
+                              className="px-4 py-2 text-sm font-medium text-purple-700 bg-white border border-purple-300 rounded-md hover:bg-purple-50 disabled:opacity-50"
                             >
-                              Cancel
+                              Test Prompt
                             </button>
-                            <button
-                              onClick={() => handleSave(prompt.key)}
-                              disabled={isSaving}
-                              className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 disabled:opacity-50"
-                            >
-                              {isSaving ? 'Saving...' : 'Save Changes'}
-                            </button>
+                            <div className="flex items-center space-x-3">
+                              <button
+                                onClick={handleCancel}
+                                disabled={isSaving}
+                                className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50"
+                              >
+                                Cancel
+                              </button>
+                              <button
+                                onClick={() => handleSave(prompt.key)}
+                                disabled={isSaving}
+                                className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 disabled:opacity-50"
+                              >
+                                {isSaving ? 'Saving...' : 'Save Changes'}
+                              </button>
+                            </div>
                           </div>
                         </>
                       ) : (
@@ -1620,20 +1643,12 @@ function AIPromptsSettings() {
                                 {saving === prompt.key ? 'Saving...' : 'Save as Default'}
                               </button>
                             </div>
-                            <div className="flex items-center space-x-3">
-                              <button
-                                onClick={() => handleTestPrompt(prompt.key)}
-                                className="px-4 py-2 text-sm font-medium text-purple-700 bg-white border border-purple-300 rounded-md hover:bg-purple-50"
-                              >
-                                Test Prompt
-                              </button>
-                              <button
-                                onClick={() => handleEdit(prompt)}
-                                className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700"
-                              >
-                                Edit Prompt
-                              </button>
-                            </div>
+                            <button
+                              onClick={() => handleEdit(prompt)}
+                              className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700"
+                            >
+                              Edit Prompt
+                            </button>
                           </div>
                         </>
                       )}

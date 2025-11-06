@@ -1,5 +1,150 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { AI_PROMPTS, callOpenAI } from '@/lib/openai'
+import { AI_PROMPTS, callOpenAI, callAIWithPrompt } from '@/lib/openai'
+import { supabaseAdmin } from '@/lib/supabase'
+
+// Helper function to test with custom prompt content
+async function testWithCustomPrompt(type: string, customPromptJson: string, testData: any) {
+  try {
+    // Parse the custom prompt JSON
+    const customPromptConfig = JSON.parse(customPromptJson)
+
+    // Temporarily save it to test (without affecting the actual database)
+    // We'll use callWithStructuredPrompt directly with the custom config
+    const { callWithStructuredPrompt } = await import('@/lib/openai')
+
+    // Get placeholders based on prompt type
+    let placeholders: Record<string, string> = {}
+
+    switch (type) {
+      case 'contentEvaluator':
+        placeholders = {
+          title: testData.contentEvaluator.title,
+          description: testData.contentEvaluator.description,
+          content: testData.contentEvaluator.content,
+          imagePenalty: '0'
+        }
+        break
+      case 'newsletterWriter':
+        placeholders = {
+          title: testData.newsletterWriter.title,
+          description: testData.newsletterWriter.description,
+          content: testData.newsletterWriter.content,
+          source_url: testData.newsletterWriter.source_url
+        }
+        break
+      case 'subjectLineGenerator':
+        placeholders = {
+          headline: testData.subjectLineGenerator[0].headline
+        }
+        break
+      case 'eventSummarizer':
+        placeholders = {
+          title: testData.eventSummarizer.title,
+          description: testData.eventSummarizer.description,
+          venue: testData.eventSummarizer.venue
+        }
+        break
+      case 'topicDeduper':
+        const postsJson = JSON.stringify(testData.topicDeduper.map((a: any) => ({
+          title: a.headline,
+          description: a.content
+        })))
+        placeholders = { posts: postsJson }
+        break
+      case 'roadWorkGenerator':
+        placeholders = { campaignDate: testData.roadWorkGenerator }
+        break
+    }
+
+    // Call AI with custom prompt config
+    const result = await callWithStructuredPrompt(customPromptConfig, placeholders)
+
+    return {
+      success: true,
+      response: result,
+      note: 'Tested with custom prompt (not saved to database)',
+      custom_prompt_used: true
+    }
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error',
+      custom_prompt_used: true
+    }
+  }
+}
+
+export async function POST(request: NextRequest) {
+  try {
+    const body = await request.json()
+    const { type, customPrompt } = body
+
+    if (!type || !customPrompt) {
+      return NextResponse.json({
+        success: false,
+        error: 'Missing type or customPrompt in request body'
+      }, { status: 400 })
+    }
+
+    // Test data for each prompt type
+    const testData = {
+      contentEvaluator: {
+        title: 'St. Cloud School District Launches New STEM Program',
+        description: 'The St. Cloud Area School District announced today that it will launch a comprehensive STEM education program this fall, providing students with hands-on experience in science, technology, engineering, and mathematics through partnerships with local businesses and St. Cloud State University.',
+        content: 'The new program will be available to students in grades 6-12 and will include after-school clubs, summer camps, and specialized coursework. Local tech companies have pledged equipment donations and mentorship opportunities.'
+      },
+      newsletterWriter: {
+        title: 'New Community Center Opens in Waite Park',
+        description: 'Waite Park celebrated the grand opening of its new $5 million community center on Saturday, featuring a gym, meeting rooms, and senior activity spaces.',
+        content: 'The 25,000 square foot facility at 715 2nd Ave S will serve as a hub for community activities, offering fitness classes, youth programs, and event rentals. Mayor Rick Miller said the center will "bring people together" and provide year-round recreational opportunities.',
+        source_url: 'https://example.com/article'
+      },
+      subjectLineGenerator: [
+        {
+          headline: 'Sartell Bridge Construction Begins Monday',
+          content: 'The Minnesota Department of Transportation will close the Sartell Bridge for major repairs starting Monday morning. The project is expected to last six weeks.'
+        }
+      ],
+      eventSummarizer: {
+        title: 'Summer Concert Series at Lake George',
+        description: 'Join us for free outdoor concerts every Thursday evening in July! Local bands will perform a variety of music styles from 6-8 PM. Bring your lawn chairs and blankets. Food trucks will be available.',
+        venue: 'Lake George Amphitheater'
+      },
+      topicDeduper: [
+        {
+          id: '1',
+          headline: 'Sartell Fire Department Open House This Saturday',
+          content: 'Join Sartell firefighters for station tours, equipment demonstrations, and fire safety education. Event runs from 10am-2pm at the main station.'
+        },
+        {
+          id: '2',
+          headline: 'St. Cloud Fire Station 3 Hosts Community Open House',
+          content: 'Fire Station 3 welcomes community members for an open house event this Saturday. Tour the facility and meet your local firefighters from 10am-2pm.'
+        }
+      ],
+      roadWorkGenerator: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+    }
+
+    const result = await testWithCustomPrompt(type, customPrompt, testData)
+
+    return NextResponse.json({
+      success: true,
+      message: 'Custom Prompt Test Results',
+      prompt_type: type,
+      test_data: testData[type as keyof typeof testData],
+      results: { [type]: result },
+      timestamp: new Date().toISOString()
+    })
+
+  } catch (error) {
+    console.error('Error testing custom prompt:', error)
+    return NextResponse.json({
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : undefined
+    }, { status: 500 })
+  }
+}
 
 export async function GET(request: NextRequest) {
   try {

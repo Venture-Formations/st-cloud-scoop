@@ -1725,134 +1725,104 @@ function AIPromptsSettings() {
                 {/* Results Display */}
                 {testModalData && !testModalLoading && !testModalError && (
                   <div className="space-y-4">
-                    {/* Status Banner */}
-                    <div className={`rounded-lg p-4 ${testModalData.success ? 'bg-green-50 border border-green-200' : 'bg-red-50 border border-red-200'}`}>
-                      <div className="flex items-center">
-                        <div className={`flex-shrink-0 ${testModalData.success ? 'text-green-600' : 'text-red-600'}`}>
-                          <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
-                            {testModalData.success ? (
-                              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                            ) : (
-                              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-                            )}
-                          </svg>
-                        </div>
-                        <div className="ml-3">
-                          <h3 className={`text-sm font-medium ${testModalData.success ? 'text-green-800' : 'text-red-800'}`}>
-                            {testModalData.success ? 'Test Successful' : 'Test Failed'}
-                          </h3>
-                          <p className={`text-sm ${testModalData.success ? 'text-green-700' : 'text-red-700'}`}>
-                            {testModalData.message}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Test Data Used */}
+                    {/* Test Data Section */}
                     {testModalData.test_data && (
-                      <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
-                        <h4 className="font-medium text-gray-900 mb-2">Test Data Used</h4>
-                        <pre className="text-xs text-gray-700 overflow-x-auto whitespace-pre-wrap">
-                          {JSON.stringify(testModalData.test_data, null, 2)}
-                        </pre>
+                      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                        <h4 className="font-semibold text-blue-900 mb-3">Test Data:</h4>
+                        <div className="space-y-2 text-sm">
+                          {testModalData.test_data.title && (
+                            <div>
+                              <span className="font-semibold text-blue-800">Post: </span>
+                              <span className="text-blue-900">{testModalData.test_data.title}</span>
+                            </div>
+                          )}
+                          {testModalData.test_data.source_url && (
+                            <div>
+                              <span className="font-semibold text-blue-800">Source: </span>
+                              <a href={testModalData.test_data.source_url} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
+                                {testModalData.test_data.source_url}
+                              </a>
+                            </div>
+                          )}
+                        </div>
                       </div>
                     )}
 
                     {/* Results */}
-                    {testModalData.results && (
-                      <div className="space-y-3">
-                        <h4 className="font-medium text-gray-900">AI Response</h4>
-                        {Object.entries(testModalData.results).map(([key, value]: [string, any]) => (
-                          <div key={key} className="bg-white border border-gray-200 rounded-lg p-4">
-                            <div className="flex items-center justify-between mb-2">
-                              <h5 className="font-medium text-gray-900 capitalize">{key.replace(/([A-Z])/g, ' $1').trim()}</h5>
-                              {value.success && (
-                                <span className="text-xs px-2 py-1 bg-green-100 text-green-800 rounded-full">
-                                  {value.format || 'Success'}
-                                </span>
-                              )}
-                            </div>
-                            {value.success ? (
-                              <div className="mt-2 space-y-3">
-                                {/* Parsed Response Fields */}
-                                {value.parsed_response && typeof value.parsed_response === 'object' && !Array.isArray(value.parsed_response) && (
-                                  <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                                    <h6 className="text-sm font-semibold text-green-900 mb-3 flex items-center">
-                                      <svg className="h-4 w-4 mr-2 text-green-600" fill="currentColor" viewBox="0 0 20 20">
-                                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                                      </svg>
-                                      Parsed Response Fields
-                                    </h6>
-                                    <div className="space-y-2">
-                                      {Object.entries(value.parsed_response).map(([fieldKey, fieldValue]: [string, any]) => (
-                                        <div key={fieldKey} className="bg-white rounded p-2 border border-green-100">
-                                          <div className="flex items-start">
-                                            <span className="text-xs font-semibold text-green-700 min-w-[140px]">{fieldKey}:</span>
-                                            <span className="text-xs text-gray-800 flex-1 ml-2">
-                                              {typeof fieldValue === 'object'
-                                                ? JSON.stringify(fieldValue, null, 2)
-                                                : String(fieldValue)}
-                                            </span>
-                                          </div>
-                                        </div>
-                                      ))}
+                    {testModalData.results && Object.entries(testModalData.results).map(([key, value]: [string, any]) => (
+                      <div key={key}>
+                        {value.success ? (
+                          <div className="space-y-4">
+                            {/* Expected Outputs Section */}
+                            {value.parsed_response && typeof value.parsed_response === 'object' && !Array.isArray(value.parsed_response) && (
+                              <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                                <h4 className="font-semibold text-green-900 mb-4">Expected Outputs:</h4>
+                                <div className="space-y-4">
+                                  {Object.entries(value.parsed_response).map(([fieldKey, fieldValue]: [string, any]) => (
+                                    <div key={fieldKey} className="bg-white rounded-lg p-4 border border-green-100">
+                                      <div className="flex items-start justify-between mb-2">
+                                        <span className="font-semibold text-gray-700">{fieldKey}:</span>
+                                        <span className="text-xs px-2 py-1 bg-green-100 text-green-700 rounded">Parsed</span>
+                                      </div>
+                                      <div className="text-gray-900">
+                                        {typeof fieldValue === 'object'
+                                          ? JSON.stringify(fieldValue, null, 2)
+                                          : String(fieldValue)}
+                                      </div>
                                     </div>
-                                  </div>
-                                )}
-
-                                {/* Parse Error */}
-                                {value.parse_error && (
-                                  <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
-                                    <p className="text-sm font-medium text-yellow-800">⚠️ Parse Error</p>
-                                    <p className="text-xs text-yellow-700 mt-1">{value.parse_error}</p>
-                                  </div>
-                                )}
-
-                                {/* Raw Response (collapsed by default if parsed successfully) */}
-                                {value.response && (
-                                  <details className={value.parsed_response && !value.parse_error ? '' : 'open'}>
-                                    <summary className="text-sm font-medium text-gray-700 cursor-pointer hover:text-gray-900 mb-2">
-                                      {value.parsed_response && !value.parse_error ? '📄 View Raw Response' : '📄 Raw Response'}
-                                    </summary>
-                                    <div className="bg-gray-50 rounded p-3 overflow-x-auto">
-                                      <pre className="text-xs text-gray-700 whitespace-pre-wrap">
-                                        {typeof value.response === 'string' ? value.response : JSON.stringify(value.response, null, 2)}
-                                      </pre>
-                                    </div>
-                                  </details>
-                                )}
-
-                                {/* Metadata */}
-                                <div className="flex flex-wrap gap-3 text-xs text-gray-500">
-                                  {value.response_type && (
-                                    <span>Type: {value.response_type}</span>
-                                  )}
-                                  {value.response_length && (
-                                    <span>Length: {value.response_length} chars</span>
-                                  )}
-                                  {value.articles_analyzed && (
-                                    <span>Articles: {value.articles_analyzed}</span>
-                                  )}
-                                  {value.provider && (
-                                    <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded">
-                                      Provider: {value.provider}
-                                    </span>
-                                  )}
+                                  ))}
                                 </div>
-
-                                {value.note && (
-                                  <p className="text-sm text-blue-600 bg-blue-50 rounded p-2">{value.note}</p>
-                                )}
                               </div>
-                            ) : (
-                              <div className="mt-2 text-sm text-red-600">
-                                Error: {value.error}
+                            )}
+
+                            {/* Parse Error */}
+                            {value.parse_error && (
+                              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                                <p className="text-sm font-medium text-yellow-800">⚠️ Parse Error</p>
+                                <p className="text-xs text-yellow-700 mt-1">{value.parse_error}</p>
+                              </div>
+                            )}
+
+                            {/* Primary Article Body / Parsed Content */}
+                            {value.response && (
+                              <div className="space-y-3">
+                                <h4 className="font-semibold text-gray-900">Primary Article Body</h4>
+                                <div className="bg-white border border-gray-200 rounded-lg p-4">
+                                  <p className="font-semibold text-gray-700 mb-2">Parsed Content:</p>
+                                  <pre className="text-sm text-gray-800 whitespace-pre-wrap overflow-x-auto">
+                                    {typeof value.response === 'string' ? value.response : JSON.stringify(value.response, null, 2)}
+                                  </pre>
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Full API Response (collapsed) */}
+                            <details>
+                              <summary className="text-sm font-medium text-gray-700 cursor-pointer hover:text-gray-900 bg-gray-50 border border-gray-200 rounded-lg p-3">
+                                ▶ Full API Response (Click to expand)
+                              </summary>
+                              <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 mt-2">
+                                <pre className="text-xs text-gray-700 whitespace-pre-wrap overflow-x-auto">
+                                  {JSON.stringify(value, null, 2)}
+                                </pre>
+                              </div>
+                            </details>
+
+                            {/* Provider Info */}
+                            {value.provider && (
+                              <div className="text-sm text-blue-600">
+                                Tested with custom prompt (not saved to database). Provider: {value.provider}
                               </div>
                             )}
                           </div>
-                        ))}
+                        ) : (
+                          <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                            <p className="font-semibold text-red-800 mb-2">Test Failed</p>
+                            <p className="text-sm text-red-600">Error: {value.error}</p>
+                          </div>
+                        )}
                       </div>
-                    )}
+                    ))}
                   </div>
                 )}
               </div>

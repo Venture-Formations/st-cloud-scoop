@@ -80,29 +80,15 @@ export async function callWithStructuredPrompt(
 
   if (provider === 'openai') {
     // Use Responses API for OpenAI
-    // Build request from config as-is, just override input if we processed it
+    // Pass config as-is (user maintains correct Responses API format in database)
     const request: any = { ...config }
 
-    // If we processed the input/messages, use it
+    // Only override input if we processed placeholders
     if (processedInput) {
       request.input = processedInput
-      delete request.messages  // Remove messages if it exists (input is the new standard)
     }
 
-    // Responses API: response_format moved to text.format
-    if (request.response_format) {
-      const format = request.response_format
-
-      // Ensure format has a name field at top level (required by Responses API)
-      if (!format.name) {
-        format.name = 'Response'  // Default name if not provided
-      }
-
-      request.text = { format }
-      delete request.response_format
-    }
-
-    console.log('[AI] OpenAI Responses API request keys:', Object.keys(request))
+    console.log('[AI] OpenAI Responses API request (as-is):', Object.keys(request))
 
     const response = await (client as any).responses.create(request)
 
@@ -199,10 +185,8 @@ export async function callAIWithPrompt(
       ? JSON.parse(data.value)
       : data.value
 
-    // Validate structure
-    if (!promptConfig.messages || !Array.isArray(promptConfig.messages)) {
-      throw new Error(`Prompt ${promptKey} is missing 'messages' array`)
-    }
+    // No validation - let API validate the structure
+    console.log(`[AI-PROMPT] Prompt config keys:`, Object.keys(promptConfig))
 
     // Get provider (default to 'openai')
     const provider = (data.ai_provider === 'perplexity' ? 'perplexity' : 'openai') as 'openai' | 'perplexity'

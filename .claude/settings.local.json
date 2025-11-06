@@ -8,7 +8,8 @@
       "Bash(git stash:*)",
       "Bash(npm run build:*)",
       "Bash(git add:*)",
-      "Bash(git commit:*)"
+      "Bash(git commit:*)",
+      "Bash(this parameter has moved to 'text.format'.\"\n\nOpenAI API Change:\nThe Responses API uses a different structure for response formatting.\n\nBefore (Chat Completions API):\n{\n  response_format: { type: \"json_schema\", json_schema: {...} }\n}\n\nAfter (Responses API):\n{\n  text: { \n    format: { type: \"json_schema\", json_schema: {...} }\n  }\n}\n\nFix:\n- Detect if request.response_format exists\n- Move it to request.text.format\n- Delete old response_format field\n- This transformation happens automatically for all prompts\n\nMinimal Manipulation:\n- Only transforms the parameter location (required by API)\n- Doesn''t change the structure or content\n- All other fields pass through unchanged\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\")"
     ],
     "deny": [],
     "ask": []

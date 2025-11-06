@@ -2,6 +2,28 @@ import { NextRequest, NextResponse } from 'next/server'
 import { AI_PROMPTS, callOpenAI, callAIWithPrompt } from '@/lib/openai'
 import { supabaseAdmin } from '@/lib/supabase'
 
+// Helper function to parse AI response and extract fields
+function parseAIResponse(response: any) {
+  let parsedResponse = null
+  let parseError = null
+  let responseType = typeof response
+
+  try {
+    parsedResponse = typeof response === 'string' ? JSON.parse(response) : response
+    responseType = typeof parsedResponse
+  } catch (error) {
+    parseError = error instanceof Error ? error.message : 'Failed to parse response'
+    // If it's not JSON, treat it as plain text
+    parsedResponse = response
+  }
+
+  return {
+    parsed_response: parsedResponse,
+    parse_error: parseError,
+    response_type: responseType
+  }
+}
+
 // Helper function to test with custom prompt content
 async function testWithCustomPrompt(type: string, customPromptJson: string, testData: any, promptKey?: string) {
   try {
@@ -79,9 +101,13 @@ async function testWithCustomPrompt(type: string, customPromptJson: string, test
     console.log('[TEST] Calling AI with provider:', provider)
     const result = await callWithStructuredPrompt(customPromptConfig, placeholders, provider)
 
+    // Parse the response to extract expected fields
+    const parseResult = parseAIResponse(result)
+
     return {
       success: true,
       response: result,
+      ...parseResult,
       note: `Tested with custom prompt (not saved to database). Provider: ${provider}`,
       custom_prompt_used: true,
       provider
@@ -237,9 +263,11 @@ export async function GET(request: NextRequest) {
       console.log('Testing Content Evaluator...')
       try {
         const response = await AI_PROMPTS.contentEvaluator(testData.contentEvaluator)
+        const parseResult = parseAIResponse(response)
         results.contentEvaluator = {
           success: true,
           response,
+          ...parseResult,
           response_length: response.length,
           format: 'Structured JSON (calls OpenAI internally)'
         }
@@ -256,9 +284,11 @@ export async function GET(request: NextRequest) {
       console.log('Testing Newsletter Writer...')
       try {
         const response = await AI_PROMPTS.newsletterWriter(testData.newsletterWriter)
+        const parseResult = parseAIResponse(response)
         results.newsletterWriter = {
           success: true,
           response,
+          ...parseResult,
           response_length: response.length,
           format: 'Structured JSON (calls OpenAI internally)'
         }
@@ -275,10 +305,12 @@ export async function GET(request: NextRequest) {
       console.log('Testing Subject Line Generator...')
       try {
         const response = await AI_PROMPTS.subjectLineGenerator(testData.subjectLineGenerator)
+        const parseResult = parseAIResponse(response)
         const responseObj = response as any
         results.subjectLineGenerator = {
           success: true,
           response,
+          ...parseResult,
           character_count: typeof response === 'string' ? response.length : responseObj?.raw?.length || 0,
           format: 'Structured JSON (calls OpenAI internally)'
         }
@@ -296,9 +328,11 @@ export async function GET(request: NextRequest) {
       try {
         const prompt = await AI_PROMPTS.eventSummarizer(testData.eventSummarizer)
         const response = await callOpenAI(prompt, 200, 0.7)
+        const parseResult = parseAIResponse(response)
         results.eventSummarizer = {
           success: true,
           response,
+          ...parseResult,
           prompt_length: prompt.length
         }
       } catch (error) {
@@ -339,9 +373,11 @@ export async function GET(request: NextRequest) {
         }))
 
         const response = await AI_PROMPTS.topicDeduper(postsForDeduper)
+        const parseResult = parseAIResponse(response)
         results.topicDeduper = {
           success: true,
           response,
+          ...parseResult,
           response_length: response.length,
           format: 'Structured JSON (calls OpenAI internally)',
           articles_analyzed: testData.topicDeduper.length

@@ -1,0 +1,151 @@
+2025-10-24T17:35:29.188Z [info] === AUTOMATED RSS PROCESSING CHECK (GET) ===
+2025-10-24T17:35:29.188Z [info] Time: 2025-10-24T17:35:29.188Z
+2025-10-24T17:35:29.188Z [info] Request type: Vercel Cron
+2025-10-24T17:35:29.255Z [info] RSS Processing check: Current CT time 12:35, Scheduled: 12:35
+2025-10-24T17:35:29.255Z [info] Time window matched for last_rss_processing_run: current 12:35, scheduled 12:35, diff 0 minutes
+2025-10-24T17:35:29.364Z [info] last_rss_processing_run updating last run date to 2025-10-24
+2025-10-24T17:35:29.365Z [info] === RSS PROCESSING STARTED (Time Matched) ===
+2025-10-24T17:35:29.365Z [info] Central Time: 10/24/2025, 12:35:29 PM
+2025-10-24T17:35:29.366Z [info] Processing RSS for tomorrow's campaign date: 2025-10-25
+2025-10-24T17:35:29.366Z [info] Debug: UTC now: 2025-10-24T17:35:29.365Z
+2025-10-24T17:35:29.366Z [info] Debug: Central date today: 2025-10-24
+2025-10-24T17:35:29.366Z [info] Debug: Central tomorrow: 2025-10-25
+2025-10-24T17:35:29.366Z [info] Creating new campaign for tomorrow...
+2025-10-24T17:35:29.428Z [info] Created new campaign: 063f39de-3120-4f09-8ed3-af64dc690f8c for date: 2025-10-25
+2025-10-24T17:35:29.428Z [info] Starting RSS processing...
+2025-10-24T17:35:29.430Z [info] Starting RSS processing for campaign: 063f39de-3120-4f09-8ed3-af64dc690f8c
+2025-10-24T17:35:29.430Z [info] Archiving existing articles and posts before clearing...
+2025-10-24T17:35:29.430Z [info] === ARCHIVING ARTICLES FOR CAMPAIGN 063f39de-3120-4f09-8ed3-af64dc690f8c ===
+2025-10-24T17:35:29.430Z [info] Archive reason: rss_processing_clear
+2025-10-24T17:35:29.534Z [info] No articles found to archive
+2025-10-24T17:35:29.591Z [info] No posts found to archive
+2025-10-24T17:35:29.592Z [info] ✅ Archive complete: 0 articles, 0 posts, 0 ratings
+2025-10-24T17:35:29.592Z [info] ✅ Archive successful: 0 articles, 0 posts, 0 ratings preserved
+2025-10-24T17:35:29.592Z [info] Clearing previous articles and posts...
+2025-10-24T17:35:29.676Z [info] Previous articles cleared successfully
+2025-10-24T17:35:29.716Z [info] Previous posts cleared successfully
+2025-10-24T17:35:29.770Z [info] === PROCESSING FEED: St. Cloud Local News ===
+2025-10-24T17:35:29.816Z [error] Error parsing RSS feed St. Cloud Local News: SyntaxError: Unexpected token 'C', "CentraCare"... is not valid JSON
+    at JSON.parse (<anonymous>)
+    at g.processFeed (.next/server/chunks/6723.js:4:16989)
+    at async g.processAllFeedsForCampaign (.next/server/chunks/6723.js:4:13676)
+    at async g (.next/server/app/api/cron/rss-processing/route.js:1:5532)
+2025-10-24T17:35:29.900Z [info] Populating events for campaign...
+2025-10-24T17:35:29.902Z [info] Starting smart event population for campaign: 063f39de-3120-4f09-8ed3-af64dc690f8c
+2025-10-24T17:35:29.941Z [info] Populating events for campaign date: 2025-10-25
+2025-10-24T17:35:29.941Z [info] Event date range: [ '2025-10-25', '2025-10-26', '2025-10-27' ]
+2025-10-24T17:35:30.151Z [info] Found 57 available events
+2025-10-24T17:35:30.151Z [info] Processing 2025-10-25: 38 available events, 0 already selected
+2025-10-24T17:35:30.151Z [info] ⚠️ Skipping duplicate event: "Historic Home Tour & Tea" (ID: 4cfc735e-5bad-4a85-be8f-4a01a4de568f)
+2025-10-24T17:35:30.151Z [info] After removing duplicates: 37 unique events available for 2025-10-25
+2025-10-24T17:35:30.151Z [info] Available for 2025-10-25: 0 featured, 0 paid placement, 37 regular
+2025-10-24T17:35:30.151Z [info] Selected 8 regular events randomly for 2025-10-25 (first marked as featured)
+2025-10-24T17:35:30.152Z [info] Total selected for 2025-10-25: 8 events (1 featured)
+2025-10-24T17:35:30.152Z [info] Processing 2025-10-26: 11 available events, 0 already selected
+2025-10-24T17:35:30.152Z [info] After removing duplicates: 11 unique events available for 2025-10-26
+2025-10-24T17:35:30.152Z [info] Available for 2025-10-26: 0 featured, 0 paid placement, 11 regular
+2025-10-24T17:35:30.152Z [info] Selected 8 regular events randomly for 2025-10-26 (first marked as featured)
+2025-10-24T17:35:30.152Z [info] Total selected for 2025-10-26: 8 events (1 featured)
+2025-10-24T17:35:30.152Z [info] Processing 2025-10-27: 8 available events, 0 already selected
+2025-10-24T17:35:30.152Z [info] After removing duplicates: 8 unique events available for 2025-10-27
+2025-10-24T17:35:30.152Z [info] Available for 2025-10-27: 0 featured, 0 paid placement, 8 regular
+2025-10-24T17:35:30.152Z [info] Selected 8 regular events randomly for 2025-10-27 (first marked as featured)
+2025-10-24T17:35:30.152Z [info] Total selected for 2025-10-27: 8 events (1 featured)
+2025-10-24T17:35:30.152Z [info] Inserting 24 new campaign events
+2025-10-24T17:35:30.225Z [info] Successfully inserted new campaign events
+2025-10-24T17:35:30.225Z [info] Smart event population completed successfully
+2025-10-24T17:35:30.225Z [info] ✅ Events populated successfully
+2025-10-24T17:35:30.225Z [info] Starting AI processing of posts...
+2025-10-24T17:35:30.281Z [info] Processing 0 posts with AI
+2025-10-24T17:35:30.281Z [info] AI evaluation complete: 0 successful, 0 errors
+2025-10-24T17:35:30.406Z [info] Starting newsletter article generation...
+2025-10-24T17:35:30.537Z [info] Found 0 duplicate posts to exclude
+2025-10-24T17:35:30.537Z [info] No top posts found for article generation
+2025-10-24T17:35:30.577Z [info] Generating road work data for campaign...
+2025-10-24T17:35:30.626Z [info] Starting daily road work generation...
+2025-10-24T17:35:30.626Z [info] Generating road work data for date: 2025-10-25
+2025-10-24T17:35:30.626Z [info] 🔍 Searching for real road work data from government sources...
+2025-10-24T17:35:30.626Z [info] 🔍 Using Perplexity to search for real road work data...
+2025-10-24T17:35:30.628Z [info] 🔍 Calling Perplexity for real road work data...
+2025-10-24T17:35:30.629Z [info] 🔍 Calling Perplexity AI with web search...
+2025-10-24T17:35:30.629Z [info] Model: sonar-pro
+2025-10-24T17:35:30.629Z [info] Search context: high
+2025-10-24T17:35:34.552Z [info] ✅ Perplexity response received
+2025-10-24T17:35:34.552Z [info] Tokens used: 979
+2025-10-24T17:35:34.552Z [info] 📊 Perplexity raw response: [
+  {
+    "road_name": "Morningside Drive NE",
+    "road_range": "Prospect Dr to Morningside Court",
+    "city_or_township": "St. Cloud",
+    "reason": "Road closure for construction",
+    "start_date": "Oct 23",
+    "expected_reopen": "Not specified",
+    "source_url": "https://www.ci.stcloud.mn.us/307/Road-Construction-Projects"
+  },
+  {
+    "road_name": "29th Avenue South",
+    "road_range": "1 ½ Street S to 2nd Street S",
+    "city_or_township": "St. Cloud",
+    "reason": "Road closure for construction",
+    "start_date": "Oct 27",
+    "expected_reopen": "Oct 29",
+    "source_url": "https://www.ci.stcloud.mn.us/307/Road-Construction-Projects"
+  },
+  {
+    "road_name": "Highway 10",
+    "road_range": "32nd Street SE to 52nd Street SE",
+    "city_or_township": "Haven Township (east of St. Cloud)",
+    "reason": "Single-lane closures and access changes for intersection realignment and safety improvements",
+    "start_date": "Aug 4",
+    "expected_reopen": "Oct 10",
+    "source_url": "http://www.dot.state.mn.us/news/2025/08/06-d3-inproves-co-rd-65-hwy10.html"
+  }
+]
+2025-10-24T17:35:34.552Z [info] ✅ Successfully parsed Perplexity JSON response: 3 items
+2025-10-24T17:35:34.552Z [info] 🔍 AI Response Type: object
+2025-10-24T17:35:34.552Z [info] 🔍 AI Response Is Array: true
+2025-10-24T17:35:34.552Z [info] 🔍 AI Response Length: 3
+2025-10-24T17:35:34.552Z [info] ✅ AI returned direct array, using as-is
+2025-10-24T17:35:34.552Z [info] Found 3 total road work items from web search
+2025-10-24T17:35:34.552Z [info] 🔍 Validating road work items for date accuracy and completeness...
+2025-10-24T17:35:34.553Z [info] Calling OpenAI API...
+2025-10-24T17:35:34.553Z [info] Using GPT-4o model with improved JSON parsing...
+2025-10-24T17:35:38.635Z [info] OpenAI response received
+2025-10-24T17:35:38.635Z [info] Stripped markdown code fences from response
+2025-10-24T17:35:38.635Z [info] Validation response: [
+  {
+    "index": 0,
+    "valid": false,
+    "reason": "Expected reopen date is not specified, making it unconfirmed.",
+    "confidence": 0.9
+  },
+  {
+    "index": 1,
+    "valid": false,
+    "reason": "Start date is after the target date, meaning the project has not yet started.",
+    "confidence": 0.95
+  },
+  {
+    "index": 2,
+    "valid": false,
+    "reason": "Expected reopen date is before the target date, indicating the project is already completed.",
+    "confidence": 0.95
+  }
+]
+2025-10-24T17:35:38.636Z [info] Filtering out completed project: Highway 10 (ended Oct 10)
+2025-10-24T17:35:38.636Z [info] Filtered 1 outdated/placeholder items
+2025-10-24T17:35:38.636Z [info] Using 2 real road work items (no filler content)
+2025-10-24T17:35:38.636Z [info] Successfully parsed 2 road work items
+2025-10-24T17:35:38.637Z [info] Road work HTML generated
+2025-10-24T17:35:38.637Z [info] ✅ Road work data generation completed successfully
+2025-10-24T17:35:38.637Z [info] Storing road work data in database...
+2025-10-24T17:35:38.716Z [info] ✅ Road work data stored successfully: 6840a661-eb17-4e12-8afd-23c5d2930454
+2025-10-24T17:35:38.716Z [info] Storing 2 road work items in normalized database...
+2025-10-24T17:35:38.716Z [warning] Could not parse road work date: "Not specified", storing as null
+2025-10-24T17:35:38.767Z [info] ✅ Road work items stored successfully: 2 items
+2025-10-24T17:35:38.820Z [info] ✅ Auto-selected 2 most complete/relevant road work items for campaign
+2025-10-24T17:35:38.820Z [info] ✅ Generated and stored 2 road work items for campaign
+2025-10-24T17:35:39.113Z [info] Slack notification skipped - rss_processing_updates is disabled
+2025-10-24T17:35:39.295Z [info] ✅ Low article count alert sent for campaign 063f39de-3120-4f09-8ed3-af64dc690f8c (0 articles)
+2025-10-24T17:35:39.295Z [info] === RSS PROCESSING COMPLETED ===
+2025-10-24T17:35:39.295Z [info] Subject line generation now happens during RSS processing

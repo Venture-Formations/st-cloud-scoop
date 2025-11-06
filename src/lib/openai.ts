@@ -89,6 +89,12 @@ export async function callWithStructuredPrompt(
       delete request.messages  // Remove messages if it exists (input is the new standard)
     }
 
+    // Responses API: response_format moved to text.format
+    if (request.response_format) {
+      request.text = { format: request.response_format }
+      delete request.response_format
+    }
+
     console.log('[AI] OpenAI Responses API request keys:', Object.keys(request))
 
     const response = await (client as any).responses.create(request)

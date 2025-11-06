@@ -43,6 +43,8 @@ export async function callWithStructuredPrompt(
     top_p?: number
     presence_penalty?: number
     frequency_penalty?: number
+    max_output_tokens?: number
+    response_format?: any
     messages: Array<{ role: string; content: string }>
   },
   placeholders: Record<string, string>,
@@ -74,19 +76,63 @@ export async function callWithStructuredPrompt(
     message_count: processedMessages.length
   })
 
-  const response = await client.chat.completions.create({
-    model: config.model || defaultModel,
-    messages: processedMessages as any,
-    temperature: config.temperature ?? 0.7,
-    top_p: config.top_p,
-    presence_penalty: config.presence_penalty,
-    frequency_penalty: config.frequency_penalty,
-  })
+  if (provider === 'openai') {
+    // Use Responses API for OpenAI
+    const response = await (client as any).responses.create({
+      model: config.model || defaultModel,
+      input: processedMessages,  // Changed from "messages" to "input"
+      temperature: config.temperature ?? 0.7,
+      max_output_tokens: config.max_output_tokens,
+      top_p: config.top_p,
+      presence_penalty: config.presence_penalty,
+      frequency_penalty: config.frequency_penalty,
+      response_format: config.response_format
+    })
 
-  const result = response.choices[0]?.message?.content || ''
-  console.log(`[AI] ${provider.toUpperCase()} response received, length:`, result.length)
+    // Extract content using fallback chain (handles different response structures)
+    const outputArray = response.output?.[0]?.content
+    const jsonSchemaItem = outputArray?.find((c: any) => c.type === "json_schema")
+    const textItem = outputArray?.find((c: any) => c.type === "text")
 
-  return result
+    let rawContent = jsonSchemaItem?.json ??
+      jsonSchemaItem?.input_json ??
+      response.output?.[0]?.content?.[0]?.json ??
+      response.output?.[0]?.content?.[0]?.input_json ??
+      textItem?.text ??
+      response.output?.[0]?.content?.[0]?.text ??
+      response.output_text ??
+      response.text ??
+      ""
+
+    console.log(`[AI] OpenAI Responses API result:`, {
+      length: typeof rawContent === 'string' ? rawContent.length : JSON.stringify(rawContent).length,
+      type: typeof rawContent,
+      contentTypes: outputArray?.map((c: any) => c.type)
+    })
+
+    // Handle already-parsed JSON objects
+    if (typeof rawContent === 'object' && rawContent !== null) {
+      return JSON.stringify(rawContent)  // Convert to string for consistency
+    }
+
+    return rawContent
+  } else {
+    // Perplexity still uses Chat Completions API
+    const response = await client.chat.completions.create({
+      model: config.model || defaultModel,
+      messages: processedMessages as any,
+      temperature: config.temperature ?? 0.7,
+      max_tokens: config.max_output_tokens || 1000,
+      top_p: config.top_p,
+      presence_penalty: config.presence_penalty,
+      frequency_penalty: config.frequency_penalty,
+    })
+
+    const result = response.choices[0]?.message?.content || ''
+    console.log(`[AI] Perplexity response received, length:`, result.length)
+
+    return result
+  }
 }
 
 /**

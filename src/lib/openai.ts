@@ -92,6 +92,15 @@ export async function callWithStructuredPrompt(
 
     const response = await (client as any).responses.create(request)
 
+    // Log full response metadata for debugging
+    console.log(`[AI] OpenAI Responses API full metadata:`, {
+      id: response.id,
+      model: response.model,
+      usage: response.usage,
+      created: response.created,
+      object: response.object
+    })
+
     // Extract content using fallback chain (handles different response structures)
     const outputArray = response.output?.[0]?.content
     const jsonSchemaItem = outputArray?.find((c: any) => c.type === "json_schema")

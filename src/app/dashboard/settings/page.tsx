@@ -1802,8 +1802,8 @@ function AIPromptsSettings() {
                                 ▶ Full API Response (Click to expand)
                               </summary>
                               <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 mt-2">
-                                <pre className="text-xs text-gray-700 whitespace-pre-wrap overflow-x-auto">
-                                  {JSON.stringify(value, null, 2)}
+                                <pre className="text-xs text-gray-700 whitespace-pre-wrap overflow-x-auto max-h-96 overflow-y-auto">
+                                  {JSON.stringify(testModalData, null, 2)}
                                 </pre>
                               </div>
                             </details>

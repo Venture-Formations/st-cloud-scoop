@@ -99,7 +99,66 @@ async function testWithCustomPrompt(type: string, customPromptJson: string, test
 
     // Call AI with custom prompt config
     console.log('[TEST] Calling AI with provider:', provider)
-    const result = await callWithStructuredPrompt(customPromptConfig, placeholders, provider)
+
+    // For OpenAI, we want to capture the full response metadata
+    let fullApiResponse: any = null
+    let result: string
+
+    if (provider === 'openai') {
+      // Call OpenAI directly to get full response including usage
+      const { openai } = await import('@/lib/openai')
+
+      // Process placeholders in input/messages
+      let processedInput = customPromptConfig.input || customPromptConfig.messages
+      if (processedInput && Array.isArray(processedInput)) {
+        processedInput = processedInput.map((msg: any) => {
+          if (msg.content && typeof msg.content === 'string') {
+            return {
+              ...msg,
+              content: Object.entries(placeholders).reduce(
+                (content, [key, value]) => content.replace(
+                  new RegExp(`\\{\\{${key}\\}\\}`, 'g'),
+                  value
+                ),
+                msg.content
+              )
+            }
+          }
+          return msg
+        })
+      }
+
+      // Prepare the request
+      const request: any = { ...customPromptConfig }
+      if (processedInput) {
+        request.input = processedInput
+      }
+
+      // Make the API call
+      fullApiResponse = await (openai as any).responses.create(request)
+
+      // Extract content
+      const outputArray = fullApiResponse.output?.[0]?.content
+      const jsonSchemaItem = outputArray?.find((c: any) => c.type === "json_schema")
+      const textItem = outputArray?.find((c: any) => c.type === "text")
+
+      let rawContent = jsonSchemaItem?.json ??
+        jsonSchemaItem?.input_json ??
+        fullApiResponse.output?.[0]?.content?.[0]?.json ??
+        fullApiResponse.output?.[0]?.content?.[0]?.input_json ??
+        textItem?.text ??
+        fullApiResponse.output?.[0]?.content?.[0]?.text ??
+        fullApiResponse.output_text ??
+        fullApiResponse.text ??
+        ""
+
+      result = typeof rawContent === 'object' && rawContent !== null
+        ? JSON.stringify(rawContent)
+        : rawContent
+    } else {
+      // Use existing method for Perplexity
+      result = await callWithStructuredPrompt(customPromptConfig, placeholders, provider)
+    }
 
     // Parse the response to extract expected fields
     const parseResult = parseAIResponse(result)
@@ -108,6 +167,7 @@ async function testWithCustomPrompt(type: string, customPromptJson: string, test
       success: true,
       response: result,
       ...parseResult,
+      full_api_response: fullApiResponse, // Include complete API response with usage
       note: `Tested with custom prompt (not saved to database). Provider: ${provider}`,
       custom_prompt_used: true,
       provider

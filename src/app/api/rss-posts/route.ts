@@ -6,7 +6,7 @@ export async function GET(request: NextRequest) {
     // Get recent RSS posts
     const { data: posts, error: postsError } = await supabaseAdmin
       .from('rss_posts')
-      .select('id, title, description, content, published_at, processed_at')
+      .select('id, title, description, content, publication_date, processed_at')
       .order('processed_at', { ascending: false })
       .limit(100)
 
@@ -46,7 +46,7 @@ export async function GET(request: NextRequest) {
         title: post.title,
         description: post.description,
         content: post.content,
-        published_at: post.published_at,
+        publication_date: post.publication_date,
         processed_at: post.processed_at,
         total_score: ratingsMap.get(post.id) || 0
       }))

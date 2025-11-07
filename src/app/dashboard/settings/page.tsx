@@ -1297,8 +1297,40 @@ function AIPromptsSettings() {
   const [testModalLoading, setTestModalLoading] = useState(false)
   const [testModalError, setTestModalError] = useState<string | null>(null)
 
+  // Multi-Criteria Scoring state
+  const [criteriaSettings, setCriteriaSettings] = useState<{
+    enabledCount: number
+    criteria: Array<{
+      number: number
+      name: string
+      weight: number
+      enabled: boolean
+    }>
+  }>({
+    enabledCount: 3,
+    criteria: [
+      { number: 1, name: 'Interest Level', weight: 1.0, enabled: true },
+      { number: 2, name: 'Local Relevance', weight: 1.5, enabled: true },
+      { number: 3, name: 'Community Impact', weight: 1.0, enabled: true },
+      { number: 4, name: 'Criterion 4', weight: 1.0, enabled: false },
+      { number: 5, name: 'Criterion 5', weight: 1.0, enabled: false }
+    ]
+  })
+  const [criteriaSaving, setCriteriaSaving] = useState(false)
+  const [criteriaMessage, setCriteriaMessage] = useState('')
+  const [criteriaPromptsExpanded, setCriteriaPromptsExpanded] = useState(false)
+  const [expandedCriterionPrompt, setExpandedCriterionPrompt] = useState<number | null>(null)
+
+  // RSS post selection for testing
+  const [testRssPosts, setTestRssPosts] = useState<any[]>([])
+  const [selectedTestPostId, setSelectedTestPostId] = useState<string | null>(null)
+  const [editingWeight, setEditingWeight] = useState<number | null>(null)
+  const [tempWeight, setTempWeight] = useState<number>(1.0)
+
   useEffect(() => {
     loadPrompts()
+    loadCriteriaSettings()
+    loadTestRssPosts()
   }, [])
 
   // Helper function to detect structured JSON format
@@ -1327,6 +1359,90 @@ function AIPromptsSettings() {
     } finally {
       setLoading(false)
     }
+  }
+
+  const loadCriteriaSettings = async () => {
+    try {
+      const response = await fetch('/api/settings/criteria')
+      if (response.ok) {
+        const data = await response.json()
+        setCriteriaSettings({
+          enabledCount: data.enabledCount || 3,
+          criteria: data.criteria || criteriaSettings.criteria
+        })
+      }
+    } catch (error) {
+      console.error('Failed to load criteria settings:', error)
+    }
+  }
+
+  const saveCriteriaSettings = async () => {
+    setCriteriaSaving(true)
+    setCriteriaMessage('')
+
+    try {
+      const response = await fetch('/api/settings/criteria', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(criteriaSettings)
+      })
+
+      if (response.ok) {
+        setCriteriaMessage('✓ Criteria settings saved successfully!')
+        await loadCriteriaSettings() // Reload to confirm
+        setTimeout(() => setCriteriaMessage(''), 3000)
+      } else {
+        throw new Error('Failed to save criteria settings')
+      }
+    } catch (error) {
+      setCriteriaMessage('Error: Failed to save criteria settings')
+      setTimeout(() => setCriteriaMessage(''), 5000)
+    } finally {
+      setCriteriaSaving(false)
+    }
+  }
+
+  const updateCriterion = (number: number, field: 'name' | 'weight' | 'enabled', value: any) => {
+    setCriteriaSettings(prev => ({
+      ...prev,
+      criteria: prev.criteria.map(c =>
+        c.number === number ? { ...c, [field]: value } : c
+      ),
+      enabledCount: field === 'enabled'
+        ? prev.criteria.filter((c, idx) => idx === number - 1 ? value : c.enabled).length
+        : prev.enabledCount
+    }))
+  }
+
+  const loadTestRssPosts = async () => {
+    try {
+      const response = await fetch('/api/rss-posts?limit=50')
+      if (response.ok) {
+        const data = await response.json()
+        setTestRssPosts(data.posts || [])
+        if (data.posts && data.posts.length > 0) {
+          setSelectedTestPostId(data.posts[0].id)
+        }
+      }
+    } catch (error) {
+      console.error('Failed to load RSS posts:', error)
+    }
+  }
+
+  const startEditingWeight = (criterionNumber: number, currentWeight: number) => {
+    setEditingWeight(criterionNumber)
+    setTempWeight(currentWeight)
+  }
+
+  const saveWeight = async (criterionNumber: number) => {
+    updateCriterion(criterionNumber, 'weight', tempWeight)
+    setEditingWeight(null)
+    // Save to database
+    await saveCriteriaSettings()
+  }
+
+  const cancelEditingWeight = () => {
+    setEditingWeight(null)
   }
 
   const handleEdit = (prompt: any) => {
@@ -1462,6 +1578,11 @@ function AIPromptsSettings() {
     // Map prompt keys to their test endpoint type parameter
     const promptTypeMap: Record<string, string> = {
       'ai_prompt_content_evaluator': 'contentEvaluator',
+      'ai_prompt_criteria_1': 'criteria_1',
+      'ai_prompt_criteria_2': 'criteria_2',
+      'ai_prompt_criteria_3': 'criteria_3',
+      'ai_prompt_criteria_4': 'criteria_4',
+      'ai_prompt_criteria_5': 'criteria_5',
       'ai_prompt_newsletter_writer': 'newsletterWriter',
       'ai_prompt_subject_line': 'subjectLineGenerator',
       'ai_prompt_event_summary': 'eventSummarizer',
@@ -1539,14 +1660,370 @@ function AIPromptsSettings() {
         )}
       </div>
 
+      {/* Multi-Criteria Scoring Configuration */}
+      <div className="bg-white shadow rounded-lg">
+        <div className="p-6 border-b border-gray-200">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-lg font-medium text-gray-900">Multi-Criteria Scoring System</h3>
+              <p className="text-sm text-gray-600 mt-1">
+                Configure how RSS posts are evaluated. Each enabled criterion gets a separate AI evaluation with individual weighting.
+              </p>
+            </div>
+            <div className="text-right">
+              <div className="text-2xl font-bold text-brand-primary">{criteriaSettings.enabledCount}/5</div>
+              <div className="text-xs text-gray-500">Criteria Active</div>
+            </div>
+          </div>
+        </div>
+
+        <div className="p-6">
+          {criteriaMessage && (
+            <div className={`mb-4 p-3 rounded ${criteriaMessage.includes('Error') ? 'bg-red-50 text-red-700' : 'bg-green-50 text-green-700'}`}>
+              {criteriaMessage}
+            </div>
+          )}
+
+          {/* Criteria Configuration Cards */}
+          <div className="space-y-4">
+            {criteriaSettings.criteria.map((criterion) => (
+              <div
+                key={criterion.number}
+                className={`border rounded-lg p-4 ${criterion.enabled ? 'border-green-300 bg-green-50/30' : 'border-gray-200 bg-gray-50/30'}`}
+              >
+                <div className="flex items-start gap-4">
+                  {/* Enable/Disable Toggle */}
+                  <div className="flex items-center pt-1">
+                    <button
+                      onClick={() => updateCriterion(criterion.number, 'enabled', !criterion.enabled)}
+                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                        criterion.enabled ? 'bg-green-600' : 'bg-gray-300'
+                      }`}
+                    >
+                      <span
+                        className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                          criterion.enabled ? 'translate-x-6' : 'translate-x-1'
+                        }`}
+                      />
+                    </button>
+                  </div>
+
+                  {/* Criterion Details */}
+                  <div className="flex-1 space-y-3">
+                    {/* Name Input */}
+                    <div>
+                      <label className="block text-xs font-medium text-gray-700 mb-1">
+                        Criterion {criterion.number} Name
+                      </label>
+                      <input
+                        type="text"
+                        value={criterion.name}
+                        onChange={(e) => updateCriterion(criterion.number, 'name', e.target.value)}
+                        disabled={!criterion.enabled}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm disabled:bg-gray-100 disabled:text-gray-500"
+                        placeholder={`Criterion ${criterion.number}`}
+                      />
+                    </div>
+
+                    {/* Weight Slider */}
+                    <div>
+                      <div className="flex items-center justify-between mb-1">
+                        <label className="block text-xs font-medium text-gray-700">
+                          Weight Multiplier
+                        </label>
+                        <span className="text-sm font-semibold text-brand-primary">
+                          {criterion.weight.toFixed(1)}x
+                        </span>
+                      </div>
+                      <input
+                        type="range"
+                        min="0.5"
+                        max="3.0"
+                        step="0.1"
+                        value={criterion.weight}
+                        onChange={(e) => updateCriterion(criterion.number, 'weight', parseFloat(e.target.value))}
+                        disabled={!criterion.enabled}
+                        className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer disabled:opacity-50"
+                      />
+                      <div className="flex justify-between text-xs text-gray-500 mt-1">
+                        <span>0.5x (lower priority)</span>
+                        <span>3.0x (higher priority)</span>
+                      </div>
+                    </div>
+
+                    {/* Associated Prompt Link */}
+                    <div className="flex items-center gap-2 text-xs text-gray-600">
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+                      </svg>
+                      <span>
+                        AI Prompt: <code className="bg-gray-100 px-1 rounded text-xs">ai_prompt_criteria_{criterion.number}</code>
+                      </span>
+                      <button
+                        onClick={() => setExpandedPrompt(`ai_prompt_criteria_${criterion.number}`)}
+                        className="text-blue-600 hover:text-blue-800 font-medium"
+                      >
+                        Edit Prompt →
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Status Indicator */}
+                  <div className="flex flex-col items-end gap-1 pt-1">
+                    <span className={`px-2 py-1 text-xs font-medium rounded-full ${
+                      criterion.enabled
+                        ? 'bg-green-100 text-green-800'
+                        : 'bg-gray-100 text-gray-500'
+                    }`}>
+                      {criterion.enabled ? 'Active' : 'Disabled'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Save Button */}
+          <div className="mt-6 flex items-center justify-between border-t border-gray-200 pt-4">
+            <div className="text-sm text-gray-600">
+              <strong>How it works:</strong> Each enabled criterion evaluates posts independently (separate AI call).
+              Final score = weighted sum of all criteria scores.
+            </div>
+            <button
+              onClick={saveCriteriaSettings}
+              disabled={criteriaSaving}
+              className="px-6 py-2 bg-brand-primary text-white rounded-md hover:bg-brand-secondary disabled:opacity-50 font-medium"
+            >
+              {criteriaSaving ? 'Saving...' : 'Save Criteria Settings'}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Scoring Criteria Prompts - Grouped Section */}
+      <div className="bg-white shadow rounded-lg">
+        <div className="p-6 border-b border-gray-200">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h3 className="text-lg font-medium text-gray-900">Scoring Criteria Prompts</h3>
+              <p className="text-sm text-gray-600 mt-1">
+                Configure evaluation criteria and content generation for primary (top) articles. {criteriaSettings.enabledCount} of 5 criteria enabled.
+              </p>
+            </div>
+            <button
+              onClick={() => setCriteriaPromptsExpanded(!criteriaPromptsExpanded)}
+              className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+            >
+              {criteriaPromptsExpanded ? 'Collapse All' : 'Expand All'}
+            </button>
+          </div>
+
+          {/* RSS Post Selector for Testing */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              RSS Post for Testing Primary Prompts
+            </label>
+            <select
+              value={selectedTestPostId || ''}
+              onChange={(e) => setSelectedTestPostId(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              {testRssPosts.map((post) => (
+                <option key={post.id} value={post.id}>
+                  {post.title} - {new Date(post.published_at || post.created_at).toLocaleDateString()}
+                </option>
+              ))}
+            </select>
+            <p className="text-xs text-gray-500 mt-1">Only showing posts from feeds assigned to Primary section</p>
+          </div>
+        </div>
+
+        {criteriaPromptsExpanded && (
+          <div className="divide-y divide-gray-200">
+            {criteriaSettings.criteria.map((criterion) => {
+              const promptKey = `ai_prompt_criteria_${criterion.number}`
+              const prompt = prompts.find(p => p.key === promptKey)
+              const isExpanded = expandedCriterionPrompt === criterion.number
+              const isEditing = editingPrompt?.key === promptKey
+              const isSaving = saving === promptKey
+              const isEditingWeight = editingWeight === criterion.number
+              const maxScore = criterion.weight * 10 // Max score per criterion is 10
+
+              return (
+                <div key={criterion.number} className="p-6">
+                  <div className="flex items-start justify-between mb-3">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-3 mb-2">
+                        <span className="text-sm text-gray-500 font-medium">CRITERIA NAME:</span>
+                        <h4 className="text-base font-medium text-gray-900">{criterion.name}</h4>
+                        {prompt?.ai_provider && (
+                          <span className={`px-2 py-0.5 text-xs font-medium rounded ${
+                            prompt.ai_provider === 'perplexity'
+                              ? 'bg-purple-100 text-purple-700'
+                              : 'bg-blue-100 text-blue-700'
+                          }`}>
+                            {prompt.ai_provider === 'perplexity' ? 'Perplexity' : 'OpenAI'}
+                          </span>
+                        )}
+                        <button
+                          onClick={() => {
+                            const newName = window.prompt(
+                              'Enter new name for criterion:',
+                              criterion.name
+                            )
+                            if (newName && newName !== criterion.name) {
+                              updateCriterion(criterion.number, 'name', newName)
+                              saveCriteriaSettings()
+                            }
+                          }}
+                          className="text-sm text-blue-600 hover:text-blue-800"
+                        >
+                          Edit Name
+                        </button>
+                      </div>
+
+                      {/* Weight section */}
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="text-sm text-gray-700">Weight:</span>
+                        {isEditingWeight ? (
+                          <>
+                            <input
+                              type="number"
+                              min="0.1"
+                              max="5"
+                              step="0.1"
+                              value={tempWeight}
+                              onChange={(e) => setTempWeight(parseFloat(e.target.value) || 1.0)}
+                              className="w-20 px-2 py-1 border border-gray-300 rounded text-sm"
+                            />
+                            <button
+                              onClick={() => saveWeight(criterion.number)}
+                              className="text-sm text-green-600 hover:text-green-800"
+                            >
+                              Save
+                            </button>
+                            <button
+                              onClick={cancelEditingWeight}
+                              className="text-sm text-gray-600 hover:text-gray-800"
+                            >
+                              Cancel
+                            </button>
+                          </>
+                        ) : (
+                          <>
+                            <span className="text-sm font-medium text-gray-900">{criterion.weight.toFixed(1)}</span>
+                            <button
+                              onClick={() => startEditingWeight(criterion.number, criterion.weight)}
+                              className="text-sm text-blue-600 hover:text-blue-800"
+                            >
+                              Edit
+                            </button>
+                            <span className="text-sm text-gray-500">
+                              (Max final score contribution: {maxScore.toFixed(1)} points)
+                            </span>
+                          </>
+                        )}
+                      </div>
+
+                      <p className="text-sm text-gray-600">
+                        {prompt?.description || `Evaluates ${criterion.name.toLowerCase()} (weight: ${criterion.weight.toFixed(1)})`}
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => setExpandedCriterionPrompt(isExpanded ? null : criterion.number)}
+                      className="ml-4 text-blue-600 hover:text-blue-800 text-sm font-medium"
+                    >
+                      {isExpanded ? 'Collapse' : 'View/Edit Prompt'}
+                    </button>
+                  </div>
+
+                  {isExpanded && prompt && (
+                    <div className="mt-4">
+                      <div className="mb-2 flex items-center justify-between">
+                        <label className="block text-sm font-medium text-gray-700">
+                          Prompt Content
+                        </label>
+                        <span className="text-xs text-gray-500">
+                          {isEditing
+                            ? (editingPrompt?.value.length || 0)
+                            : (typeof prompt.value === 'string' ? prompt.value.length : JSON.stringify(prompt.value).length)
+                          } characters
+                        </span>
+                      </div>
+                      {isEditing ? (
+                        <>
+                          <textarea
+                            value={editingPrompt?.value || ''}
+                            onChange={(e) => editingPrompt && setEditingPrompt({ ...editingPrompt, value: e.target.value })}
+                            rows={15}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md font-mono text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          />
+                          <div className="mt-3 flex items-center justify-between">
+                            <div className="flex gap-2">
+                              <button
+                                onClick={() => handleSave(promptKey)}
+                                disabled={isSaving}
+                                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
+                              >
+                                {isSaving ? 'Saving...' : 'Save Changes'}
+                              </button>
+                              <button
+                                onClick={handleCancel}
+                                className="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300"
+                              >
+                                Cancel
+                              </button>
+                            </div>
+                          </div>
+                        </>
+                      ) : (
+                        <>
+                          <pre className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50 overflow-x-auto text-xs font-mono whitespace-pre-wrap">
+                            {typeof prompt.value === 'string' ? prompt.value : JSON.stringify(prompt.value, null, 2)}
+                          </pre>
+                          <div className="mt-3 flex items-center gap-2">
+                            <button
+                              onClick={() => handleEdit(prompt)}
+                              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-sm"
+                            >
+                              Edit Prompt
+                            </button>
+                            <button
+                              onClick={() => handleReset(promptKey)}
+                              disabled={isSaving}
+                              className="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 disabled:opacity-50 text-sm"
+                            >
+                              {isSaving ? 'Resetting...' : 'Reset to Default'}
+                            </button>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+        )}
+      </div>
+
       {/* Prompts by Category */}
-      {Object.entries(grouped).map(([category, categoryPrompts]) => (
+      {Object.entries(grouped).map(([category, categoryPrompts]) => {
+        // Filter out criteria prompts and deprecated Content Evaluator from regular display
+        const filteredPrompts = categoryPrompts.filter(p =>
+          !p.key.startsWith('ai_prompt_criteria_') &&
+          p.key !== 'ai_prompt_content_evaluator'
+        )
+
+        if (filteredPrompts.length === 0) return null
+
+        return (
         <div key={category} className="bg-white shadow rounded-lg">
           <div className="p-6 border-b border-gray-200">
             <h3 className="text-lg font-medium text-gray-900">{category}</h3>
           </div>
           <div className="divide-y divide-gray-200">
-            {categoryPrompts.map((prompt) => {
+            {filteredPrompts.map((prompt) => {
               const isExpanded = expandedPrompt === prompt.key
               const isEditing = editingPrompt?.key === prompt.key
               const isSaving = saving === prompt.key
@@ -1660,7 +2137,8 @@ function AIPromptsSettings() {
             })}
           </div>
         </div>
-      ))}
+        )
+      })}
 
       {/* Help Information */}
       <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">

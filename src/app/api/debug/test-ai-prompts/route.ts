@@ -65,6 +65,18 @@ async function testWithCustomPrompt(type: string, customPromptJson: string, test
           imagePenalty: '0'
         }
         break
+      case 'criteria_1':
+      case 'criteria_2':
+      case 'criteria_3':
+      case 'criteria_4':
+      case 'criteria_5':
+        placeholders = {
+          title: testData.contentEvaluator.title,
+          description: testData.contentEvaluator.description,
+          content: testData.contentEvaluator.content,
+          hasImage: 'true'
+        }
+        break
       case 'newsletterWriter':
         placeholders = {
           title: testData.newsletterWriter.title,
@@ -339,6 +351,39 @@ export async function GET(request: NextRequest) {
       }
     }
 
+    // Test Criteria Prompts (1-5)
+    for (let i = 1; i <= 5; i++) {
+      const criteriaType = `criteria_${i}`
+      if (promptType === 'all' || promptType === criteriaType) {
+        console.log(`Testing Criterion ${i}...`)
+        try {
+          const promptKey = `ai_prompt_criteria_${i}`
+          const response = await callAIWithPrompt(
+            promptKey,
+            {
+              title: testData.contentEvaluator.title,
+              description: testData.contentEvaluator.description,
+              content: testData.contentEvaluator.content,
+              hasImage: 'true'
+            }
+          )
+          const parseResult = parseAIResponse(response)
+          results[criteriaType] = {
+            success: true,
+            response,
+            ...parseResult,
+            response_length: typeof response === 'string' ? response.length : JSON.stringify(response).length,
+            format: 'JSON with score (0-10) and reason fields'
+          }
+        } catch (error) {
+          results[criteriaType] = {
+            success: false,
+            error: error instanceof Error ? error.message : 'Unknown error'
+          }
+        }
+      }
+    }
+
     // Test Newsletter Writer (now calls OpenAI internally)
     if (promptType === 'all' || promptType === 'newsletterWriter') {
       console.log('Testing Newsletter Writer...')
@@ -464,7 +509,7 @@ export async function GET(request: NextRequest) {
       prompt_type: promptType,
       test_data: promptType === 'all' ? 'Sample data for all prompts' : testData[promptType as keyof typeof testData],
       results,
-      usage_note: 'Add ?type=promptName to test individual prompts (contentEvaluator, newsletterWriter, subjectLineGenerator, eventSummarizer, topicDeduper, roadWorkGenerator, imageAnalyzer)',
+      usage_note: 'Add ?type=promptName to test individual prompts (contentEvaluator, criteria_1, criteria_2, criteria_3, criteria_4, criteria_5, newsletterWriter, subjectLineGenerator, eventSummarizer, topicDeduper, roadWorkGenerator, imageAnalyzer)',
       timestamp: new Date().toISOString()
     })
 

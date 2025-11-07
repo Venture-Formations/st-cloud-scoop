@@ -47,11 +47,36 @@ export interface RssPost {
 export interface PostRating {
   id: string
   post_id: string
+
+  // Multi-Criteria Scoring System (new)
+  criteria_1_score: number | null
+  criteria_1_reason: string | null
+  criteria_1_weight: number | null
+
+  criteria_2_score: number | null
+  criteria_2_reason: string | null
+  criteria_2_weight: number | null
+
+  criteria_3_score: number | null
+  criteria_3_reason: string | null
+  criteria_3_weight: number | null
+
+  criteria_4_score: number | null
+  criteria_4_reason: string | null
+  criteria_4_weight: number | null
+
+  criteria_5_score: number | null
+  criteria_5_reason: string | null
+  criteria_5_weight: number | null
+
+  total_score: number
+
+  // Legacy fields (backward compatibility, deprecated)
   interest_level: number
   local_relevance: number
   community_impact: number
-  total_score: number
   ai_reasoning: string | null
+
   created_at: string
 }
 
@@ -403,10 +428,27 @@ export interface CampaignWithEvents extends CampaignWithArticles {
 
 // AI Processing types
 export interface ContentEvaluation {
-  interest_level: number
-  local_relevance: number
-  community_impact: number
-  reasoning: string
+  // Multi-Criteria Scoring System
+  criteria_scores: Array<{
+    score: number        // 0-10
+    reason: string       // AI explanation
+    weight: number       // Multiplier
+  }>
+  total_score: number    // Weighted sum
+
+  // Legacy fields (backward compatibility, deprecated)
+  interest_level?: number
+  local_relevance?: number
+  community_impact?: number
+  reasoning?: string
+}
+
+export interface CriterionConfig {
+  number: number         // 1-5
+  name: string           // Display name
+  weight: number         // Importance multiplier
+  enabled: boolean       // Active or not
+  prompt_key: string     // ai_prompt_criteria_X
 }
 
 export interface NewsletterContent {

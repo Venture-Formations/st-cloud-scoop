@@ -13,7 +13,7 @@ export async function GET(request: NextRequest) {
 
     const { data: prompts, error } = await supabaseAdmin
       .from('app_settings')
-      .select('key, value, description')
+      .select('key, value, description, ai_provider')
       .like('key', 'ai_prompt_%')
       .order('key', { ascending: true })
 
@@ -34,7 +34,8 @@ export async function GET(request: NextRequest) {
         category,
         name: name || p.key.replace('ai_prompt_', '').replace(/_/g, ' '),
         description: descParts.join(': ') || '',
-        value: p.value
+        value: p.value,
+        ai_provider: p.ai_provider || 'openai' // Default to openai if not set
       }
     }) || []
 

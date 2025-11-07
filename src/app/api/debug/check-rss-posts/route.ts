@@ -6,8 +6,8 @@ export async function GET() {
     // Check total RSS posts
     const { data: allPosts, error: postsError, count: totalCount } = await supabaseAdmin
       .from('rss_posts')
-      .select('id, title, created_at', { count: 'exact' })
-      .order('created_at', { ascending: false })
+      .select('id, title, processed_at', { count: 'exact' })
+      .order('processed_at', { ascending: false })
       .limit(10)
 
     // Check total post ratings
@@ -23,10 +23,10 @@ export async function GET() {
       .select(`
         id,
         title,
-        created_at,
+        processed_at,
         post_rating:post_ratings(total_score, created_at)
       `)
-      .order('created_at', { ascending: false })
+      .order('processed_at', { ascending: false })
       .limit(10)
 
     // Filter to only posts that have ratings
@@ -44,7 +44,7 @@ export async function GET() {
       sample_posts: allPosts?.slice(0, 5).map(p => ({
         id: p.id,
         title: p.title?.substring(0, 60),
-        created_at: p.created_at
+        processed_at: p.processed_at
       })),
       sample_ratings: allRatings?.slice(0, 5).map(r => ({
         id: r.id,

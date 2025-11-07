@@ -12,11 +12,10 @@ export async function GET(request: NextRequest) {
         description,
         content,
         published_at,
-        created_at,
-        feed_name,
+        processed_at,
         post_rating:post_ratings(total_score)
       `)
-      .order('created_at', { ascending: false })
+      .order('processed_at', { ascending: false })
       .limit(100) // Get recent 100 posts to filter and sort by score
 
     if (error) {
@@ -36,8 +35,7 @@ export async function GET(request: NextRequest) {
         description: post.description,
         content: post.content,
         published_at: post.published_at,
-        created_at: post.created_at,
-        feed_name: post.feed_name,
+        processed_at: post.processed_at,
         total_score: post.post_rating[0]?.total_score || 0
       }))
       .sort((a, b) => b.total_score - a.total_score)

@@ -1731,7 +1731,7 @@ function AIPromptsSettings() {
               ) : (
                 testRssPosts.map((post) => (
                   <option key={post.id} value={post.id}>
-                    {post.title} - {new Date(post.published_at || post.created_at).toLocaleDateString()}
+                    {post.title} - {new Date(post.publication_date || post.processed_at).toLocaleDateString()}
                   </option>
                 ))
               )}

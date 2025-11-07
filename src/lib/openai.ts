@@ -69,7 +69,7 @@ export async function callWithStructuredPrompt(
 
   // Select default model based on provider
   const defaultModel = provider === 'perplexity'
-    ? 'llama-3.1-sonar-large-128k-online'
+    ? 'sonar'
     : 'gpt-4o'
 
   console.log(`[AI] Calling ${provider.toUpperCase()} with structured prompt:`, {

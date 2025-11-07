@@ -1326,10 +1326,15 @@ function AIPromptsSettings() {
   const [editingWeight, setEditingWeight] = useState<number | null>(null)
   const [tempWeight, setTempWeight] = useState<number>(1.0)
 
+  // Event selection for testing event summarizer
+  const [testEvents, setTestEvents] = useState<any[]>([])
+  const [selectedTestEventId, setSelectedTestEventId] = useState<string | null>(null)
+
   useEffect(() => {
     loadPrompts()
     loadCriteriaSettings()
     loadTestRssPosts()
+    loadTestEvents()
   }, [])
 
   // Helper function to detect structured JSON format
@@ -1425,6 +1430,21 @@ function AIPromptsSettings() {
       }
     } catch (error) {
       console.error('Failed to load RSS posts:', error)
+    }
+  }
+
+  const loadTestEvents = async () => {
+    try {
+      const response = await fetch('/api/events?limit=10&upcoming=true')
+      if (response.ok) {
+        const data = await response.json()
+        setTestEvents(data.events || [])
+        if (data.events && data.events.length > 0) {
+          setSelectedTestEventId(data.events[0].id)
+        }
+      }
+    } catch (error) {
+      console.error('Failed to load events:', error)
     }
   }
 
@@ -1606,18 +1626,31 @@ function AIPromptsSettings() {
       let response
       if (customPromptContent) {
         // Testing edited content (POST with custom prompt)
+        const requestBody: any = {
+          type: testType,
+          customPrompt: customPromptContent,
+          promptKey: key  // Pass the actual prompt key for provider detection
+        }
+
+        // Add event_id for event summarizer
+        if (testType === 'eventSummarizer' && selectedTestEventId) {
+          requestBody.event_id = selectedTestEventId
+        }
+
         response = await fetch('/api/debug/test-ai-prompts', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            type: testType,
-            customPrompt: customPromptContent,
-            promptKey: key  // Pass the actual prompt key for provider detection
-          })
+          body: JSON.stringify(requestBody)
         })
       } else {
         // Testing saved content (GET from database)
-        const testUrl = `/api/debug/test-ai-prompts?type=${testType}`
+        let testUrl = `/api/debug/test-ai-prompts?type=${testType}`
+
+        // Add event_id for event summarizer
+        if (testType === 'eventSummarizer' && selectedTestEventId) {
+          testUrl += `&event_id=${selectedTestEventId}`
+        }
+
         response = await fetch(testUrl)
       }
 
@@ -1918,6 +1951,31 @@ function AIPromptsSettings() {
                         </span>
                       </div>
                       <p className="text-sm text-gray-600 mt-1">{prompt.description}</p>
+
+                      {/* Event selector for event summarizer prompt */}
+                      {prompt.key === 'ai_prompt_event_summary' && (
+                        <div className="mt-3">
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Event for Testing
+                          </label>
+                          <select
+                            value={selectedTestEventId || ''}
+                            onChange={(e) => setSelectedTestEventId(e.target.value)}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                          >
+                            {testEvents.length === 0 ? (
+                              <option value="">No upcoming events available</option>
+                            ) : (
+                              testEvents.map((event) => (
+                                <option key={event.id} value={event.id}>
+                                  {event.name} - {new Date(event.start_date).toLocaleDateString()}
+                                </option>
+                              ))
+                            )}
+                          </select>
+                          <p className="text-xs text-gray-500 mt-1">Showing next 10 upcoming events</p>
+                        </div>
+                      )}
                     </div>
                     <button
                       onClick={() => setExpandedPrompt(isExpanded ? null : prompt.key)}

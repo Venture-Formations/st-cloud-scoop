@@ -15,21 +15,29 @@ export async function GET(request: NextRequest) {
     const endDate = searchParams.get('end_date')
     const active = searchParams.get('active')
     const featured = searchParams.get('featured')
+    const limit = searchParams.get('limit')
+    const upcoming = searchParams.get('upcoming')
 
-    console.log('Events API called with:', { startDate, endDate, active, featured })
+    console.log('Events API called with:', { startDate, endDate, active, featured, limit, upcoming })
 
     let query = supabaseAdmin
       .from('events')
       .select('*')
       .order('start_date', { ascending: true })
 
-    // Simplified date filtering - just use start_date for now to debug
-    if (startDate) {
-      query = query.gte('start_date', startDate)
-    }
-    if (endDate) {
-      // Make endDate inclusive by using lte instead of lt with +1 day
-      query = query.lte('start_date', endDate + 'T23:59:59')
+    // If upcoming is true, get events starting from today
+    if (upcoming === 'true') {
+      const today = new Date().toISOString().split('T')[0]
+      query = query.gte('start_date', today)
+    } else {
+      // Simplified date filtering - just use start_date for now to debug
+      if (startDate) {
+        query = query.gte('start_date', startDate)
+      }
+      if (endDate) {
+        // Make endDate inclusive by using lte instead of lt with +1 day
+        query = query.lte('start_date', endDate + 'T23:59:59')
+      }
     }
 
     // Filter by active status
@@ -40,6 +48,14 @@ export async function GET(request: NextRequest) {
     // Filter by featured status
     if (featured !== null && featured !== undefined) {
       query = query.eq('featured', featured === 'true')
+    }
+
+    // Apply limit if provided
+    if (limit) {
+      const limitNum = parseInt(limit, 10)
+      if (!isNaN(limitNum) && limitNum > 0) {
+        query = query.limit(limitNum)
+      }
     }
 
     const { data: events, error } = await query

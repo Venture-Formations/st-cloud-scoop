@@ -97,15 +97,37 @@ async function testWithCustomPrompt(type: string, customPromptJson: string, test
           venue: testData.eventSummarizer.venue
         }
         break
+      case 'factChecker':
+        placeholders = {
+          newsletterContent: testData.factChecker.newsletterContent,
+          originalContent: testData.factChecker.originalContent
+        }
+        break
       case 'topicDeduper':
-        const postsJson = JSON.stringify(testData.topicDeduper.map((a: any) => ({
-          title: a.headline,
-          description: a.content
-        })))
-        placeholders = { posts: postsJson }
+        // Format articles list for placeholder (same format as AI_PROMPTS.topicDeduper)
+        const articlesText = testData.topicDeduper.map((article: any, i: number) =>
+          `${i}. ${article.headline}\n   ${article.content || 'No description'}`
+        ).join('\n\n')
+        placeholders = { articles: articlesText }
         break
       case 'roadWorkGenerator':
         placeholders = { campaignDate: testData.roadWorkGenerator }
+        break
+      case 'roadWorkValidator':
+        const itemsText = testData.roadWorkValidator.roadWorkItems.map((item: any, i: number) => `
+${i + 1}. ${item.road_name}
+   Range: ${item.road_range || 'Not specified'}
+   Location: ${item.city_or_township || 'Not specified'}
+   Reason: ${item.reason || 'Not specified'}
+   Start: ${item.start_date || 'Not specified'}
+   Expected Reopen: ${item.expected_reopen || 'Not specified'}
+   Source: ${item.source_url || 'Not specified'}
+`).join('\n')
+        placeholders = {
+          targetDate: testData.roadWorkValidator.targetDate,
+          currentDate: new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }),
+          items: itemsText
+        }
         break
     }
 
@@ -196,7 +218,7 @@ async function testWithCustomPrompt(type: string, customPromptJson: string, test
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { type, customPrompt, promptKey } = body
+    const { type, customPrompt, promptKey, event_id } = body
 
     if (!type || !customPrompt) {
       return NextResponse.json({
@@ -205,7 +227,26 @@ export async function POST(request: NextRequest) {
       }, { status: 400 })
     }
 
-    console.log('[TEST-API] POST request:', { type, promptKey, hasCustomPrompt: !!customPrompt })
+    console.log('[TEST-API] POST request:', { type, promptKey, hasCustomPrompt: !!customPrompt, event_id })
+
+    // Fetch real event data if event_id is provided (for event summarizer testing)
+    let realEventData: any = null
+    if (event_id) {
+      const { data: event } = await supabaseAdmin
+        .from('events')
+        .select('*')
+        .eq('id', event_id)
+        .single()
+
+      if (event) {
+        realEventData = event
+        console.log('[TEST] Using real event data:', {
+          id: event.id,
+          name: event.name,
+          start_date: event.start_date
+        })
+      }
+    }
 
     // Test data for each prompt type
     const testData = {
@@ -226,10 +267,20 @@ export async function POST(request: NextRequest) {
           content: 'The Minnesota Department of Transportation will close the Sartell Bridge for major repairs starting Monday morning. The project is expected to last six weeks.'
         }
       ],
-      eventSummarizer: {
+      eventSummarizer: realEventData ? {
+        title: realEventData.name || realEventData.title,
+        description: realEventData.description || '',
+        venue: realEventData.venue_name || realEventData.venue || realEventData.location || ''
+      } : {
         title: 'Summer Concert Series at Lake George',
         description: 'Join us for free outdoor concerts every Thursday evening in July! Local bands will perform a variety of music styles from 6-8 PM. Bring your lawn chairs and blankets. Food trucks will be available.',
         venue: 'Lake George Amphitheater'
+      },
+      factChecker: {
+        newsletterContent: `<h2>New Community Center Opens in Waite Park</h2>
+<p>The city of Waite Park celebrated the grand opening of its new $5 million community center on Saturday. The 25,000 square foot facility features a modern gymnasium, meeting rooms, and dedicated senior activity spaces.</p>
+<p>Mayor Rick Miller attended the ribbon-cutting ceremony and said the center will "bring our community together like never before." The facility is located at 715 2nd Ave S and will be open seven days a week.</p>`,
+        originalContent: `Waite Park celebrated the grand opening of its new $5 million community center on Saturday, featuring a gym, meeting rooms, and senior activity spaces. The 25,000 square foot facility at 715 2nd Ave S will serve as a hub for community activities, offering fitness classes, youth programs, and event rentals. Mayor Rick Miller said the center will "bring people together" and provide year-round recreational opportunities.`
       },
       topicDeduper: [
         {
@@ -243,7 +294,39 @@ export async function POST(request: NextRequest) {
           content: 'Fire Station 3 welcomes community members for an open house event this Saturday. Tour the facility and meet your local firefighters from 10am-2pm.'
         }
       ],
-      roadWorkGenerator: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+      roadWorkGenerator: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+      roadWorkValidator: {
+        roadWorkItems: [
+          {
+            road_name: 'Highway 15',
+            road_range: 'From Division St to 33rd St S',
+            city_or_township: 'St. Cloud',
+            reason: 'Bridge replacement and road resurfacing',
+            start_date: '2025-03-15',
+            expected_reopen: '2025-06-01',
+            source_url: 'https://www.dot.state.mn.us/d3/projects/hwy15stcloud/'
+          },
+          {
+            road_name: 'County Road 75',
+            road_range: '240th St to 250th St',
+            city_or_township: 'Sartell',
+            reason: 'Utility work and pavement repairs',
+            start_date: '2025-04-01',
+            expected_reopen: '2025-04-30',
+            source_url: 'https://www.co.stearns.mn.us/publicworks'
+          },
+          {
+            road_name: '2nd Street South',
+            road_range: '5th Avenue to 10th Avenue',
+            city_or_township: 'Waite Park',
+            reason: 'Water main replacement',
+            start_date: '2025-03-20',
+            expected_reopen: '2025-05-15',
+            source_url: 'https://www.waitepark.org/public-works'
+          }
+        ],
+        targetDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+      }
     }
 
     const result = await testWithCustomPrompt(type, customPrompt, testData, promptKey)
@@ -272,11 +355,31 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
     const promptType = searchParams.get('type') || 'all'
+    const eventId = searchParams.get('event_id')
 
     const results: Record<string, any> = {}
 
+    // Fetch real event data if event_id is provided (for event summarizer testing)
+    let realEventData: any = null
+    if (eventId) {
+      const { data: event } = await supabaseAdmin
+        .from('events')
+        .select('*')
+        .eq('id', eventId)
+        .single()
+
+      if (event) {
+        realEventData = event
+        console.log('[TEST] Using real event data:', {
+          id: event.id,
+          name: event.name,
+          start_date: event.start_date
+        })
+      }
+    }
+
     // Test data for each prompt type
-    const testData = {
+    const testData: any = {
       contentEvaluator: {
         title: 'St. Cloud School District Launches New STEM Program',
         description: 'The St. Cloud Area School District announced today that it will launch a comprehensive STEM education program this fall, providing students with hands-on experience in science, technology, engineering, and mathematics through partnerships with local businesses and St. Cloud State University.',
@@ -294,10 +397,20 @@ export async function GET(request: NextRequest) {
           content: 'The Minnesota Department of Transportation will close the Sartell Bridge for major repairs starting Monday morning. The project is expected to last six weeks.'
         }
       ],
-      eventSummarizer: {
+      eventSummarizer: realEventData ? {
+        title: realEventData.name || realEventData.title,
+        description: realEventData.description || '',
+        venue: realEventData.venue_name || realEventData.venue || realEventData.location || ''
+      } : {
         title: 'Summer Concert Series at Lake George',
         description: 'Join us for free outdoor concerts every Thursday evening in July! Local bands will perform a variety of music styles from 6-8 PM. Bring your lawn chairs and blankets. Food trucks will be available.',
         venue: 'Lake George Amphitheater'
+      },
+      factChecker: {
+        newsletterContent: `<h2>New Community Center Opens in Waite Park</h2>
+<p>The city of Waite Park celebrated the grand opening of its new $5 million community center on Saturday. The 25,000 square foot facility features a modern gymnasium, meeting rooms, and dedicated senior activity spaces.</p>
+<p>Mayor Rick Miller attended the ribbon-cutting ceremony and said the center will "bring our community together like never before." The facility is located at 715 2nd Ave S and will be open seven days a week.</p>`,
+        originalContent: `Waite Park celebrated the grand opening of its new $5 million community center on Saturday, featuring a gym, meeting rooms, and senior activity spaces. The 25,000 square foot facility at 715 2nd Ave S will serve as a hub for community activities, offering fitness classes, youth programs, and event rentals. Mayor Rick Miller said the center will "bring people together" and provide year-round recreational opportunities.`
       },
       topicDeduper: [
         {
@@ -327,6 +440,38 @@ export async function GET(request: NextRequest) {
         }
       ],
       roadWorkGenerator: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+      roadWorkValidator: {
+        roadWorkItems: [
+          {
+            road_name: 'Highway 15',
+            road_range: 'From Division St to 33rd St S',
+            city_or_township: 'St. Cloud',
+            reason: 'Bridge replacement and road resurfacing',
+            start_date: '2025-03-15',
+            expected_reopen: '2025-06-01',
+            source_url: 'https://www.dot.state.mn.us/d3/projects/hwy15stcloud/'
+          },
+          {
+            road_name: 'County Road 75',
+            road_range: '240th St to 250th St',
+            city_or_township: 'Sartell',
+            reason: 'Utility work and pavement repairs',
+            start_date: '2025-04-01',
+            expected_reopen: '2025-04-30',
+            source_url: 'https://www.co.stearns.mn.us/publicworks'
+          },
+          {
+            road_name: '2nd Street South',
+            road_range: '5th Avenue to 10th Avenue',
+            city_or_township: 'Waite Park',
+            reason: 'Water main replacement',
+            start_date: '2025-03-20',
+            expected_reopen: '2025-05-15',
+            source_url: 'https://www.waitepark.org/public-works'
+          }
+        ],
+        targetDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+      },
       imageAnalyzer: 'Image analysis requires actual image input - use the image ingest endpoint instead'
     }
 
@@ -448,6 +593,30 @@ export async function GET(request: NextRequest) {
       }
     }
 
+    // Test Fact Checker
+    if (promptType === 'all' || promptType === 'factChecker') {
+      console.log('Testing Fact Checker...')
+      try {
+        const response = await AI_PROMPTS.factChecker(
+          testData.factChecker.newsletterContent,
+          testData.factChecker.originalContent
+        )
+        const parseResult = parseAIResponse(response)
+        results.factChecker = {
+          success: true,
+          response,
+          ...parseResult,
+          response_length: typeof response === 'string' ? response.length : JSON.stringify(response).length,
+          format: 'JSON with violations array'
+        }
+      } catch (error) {
+        results.factChecker = {
+          success: false,
+          error: error instanceof Error ? error.message : 'Unknown error'
+        }
+      }
+    }
+
     // Test Road Work Generator (just show prompt, don't call AI)
     if (promptType === 'all' || promptType === 'roadWorkGenerator') {
       console.log('Testing Road Work Generator (prompt only)...')
@@ -467,12 +636,37 @@ export async function GET(request: NextRequest) {
       }
     }
 
+    // Test Road Work Validator
+    if (promptType === 'all' || promptType === 'roadWorkValidator') {
+      console.log('Testing Road Work Validator...')
+      try {
+        const response = await AI_PROMPTS.roadWorkValidator(
+          testData.roadWorkValidator.roadWorkItems,
+          testData.roadWorkValidator.targetDate
+        )
+        const parseResult = parseAIResponse(response)
+        results.roadWorkValidator = {
+          success: true,
+          response,
+          ...parseResult,
+          response_length: typeof response === 'string' ? response.length : JSON.stringify(response).length,
+          format: 'JSON with validated road work items',
+          items_validated: testData.roadWorkValidator.roadWorkItems.length
+        }
+      } catch (error) {
+        results.roadWorkValidator = {
+          success: false,
+          error: error instanceof Error ? error.message : 'Unknown error'
+        }
+      }
+    }
+
     // Test Topic Deduper (now calls OpenAI internally)
     if (promptType === 'all' || promptType === 'topicDeduper') {
       console.log('Testing Topic Deduper...')
       try {
         // Convert test data to expected format (array of posts with title and description)
-        const postsForDeduper = testData.topicDeduper.map(article => ({
+        const postsForDeduper = testData.topicDeduper.map((article: any) => ({
           title: article.headline,
           description: article.content
         }))
@@ -509,7 +703,7 @@ export async function GET(request: NextRequest) {
       prompt_type: promptType,
       test_data: promptType === 'all' ? 'Sample data for all prompts' : testData[promptType as keyof typeof testData],
       results,
-      usage_note: 'Add ?type=promptName to test individual prompts (contentEvaluator, criteria_1, criteria_2, criteria_3, criteria_4, criteria_5, newsletterWriter, subjectLineGenerator, eventSummarizer, topicDeduper, roadWorkGenerator, imageAnalyzer)',
+      usage_note: 'Add ?type=promptName to test individual prompts (contentEvaluator, criteria_1, criteria_2, criteria_3, criteria_4, criteria_5, newsletterWriter, subjectLineGenerator, eventSummarizer, factChecker, topicDeduper, roadWorkGenerator, roadWorkValidator, imageAnalyzer)',
       timestamp: new Date().toISOString()
     })
 

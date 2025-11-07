@@ -1,10 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
+import { callAIWithPrompt } from '@/lib/openai'
 
 /**
  * RSS Ingestion Cron
- * Runs every hour to keep RSS posts table fresh
- * Separate from campaign processing for better reliability
+ * Runs every hour to:
+ * 1. Fetch new RSS posts
+ * 2. Score them with multi-criteria AI
+ * 3. Store posts and ratings
  *
  * Schedule: 0 * * * * (every hour)
  * Timeout: 300 seconds (5 minutes)
@@ -88,19 +91,33 @@ export async function GET(request: NextRequest) {
             }
 
             // Insert new post
-            const { error: insertError } = await supabaseAdmin
+            const { data: newPost, error: insertError } = await supabaseAdmin
               .from('rss_posts')
               .insert({
                 feed_id: feed.id,
+                feed_name: feed.name,
                 title: item.title,
                 link: item.link,
                 description: item.description || null,
+                content: item.content || null,
+                image_url: item.imageUrl || null,
                 published_at: item.publishedAt || new Date().toISOString(),
                 processed_at: new Date().toISOString()
               })
+              .select()
+              .single()
 
-            if (!insertError) {
+            if (!insertError && newPost) {
               newPostsCount++
+
+              // Score the post with multi-criteria AI
+              try {
+                await scorePost(newPost)
+                console.log(`[RSS Ingest] Scored post: ${newPost.title}`)
+              } catch (scoreError) {
+                console.error(`[RSS Ingest] Failed to score post ${newPost.title}:`, scoreError)
+                // Continue even if scoring fails
+              }
             }
           } catch (itemError) {
             console.error(`[RSS Ingest] Error saving item from ${feed.name}:`, itemError)
@@ -154,11 +171,132 @@ export async function GET(request: NextRequest) {
 }
 
 /**
+ * Score a post using multi-criteria AI
+ */
+async function scorePost(post: any) {
+  // Helper to extract value from JSONB or plain text
+  const extractValue = (value: any): string => {
+    if (typeof value === 'string') return value
+    if (typeof value === 'object' && value !== null) return JSON.stringify(value).replace(/^"|"$/g, '')
+    return String(value)
+  }
+
+  // Get criteria configuration
+  const { data: criteriaCountData } = await supabaseAdmin
+    .from('app_settings')
+    .select('value')
+    .eq('key', 'criteria_enabled_count')
+    .single()
+
+  const criteriaCount = criteriaCountData ? parseInt(extractValue(criteriaCountData.value)) : 0
+
+  if (criteriaCount === 0) {
+    console.log('[RSS Ingest] Multi-criteria scoring not configured, skipping scoring')
+    return
+  }
+
+  // Fetch criteria settings
+  const { data: criteriaSettings } = await supabaseAdmin
+    .from('app_settings')
+    .select('key, value')
+    .or('key.like.criteria_%_name,key.like.criteria_%_weight,key.like.criteria_%_enabled')
+
+  if (!criteriaSettings) {
+    throw new Error('Failed to load criteria configuration')
+  }
+
+  // Build criteria array
+  const criteria: Array<{ number: number; name: string; weight: number }> = []
+  for (let i = 1; i <= criteriaCount; i++) {
+    const nameKey = `criteria_${i}_name`
+    const weightKey = `criteria_${i}_weight`
+    const enabledKey = `criteria_${i}_enabled`
+
+    const nameSetting = criteriaSettings.find(s => s.key === nameKey)
+    const weightSetting = criteriaSettings.find(s => s.key === weightKey)
+    const enabledSetting = criteriaSettings.find(s => s.key === enabledKey)
+
+    const name = nameSetting ? extractValue(nameSetting.value) : `Criterion ${i}`
+    const weight = weightSetting ? parseFloat(extractValue(weightSetting.value)) : 1.0
+    const enabled = enabledSetting ? extractValue(enabledSetting.value) !== 'false' : true
+
+    if (enabled) {
+      criteria.push({ number: i, name, weight })
+    }
+  }
+
+  console.log(`[RSS Ingest] Scoring with ${criteria.length} criteria`)
+
+  // Evaluate each criterion
+  const criteriaScores: Array<{ score: number; reason: string; weight: number }> = []
+
+  for (const criterion of criteria) {
+    const responseText = await callAIWithPrompt(
+      `ai_prompt_criteria_${criterion.number}`,
+      {
+        title: post.title,
+        description: post.description || '',
+        content: post.content || '',
+        hasImage: post.image_url ? 'true' : 'false'
+      }
+    )
+
+    // Parse response
+    let result: any
+    try {
+      result = typeof responseText === 'string' ? JSON.parse(responseText) : responseText
+    } catch (parseError) {
+      const jsonMatch = responseText.match(/\{[\s\S]*\}/)
+      if (jsonMatch) {
+        result = JSON.parse(jsonMatch[0])
+      } else {
+        throw new Error(`Failed to parse criterion ${criterion.number} response`)
+      }
+    }
+
+    // Validate score
+    if (typeof result.score !== 'number' || result.score < 0 || result.score > 10) {
+      throw new Error(`Invalid score from criterion ${criterion.number}: ${result.score}`)
+    }
+
+    criteriaScores.push({
+      score: result.score,
+      reason: result.reason || 'No reason provided',
+      weight: criterion.weight
+    })
+  }
+
+  // Calculate weighted total score
+  let totalWeightedScore = 0
+  criteriaScores.forEach(({ score, weight }) => {
+    totalWeightedScore += score * weight
+  })
+
+  // Insert rating
+  const ratingRecord: any = {
+    post_id: post.id,
+    total_score: totalWeightedScore
+  }
+
+  // Add multi-criteria fields
+  criteriaScores.forEach((criterionScore, index) => {
+    const criterionNum = index + 1
+    ratingRecord[`criteria_${criterionNum}_score`] = criterionScore.score
+    ratingRecord[`criteria_${criterionNum}_reason`] = criterionScore.reason
+    ratingRecord[`criteria_${criterionNum}_weight`] = criterionScore.weight
+  })
+
+  await supabaseAdmin
+    .from('post_ratings')
+    .insert(ratingRecord)
+}
+
+/**
  * Extract RSS items from XML text
  * Supports both RSS 2.0 and Atom formats
  */
-function extractRSSItems(xml: string): Array<{title: string, link: string, description?: string, publishedAt?: string}> {
-  const items: Array<{title: string, link: string, description?: string, publishedAt?: string}> = []
+function extractRSSItems(xml: string): Array<{title: string, link: string, description?: string, content?: string, imageUrl?: string, publishedAt?: string}> {
+  const items: Array<{title: string, link: string, description?: string, content?: string, imageUrl?: string, publishedAt?: string}> = []
 
   // Try RSS 2.0 format first
   const rssItemMatches = Array.from(xml.matchAll(/<item>([\s\S]*?)<\/item>/gi))
@@ -169,13 +307,28 @@ function extractRSSItems(xml: string): Array<{title: string, link: string, descr
     const title = extractTag(itemXml, 'title')
     const link = extractTag(itemXml, 'link')
     const description = extractTag(itemXml, 'description')
+    const content = extractTag(itemXml, 'content:encoded') || extractTag(itemXml, 'content')
     const pubDate = extractTag(itemXml, 'pubDate')
+
+    // Try to extract image
+    let imageUrl: string | undefined
+    const enclosureMatch = itemXml.match(/<enclosure[^>]*url="([^"]*)"[^>]*type="image/)
+    if (enclosureMatch) {
+      imageUrl = enclosureMatch[1]
+    } else {
+      const mediaMatch = itemXml.match(/<media:content[^>]*url="([^"]*)"/)
+      if (mediaMatch) {
+        imageUrl = mediaMatch[1]
+      }
+    }
 
     if (title && link) {
       items.push({
         title: cleanText(title),
         link: cleanText(link),
         description: description ? cleanText(description) : undefined,
+        content: content ? cleanText(content) : undefined,
+        imageUrl,
         publishedAt: pubDate ? new Date(pubDate).toISOString() : new Date().toISOString()
       })
     }
@@ -192,6 +345,7 @@ function extractRSSItems(xml: string): Array<{title: string, link: string, descr
       const linkMatch = entryXml.match(/<link[^>]*href="([^"]*)"/)
       const link = linkMatch ? linkMatch[1] : extractTag(entryXml, 'id')
       const summary = extractTag(entryXml, 'summary') || extractTag(entryXml, 'content')
+      const content = extractTag(entryXml, 'content')
       const published = extractTag(entryXml, 'published') || extractTag(entryXml, 'updated')
 
       if (title && link) {
@@ -199,6 +353,7 @@ function extractRSSItems(xml: string): Array<{title: string, link: string, descr
           title: cleanText(title),
           link: cleanText(link),
           description: summary ? cleanText(summary) : undefined,
+          content: content ? cleanText(content) : undefined,
           publishedAt: published ? new Date(published).toISOString() : new Date().toISOString()
         })
       }

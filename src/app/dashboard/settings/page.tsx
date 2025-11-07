@@ -1929,6 +1929,31 @@ function AIPromptsSettings() {
         <div key={category} className="bg-white shadow rounded-lg">
           <div className="p-6 border-b border-gray-200">
             <h3 className="text-lg font-medium text-gray-900">{category}</h3>
+
+            {/* Event selector for Events category */}
+            {category === 'Events' && (
+              <div className="mt-4">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Event for Testing Prompts
+                </label>
+                <select
+                  value={selectedTestEventId || ''}
+                  onChange={(e) => setSelectedTestEventId(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  {testEvents.length === 0 ? (
+                    <option value="">No upcoming events available</option>
+                  ) : (
+                    testEvents.map((event) => (
+                      <option key={event.id} value={event.id}>
+                        {event.title} - {new Date(event.start_date).toLocaleDateString()}
+                      </option>
+                    ))
+                  )}
+                </select>
+                <p className="text-xs text-gray-500 mt-1">Showing next 10 upcoming events</p>
+              </div>
+            )}
           </div>
           <div className="divide-y divide-gray-200">
             {filteredPrompts.map((prompt) => {
@@ -1951,31 +1976,6 @@ function AIPromptsSettings() {
                         </span>
                       </div>
                       <p className="text-sm text-gray-600 mt-1">{prompt.description}</p>
-
-                      {/* Event selector for event summarizer prompt */}
-                      {prompt.key === 'ai_prompt_event_summary' && (
-                        <div className="mt-3">
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Event for Testing
-                          </label>
-                          <select
-                            value={selectedTestEventId || ''}
-                            onChange={(e) => setSelectedTestEventId(e.target.value)}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-                          >
-                            {testEvents.length === 0 ? (
-                              <option value="">No upcoming events available</option>
-                            ) : (
-                              testEvents.map((event) => (
-                                <option key={event.id} value={event.id}>
-                                  {event.title} - {new Date(event.start_date).toLocaleDateString()}
-                                </option>
-                              ))
-                            )}
-                          </select>
-                          <p className="text-xs text-gray-500 mt-1">Showing next 10 upcoming events</p>
-                        </div>
-                      )}
                     </div>
                     <button
                       onClick={() => setExpandedPrompt(isExpanded ? null : prompt.key)}

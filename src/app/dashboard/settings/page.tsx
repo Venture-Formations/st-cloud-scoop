@@ -1318,7 +1318,6 @@ function AIPromptsSettings() {
   })
   const [criteriaSaving, setCriteriaSaving] = useState(false)
   const [criteriaMessage, setCriteriaMessage] = useState('')
-  const [criteriaPromptsExpanded, setCriteriaPromptsExpanded] = useState(false)
   const [expandedCriterionPrompt, setExpandedCriterionPrompt] = useState<number | null>(null)
 
   // RSS post selection for testing
@@ -1800,22 +1799,28 @@ function AIPromptsSettings() {
         </div>
       </div>
 
-      {/* Scoring Criteria Prompts - Grouped Section */}
+      {/* Primary Article Prompts */}
       <div className="bg-white shadow rounded-lg">
         <div className="p-6 border-b border-gray-200">
           <div className="flex items-center justify-between mb-4">
             <div>
-              <h3 className="text-lg font-medium text-gray-900">Scoring Criteria Prompts</h3>
+              <h3 className="text-lg font-medium text-gray-900">Primary Article Prompts</h3>
               <p className="text-sm text-gray-600 mt-1">
                 Configure evaluation criteria and content generation for primary (top) articles. {criteriaSettings.enabledCount} of 5 criteria enabled.
               </p>
             </div>
-            <button
-              onClick={() => setCriteriaPromptsExpanded(!criteriaPromptsExpanded)}
-              className="text-blue-600 hover:text-blue-800 text-sm font-medium"
-            >
-              {criteriaPromptsExpanded ? 'Collapse All' : 'Expand All'}
-            </button>
+            <div className="flex gap-2">
+              <button
+                className="px-4 py-2 bg-green-600 text-white text-sm font-medium rounded hover:bg-green-700"
+              >
+                Add Criteria
+              </button>
+              <button
+                className="px-4 py-2 bg-red-600 text-white text-sm font-medium rounded hover:bg-red-700"
+              >
+                Remove Criteria
+              </button>
+            </div>
           </div>
 
           {/* RSS Post Selector for Testing */}
@@ -1838,9 +1843,11 @@ function AIPromptsSettings() {
           </div>
         </div>
 
-        {criteriaPromptsExpanded && (
-          <div className="divide-y divide-gray-200">
-            {criteriaSettings.criteria.map((criterion) => {
+        {/* Criteria List - Only show enabled criteria */}
+        <div className="divide-y divide-gray-200">
+          {criteriaSettings.criteria
+            .filter(c => c.enabled) // Only show enabled criteria
+            .map((criterion) => {
               const promptKey = `ai_prompt_criteria_${criterion.number}`
               const prompt = prompts.find(p => p.key === promptKey)
               const isExpanded = expandedCriterionPrompt === criterion.number
@@ -1851,8 +1858,9 @@ function AIPromptsSettings() {
 
               return (
                 <div key={criterion.number} className="p-6">
-                  <div className="flex items-start justify-between mb-3">
+                  <div className="flex items-start justify-between">
                     <div className="flex-1">
+                      {/* Criteria Name Row */}
                       <div className="flex items-center gap-3 mb-2">
                         <span className="text-sm text-gray-500 font-medium">CRITERIA NAME:</span>
                         <h4 className="text-base font-medium text-gray-900">{criterion.name}</h4>
@@ -1882,7 +1890,7 @@ function AIPromptsSettings() {
                         </button>
                       </div>
 
-                      {/* Weight section */}
+                      {/* Weight Row */}
                       <div className="flex items-center gap-2 mb-2">
                         <span className="text-sm text-gray-700">Weight:</span>
                         {isEditingWeight ? (
@@ -1925,18 +1933,22 @@ function AIPromptsSettings() {
                         )}
                       </div>
 
+                      {/* Description */}
                       <p className="text-sm text-gray-600">
                         {prompt?.description || `Evaluates ${criterion.name.toLowerCase()} (weight: ${criterion.weight.toFixed(1)})`}
                       </p>
                     </div>
+
+                    {/* View/Edit Prompt Link */}
                     <button
                       onClick={() => setExpandedCriterionPrompt(isExpanded ? null : criterion.number)}
-                      className="ml-4 text-blue-600 hover:text-blue-800 text-sm font-medium"
+                      className="ml-4 text-blue-600 hover:text-blue-800 text-sm font-medium whitespace-nowrap"
                     >
-                      {isExpanded ? 'Collapse' : 'View/Edit Prompt'}
+                      View/Edit Prompt
                     </button>
                   </div>
 
+                  {/* Expanded Prompt Editor */}
                   {isExpanded && prompt && (
                     <div className="mt-4">
                       <div className="mb-2 flex items-center justify-between">
@@ -2003,8 +2015,7 @@ function AIPromptsSettings() {
                 </div>
               )
             })}
-          </div>
-        )}
+        </div>
       </div>
 
       {/* Prompts by Category */}

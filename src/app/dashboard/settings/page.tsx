@@ -1666,7 +1666,7 @@ function AIPromptsSettings() {
             <div>
               <h3 className="text-lg font-medium text-gray-900">Rating Criteria Prompts</h3>
               <p className="text-sm text-gray-600 mt-1">
-                Configure evaluation criteria and content generation for primary (top) articles. {criteriaSettings.enabledCount} of 5 criteria enabled.
+                Configure evaluation criteria and AI prompts for rating RSS articles. {criteriaSettings.enabledCount} of 5 criteria enabled.
               </p>
             </div>
             <div className="flex gap-2">
@@ -1686,20 +1686,24 @@ function AIPromptsSettings() {
           {/* RSS Post Selector for Testing */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              RSS Post for Testing Primary Prompts
+              RSS Post for Testing Prompts
             </label>
             <select
               value={selectedTestPostId || ''}
               onChange={(e) => setSelectedTestPostId(e.target.value)}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
-              {testRssPosts.map((post) => (
-                <option key={post.id} value={post.id}>
-                  {post.title} - {new Date(post.published_at || post.created_at).toLocaleDateString()}
-                </option>
-              ))}
+              {testRssPosts.length === 0 ? (
+                <option value="">No rated posts available from last 24 hours</option>
+              ) : (
+                testRssPosts.map((post) => (
+                  <option key={post.id} value={post.id}>
+                    {post.title} - {new Date(post.published_at || post.created_at).toLocaleDateString()}
+                  </option>
+                ))
+              )}
             </select>
-            <p className="text-xs text-gray-500 mt-1">Only showing posts from feeds assigned to Primary section</p>
+            <p className="text-xs text-gray-500 mt-1">Showing top 10 rated posts from the last 24 hours</p>
           </div>
         </div>
 

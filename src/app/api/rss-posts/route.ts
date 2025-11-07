@@ -3,15 +3,24 @@ import { supabaseAdmin } from '@/lib/supabase'
 
 export async function GET(request: NextRequest) {
   try {
-    const { searchParams } = new URL(request.url)
-    const limit = parseInt(searchParams.get('limit') || '50')
+    // Get top 10 rated posts from last 24 hours
+    const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
 
     const { data: posts, error } = await supabaseAdmin
       .from('rss_posts')
-      .select('id, title, description, content, published_at, created_at, feed_name')
-      .order('published_at', { ascending: false, nullsFirst: false })
+      .select(`
+        id,
+        title,
+        description,
+        content,
+        published_at,
+        created_at,
+        feed_name,
+        post_rating:post_ratings(total_score)
+      `)
+      .gte('created_at', twentyFourHoursAgo)
       .order('created_at', { ascending: false })
-      .limit(limit)
+      .limit(100) // Get more to filter and sort by score
 
     if (error) {
       console.error('Failed to load RSS posts:', error)
@@ -21,10 +30,26 @@ export async function GET(request: NextRequest) {
       )
     }
 
+    // Filter posts that have ratings and sort by total_score
+    const ratedPosts = (posts || [])
+      .filter(post => post.post_rating && post.post_rating.length > 0)
+      .map(post => ({
+        id: post.id,
+        title: post.title,
+        description: post.description,
+        content: post.content,
+        published_at: post.published_at,
+        created_at: post.created_at,
+        feed_name: post.feed_name,
+        total_score: post.post_rating[0]?.total_score || 0
+      }))
+      .sort((a, b) => b.total_score - a.total_score)
+      .slice(0, 10) // Top 10
+
     return NextResponse.json({
       success: true,
-      posts: posts || [],
-      count: posts?.length || 0
+      posts: ratedPosts,
+      count: ratedPosts.length
     })
 
   } catch (error) {

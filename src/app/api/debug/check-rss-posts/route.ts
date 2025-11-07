@@ -1,0 +1,74 @@
+import { NextResponse } from 'next/server'
+import { supabaseAdmin } from '@/lib/supabase'
+
+export async function GET() {
+  try {
+    // Check total RSS posts
+    const { data: allPosts, error: postsError, count: totalCount } = await supabaseAdmin
+      .from('rss_posts')
+      .select('id, title, created_at', { count: 'exact' })
+      .order('created_at', { ascending: false })
+      .limit(10)
+
+    // Check total post ratings
+    const { data: allRatings, error: ratingsError, count: ratingsCount } = await supabaseAdmin
+      .from('post_ratings')
+      .select('id, post_id, total_score', { count: 'exact' })
+      .order('created_at', { ascending: false })
+      .limit(10)
+
+    // Check posts with ratings joined
+    const { data: postsWithRatings, error: joinError } = await supabaseAdmin
+      .from('rss_posts')
+      .select(`
+        id,
+        title,
+        created_at,
+        post_rating:post_ratings(total_score, created_at)
+      `)
+      .order('created_at', { ascending: false })
+      .limit(10)
+
+    // Filter to only posts that have ratings
+    const ratedPosts = (postsWithRatings || []).filter(
+      post => post.post_rating && post.post_rating.length > 0
+    )
+
+    return NextResponse.json({
+      success: true,
+      totals: {
+        rss_posts: totalCount,
+        post_ratings: ratingsCount,
+        posts_with_ratings: ratedPosts.length
+      },
+      sample_posts: allPosts?.slice(0, 5).map(p => ({
+        id: p.id,
+        title: p.title?.substring(0, 60),
+        created_at: p.created_at
+      })),
+      sample_ratings: allRatings?.slice(0, 5).map(r => ({
+        id: r.id,
+        post_id: r.post_id,
+        total_score: r.total_score
+      })),
+      sample_posts_with_ratings: ratedPosts.slice(0, 5).map(p => ({
+        id: p.id,
+        title: p.title?.substring(0, 60),
+        rating_count: p.post_rating?.length || 0,
+        total_score: p.post_rating?.[0]?.total_score
+      })),
+      errors: {
+        posts: postsError?.message || null,
+        ratings: ratingsError?.message || null,
+        join: joinError?.message || null
+      }
+    })
+
+  } catch (error) {
+    console.error('Error checking RSS posts:', error)
+    return NextResponse.json({
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error'
+    }, { status: 500 })
+  }
+}

@@ -1968,7 +1968,7 @@ function AIPromptsSettings() {
                             ) : (
                               testEvents.map((event) => (
                                 <option key={event.id} value={event.id}>
-                                  {event.name} - {new Date(event.start_date).toLocaleDateString()}
+                                  {event.title} - {new Date(event.start_date).toLocaleDateString()}
                                 </option>
                               ))
                             )}

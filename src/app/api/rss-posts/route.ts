@@ -3,9 +3,7 @@ import { supabaseAdmin } from '@/lib/supabase'
 
 export async function GET(request: NextRequest) {
   try {
-    // Get top 10 rated posts from last 24 hours
-    const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
-
+    // Get most recent rated posts (no time limit, just get latest with ratings)
     const { data: posts, error } = await supabaseAdmin
       .from('rss_posts')
       .select(`
@@ -18,9 +16,8 @@ export async function GET(request: NextRequest) {
         feed_name,
         post_rating:post_ratings(total_score)
       `)
-      .gte('created_at', twentyFourHoursAgo)
       .order('created_at', { ascending: false })
-      .limit(100) // Get more to filter and sort by score
+      .limit(100) // Get recent 100 posts to filter and sort by score
 
     if (error) {
       console.error('Failed to load RSS posts:', error)
@@ -45,6 +42,12 @@ export async function GET(request: NextRequest) {
       }))
       .sort((a, b) => b.total_score - a.total_score)
       .slice(0, 10) // Top 10
+
+    console.log('[RSS-POSTS] Found:', {
+      total_posts: posts?.length || 0,
+      posts_with_ratings: ratedPosts.length,
+      top_scores: ratedPosts.slice(0, 3).map(p => p.total_score)
+    })
 
     return NextResponse.json({
       success: true,

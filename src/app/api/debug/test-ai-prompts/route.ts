@@ -242,7 +242,7 @@ export async function POST(request: NextRequest) {
         realEventData = event
         console.log('[TEST] Using real event data:', {
           id: event.id,
-          name: event.name,
+          title: event.title,
           start_date: event.start_date
         })
       }
@@ -268,9 +268,9 @@ export async function POST(request: NextRequest) {
         }
       ],
       eventSummarizer: realEventData ? {
-        title: realEventData.name || realEventData.title,
+        title: realEventData.title,
         description: realEventData.description || '',
-        venue: realEventData.venue_name || realEventData.venue || realEventData.location || ''
+        venue: realEventData.venue || realEventData.location || ''
       } : {
         title: 'Summer Concert Series at Lake George',
         description: 'Join us for free outdoor concerts every Thursday evening in July! Local bands will perform a variety of music styles from 6-8 PM. Bring your lawn chairs and blankets. Food trucks will be available.',
@@ -372,7 +372,7 @@ export async function GET(request: NextRequest) {
         realEventData = event
         console.log('[TEST] Using real event data:', {
           id: event.id,
-          name: event.name,
+          title: event.title,
           start_date: event.start_date
         })
       }
@@ -398,9 +398,9 @@ export async function GET(request: NextRequest) {
         }
       ],
       eventSummarizer: realEventData ? {
-        title: realEventData.name || realEventData.title,
+        title: realEventData.title,
         description: realEventData.description || '',
-        venue: realEventData.venue_name || realEventData.venue || realEventData.location || ''
+        venue: realEventData.venue || realEventData.location || ''
       } : {
         title: 'Summer Concert Series at Lake George',
         description: 'Join us for free outdoor concerts every Thursday evening in July! Local bands will perform a variety of music styles from 6-8 PM. Bring your lawn chairs and blankets. Food trucks will be available.',

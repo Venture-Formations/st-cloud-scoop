@@ -34,6 +34,13 @@ export async function GET() {
       post => post.post_rating && post.post_rating.length > 0
     )
 
+    // Check if any sample rating post_ids exist in rss_posts
+    const sampleRatingPostIds = allRatings?.slice(0, 5).map(r => r.post_id) || []
+    const { data: matchingPosts } = await supabaseAdmin
+      .from('rss_posts')
+      .select('id, title')
+      .in('id', sampleRatingPostIds)
+
     return NextResponse.json({
       success: true,
       totals: {
@@ -61,6 +68,11 @@ export async function GET() {
         posts: postsError?.message || null,
         ratings: ratingsError?.message || null,
         join: joinError?.message || null
+      },
+      diagnostics: {
+        sample_rating_post_ids: sampleRatingPostIds,
+        matching_posts_found: matchingPosts?.length || 0,
+        matching_posts: matchingPosts || []
       }
     })
 

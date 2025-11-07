@@ -1727,7 +1727,7 @@ function AIPromptsSettings() {
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
               {testRssPosts.length === 0 ? (
-                <option value="">No rated posts available from last 24 hours</option>
+                <option value="">No rated posts available</option>
               ) : (
                 testRssPosts.map((post) => (
                   <option key={post.id} value={post.id}>
@@ -1736,7 +1736,7 @@ function AIPromptsSettings() {
                 ))
               )}
             </select>
-            <p className="text-xs text-gray-500 mt-1">Showing top 10 rated posts from the last 24 hours</p>
+            <p className="text-xs text-gray-500 mt-1">Showing top 10 rated posts (sorted by score)</p>
           </div>
         </div>
 

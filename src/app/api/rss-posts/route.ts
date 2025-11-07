@@ -3,32 +3,44 @@ import { supabaseAdmin } from '@/lib/supabase'
 
 export async function GET(request: NextRequest) {
   try {
-    // Get most recent rated posts (no time limit, just get latest with ratings)
-    const { data: posts, error } = await supabaseAdmin
+    // Get recent RSS posts
+    const { data: posts, error: postsError } = await supabaseAdmin
       .from('rss_posts')
-      .select(`
-        id,
-        title,
-        description,
-        content,
-        published_at,
-        processed_at,
-        post_rating:post_ratings(total_score)
-      `)
+      .select('id, title, description, content, published_at, processed_at')
       .order('processed_at', { ascending: false })
-      .limit(100) // Get recent 100 posts to filter and sort by score
+      .limit(100)
 
-    if (error) {
-      console.error('Failed to load RSS posts:', error)
+    if (postsError) {
+      console.error('Failed to load RSS posts:', postsError)
       return NextResponse.json(
         { error: 'Failed to load RSS posts' },
         { status: 500 }
       )
     }
 
-    // Filter posts that have ratings and sort by total_score
+    // Get all ratings for these posts
+    const postIds = posts?.map(p => p.id) || []
+    const { data: ratings, error: ratingsError } = await supabaseAdmin
+      .from('post_ratings')
+      .select('post_id, total_score')
+      .in('post_id', postIds)
+
+    if (ratingsError) {
+      console.error('Failed to load ratings:', ratingsError)
+      return NextResponse.json(
+        { error: 'Failed to load ratings' },
+        { status: 500 }
+      )
+    }
+
+    // Create a map of post_id -> total_score
+    const ratingsMap = new Map(
+      (ratings || []).map(r => [r.post_id, r.total_score])
+    )
+
+    // Combine posts with their ratings
     const ratedPosts = (posts || [])
-      .filter(post => post.post_rating && post.post_rating.length > 0)
+      .filter(post => ratingsMap.has(post.id))
       .map(post => ({
         id: post.id,
         title: post.title,
@@ -36,7 +48,7 @@ export async function GET(request: NextRequest) {
         content: post.content,
         published_at: post.published_at,
         processed_at: post.processed_at,
-        total_score: post.post_rating[0]?.total_score || 0
+        total_score: ratingsMap.get(post.id) || 0
       }))
       .sort((a, b) => b.total_score - a.total_score)
       .slice(0, 10) // Top 10

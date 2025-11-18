@@ -422,11 +422,24 @@ export class RSSProcessor {
             imageUrl = itemAny.thumbnail || itemAny.image || itemAny['media:thumbnail']?.url || null
           }
 
-          // Debug: Check if URL has HTML entities
-          if (imageUrl && imageUrl.includes('&amp;')) {
-            console.log(`⚠️  WARNING: Image URL contains HTML entities (&amp;)`)
-            console.log(`⚠️  Original URL: ${imageUrl.substring(0, 150)}...`)
+          // CRITICAL: Decode HTML entities in URL immediately after extraction
+          // RSS feeds often contain &amp; instead of & which breaks HTTP requests
+          if (imageUrl) {
+            const originalUrl = imageUrl
+            imageUrl = imageUrl
+              .replace(/&amp;/g, '&')
+              .replace(/&lt;/g, '<')
+              .replace(/&gt;/g, '>')
+              .replace(/&quot;/g, '"')
+              .replace(/&#39;/g, "'")
+
+            if (originalUrl !== imageUrl) {
+              console.log(`✓ Decoded HTML entities in image URL`)
+              console.log(`  Before: ${originalUrl.substring(0, 100)}...`)
+              console.log(`  After:  ${imageUrl.substring(0, 100)}...`)
+            }
           }
+
           console.log(`Post: "${item.title}" - Image URL: ${imageUrl || 'None found'}`)
 
           // Check if post already exists

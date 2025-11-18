@@ -12,7 +12,9 @@
       "Bash(python3 -m json.tool:*)",
       "Bash(git pull:*)",
       "Bash(node:*)",
-      "mcp__postgres__query"
+      "mcp__postgres__query",
+      "Bash(git restore:*)",
+      "WebFetch(domain:rss.app)"
     ],
     "deny": [],
     "ask": []

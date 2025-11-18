@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
 import { callAIWithPrompt } from '@/lib/openai'
+import { GitHubImageStorage } from '@/lib/github-storage'
 
 /**
  * RSS Ingestion Cron
@@ -26,6 +27,9 @@ export async function GET(request: NextRequest) {
     }
 
     console.log('[RSS Ingest] Starting hourly RSS ingestion for St. Cloud Scoop')
+
+    // Initialize GitHub storage for image re-hosting
+    const githubStorage = new GitHubImageStorage()
 
     // Get all active RSS feeds
     const { data: feeds, error: feedsError } = await supabaseAdmin
@@ -91,6 +95,24 @@ export async function GET(request: NextRequest) {
               continue
             }
 
+            // Re-host image to GitHub if imageUrl exists
+            let finalImageUrl = item.imageUrl || null
+            if (finalImageUrl) {
+              console.log(`[RSS Ingest] Re-hosting image to GitHub: ${finalImageUrl.substring(0, 100)}`)
+              try {
+                const githubUrl = await githubStorage.uploadImage(finalImageUrl, item.title)
+                if (githubUrl) {
+                  finalImageUrl = githubUrl
+                  console.log(`[RSS Ingest] ✓ Successfully re-hosted image to GitHub: ${githubUrl}`)
+                } else {
+                  console.warn(`[RSS Ingest] ⚠️ Failed to re-host image, keeping original URL`)
+                }
+              } catch (imageError) {
+                console.error(`[RSS Ingest] ✗ Error re-hosting image:`, imageError)
+                // Keep original URL if re-hosting fails
+              }
+            }
+
             // Insert new post
             const { data: newPost, error: insertError } = await supabaseAdmin
               .from('rss_posts')
@@ -102,7 +124,7 @@ export async function GET(request: NextRequest) {
                 content: item.content || null,
                 author: item.author || null,
                 external_id: item.externalId || null,
-                image_url: item.imageUrl || null,
+                image_url: finalImageUrl,
                 publication_date: item.publishedAt || new Date().toISOString(),
                 processed_at: new Date().toISOString()
               })

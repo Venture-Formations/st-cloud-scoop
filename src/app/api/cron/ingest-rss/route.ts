@@ -247,21 +247,28 @@ async function scorePost(post: any) {
       }
     )
 
+    console.log(`[RSS Ingest] Raw AI response for criterion ${criterion.number}:`, typeof responseText, responseText?.toString().substring(0, 100))
+
     // Parse response
     let result: any
     try {
       result = typeof responseText === 'string' ? JSON.parse(responseText) : responseText
     } catch (parseError) {
-      const jsonMatch = responseText.match(/\{[\s\S]*\}/)
+      console.log(`[RSS Ingest] JSON parse failed for criterion ${criterion.number}, trying regex extraction`)
+      const jsonMatch = (responseText as string).match(/\{[\s\S]*\}/)
       if (jsonMatch) {
         result = JSON.parse(jsonMatch[0])
       } else {
+        console.error(`[RSS Ingest] Failed to parse criterion ${criterion.number} response:`, responseText)
         throw new Error(`Failed to parse criterion ${criterion.number} response`)
       }
     }
 
+    console.log(`[RSS Ingest] Parsed result for criterion ${criterion.number}:`, { score: result.score, hasReason: !!result.reason })
+
     // Validate score
     if (typeof result.score !== 'number' || result.score < 0 || result.score > 10) {
+      console.error(`[RSS Ingest] Invalid score from criterion ${criterion.number}:`, result.score)
       throw new Error(`Invalid score from criterion ${criterion.number}: ${result.score}`)
     }
 
@@ -278,6 +285,8 @@ async function scorePost(post: any) {
     totalWeightedScore += score * weight
   })
 
+  console.log(`[RSS Ingest] Total weighted score: ${totalWeightedScore} (from ${criteriaScores.length} criteria)`)
+
   // Insert rating
   const ratingRecord: any = {
     post_id: post.id,
@@ -292,9 +301,20 @@ async function scorePost(post: any) {
     ratingRecord[`criteria_${criterionNum}_weight`] = criterionScore.weight
   })
 
-  await supabaseAdmin
+  console.log(`[RSS Ingest] Inserting rating record:`, { post_id: post.id, total_score: totalWeightedScore, criteria_count: criteriaScores.length })
+
+  const { data: insertedRating, error: ratingError } = await supabaseAdmin
     .from('post_ratings')
     .insert(ratingRecord)
+    .select()
+    .single()
+
+  if (ratingError) {
+    console.error(`[RSS Ingest] Failed to insert rating for post ${post.id}:`, ratingError.message, ratingError.code)
+    throw new Error(`Failed to insert rating: ${ratingError.message}`)
+  }
+
+  console.log(`[RSS Ingest] ✓ Successfully inserted rating with id: ${insertedRating?.id}`)
 }
 
 /**

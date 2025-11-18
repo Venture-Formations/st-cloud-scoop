@@ -26,13 +26,21 @@ export class GitHubImageStorage {
 
   async uploadWeatherImage(imageUrl: string, forecastDate: string): Promise<string | null> {
     try {
-      console.log(`Downloading weather image from: ${imageUrl}`)
+      // Decode HTML entities in URL (&amp; -> &, etc.)
+      const decodedUrl = imageUrl
+        .replace(/&amp;/g, '&')
+        .replace(/&lt;/g, '<')
+        .replace(/&gt;/g, '>')
+        .replace(/&quot;/g, '"')
+        .replace(/&#39;/g, "'")
+
+      console.log(`Downloading weather image from: ${decodedUrl}`)
 
       // Download image with timeout
       const controller = new AbortController()
       const timeoutId = setTimeout(() => controller.abort(), 15000) // 15 second timeout
 
-      const response = await fetch(imageUrl, {
+      const response = await fetch(decodedUrl, {
         signal: controller.signal,
         headers: {
           'User-Agent': 'StCloudScoop-Newsletter/1.0',
@@ -121,13 +129,21 @@ export class GitHubImageStorage {
 
   async uploadImage(imageUrl: string, articleTitle: string): Promise<string | null> {
     try {
-      console.log(`Downloading image from: ${imageUrl}`)
+      // Decode HTML entities in URL (&amp; -> &, etc.)
+      const decodedUrl = imageUrl
+        .replace(/&amp;/g, '&')
+        .replace(/&lt;/g, '<')
+        .replace(/&gt;/g, '>')
+        .replace(/&quot;/g, '"')
+        .replace(/&#39;/g, "'")
+
+      console.log(`Downloading image from: ${decodedUrl}`)
 
       // Download image with timeout
       const controller = new AbortController()
       const timeoutId = setTimeout(() => controller.abort(), 15000) // 15 second timeout
 
-      const response = await fetch(imageUrl, {
+      const response = await fetch(decodedUrl, {
         signal: controller.signal,
         headers: {
           'User-Agent': 'StCloudScoop-Newsletter/1.0',
@@ -139,12 +155,13 @@ export class GitHubImageStorage {
       clearTimeout(timeoutId)
 
       if (!response.ok) {
-        console.error(`Failed to download image: HTTP ${response.status} ${response.statusText}`)
-        console.error(`Response headers:`, Object.fromEntries(response.headers.entries()))
-
-        // Log specific error for Facebook URLs
-        if (imageUrl.includes('fbcdn.net')) {
-          console.error(`Facebook CDN URL failed - likely expired or restricted: ${imageUrl}`)
+        // For Facebook CDN, just log a concise warning (expected for expired URLs)
+        if (decodedUrl.includes('fbcdn.net')) {
+          console.warn(`[GitHub Storage] Facebook CDN URL expired (${response.status}), skipping re-host`)
+        } else {
+          // For other URLs, log more details
+          console.error(`[GitHub Storage] Failed to download image: HTTP ${response.status} ${response.statusText}`)
+          console.error(`[GitHub Storage] URL: ${decodedUrl}`)
         }
 
         return null
@@ -168,8 +185,8 @@ export class GitHubImageStorage {
       }
 
       // Generate hash of the image URL for deduplication
-      const imageHash = crypto.createHash('md5').update(imageUrl).digest('hex')
-      const fileExtension = this.getImageExtension(imageUrl)
+      const imageHash = crypto.createHash('md5').update(decodedUrl).digest('hex')
+      const fileExtension = this.getImageExtension(decodedUrl)
       const fileName = `${imageHash}${fileExtension}`
       const filePath = `newsletter-images/${fileName}`
 
@@ -215,9 +232,9 @@ export class GitHubImageStorage {
 
     } catch (error) {
       if (error instanceof Error && error.name === 'AbortError') {
-        console.error(`Image download timeout for: ${imageUrl}`)
+        console.error(`[GitHub Storage] Image download timeout for: ${decodedUrl}`)
       } else {
-        console.error(`Error uploading image to GitHub:`, error)
+        console.error(`[GitHub Storage] Error uploading image:`, error)
       }
       return null
     }

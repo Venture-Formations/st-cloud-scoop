@@ -14,7 +14,8 @@
       "Bash(node:*)",
       "mcp__postgres__query",
       "Bash(git restore:*)",
-      "WebFetch(domain:rss.app)"
+      "WebFetch(domain:rss.app)",
+      "Bash(git push:*)"
     ],
     "deny": [],
     "ask": []

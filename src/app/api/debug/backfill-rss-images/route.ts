@@ -115,8 +115,7 @@ export async function GET(request: Request) {
         const { error: updateError } = await supabaseAdmin
           .from('rss_posts')
           .update({
-            image_url: null,
-            updated_at: new Date().toISOString()
+            image_url: null
           })
           .eq('id', post.id)
 
@@ -169,8 +168,7 @@ export async function GET(request: Request) {
           const { error: updateError } = await supabaseAdmin
             .from('rss_posts')
             .update({
-              image_url: githubUrl,
-              updated_at: new Date().toISOString()
+              image_url: githubUrl
             })
             .eq('id', post.id)
 

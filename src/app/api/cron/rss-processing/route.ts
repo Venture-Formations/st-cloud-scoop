@@ -228,3 +228,4 @@ export async function GET(request: NextRequest) {
     }, { status: 500 })
   }
 }
+export const maxDuration = 600  // 10 minutes

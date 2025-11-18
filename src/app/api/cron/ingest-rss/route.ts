@@ -451,4 +451,4 @@ function cleanText(text: string): string {
     .trim()
 }
 
-export const maxDuration = 300  // 5 minutes
+export const maxDuration = 600  // 10 minutes

@@ -15,7 +15,8 @@
       "mcp__postgres__query",
       "Bash(git restore:*)",
       "WebFetch(domain:rss.app)",
-      "Bash(git push:*)"
+      "Bash(git push:*)",
+      "Bash(src/app/api/cron/rss-processing/route.ts)"
     ],
     "deny": [],
     "ask": []

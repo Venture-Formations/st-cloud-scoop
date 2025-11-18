@@ -1206,8 +1206,8 @@ export class RSSProcessor {
   }
 
   private async factCheckContent(newsletterContent: string, originalContent: string): Promise<FactCheckResult> {
-    const prompt = await AI_PROMPTS.factChecker(newsletterContent, originalContent)
-    const result = await callOpenAI(prompt)
+    // AI_PROMPTS.factChecker already calls the API and returns the result
+    const result = await AI_PROMPTS.factChecker(newsletterContent, originalContent)
 
     if (typeof result.score !== 'number' || typeof result.passed !== 'boolean') {
       throw new Error('Invalid fact-check response')

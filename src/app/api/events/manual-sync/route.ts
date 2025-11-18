@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
-import { callOpenAI, AI_PROMPTS } from '@/lib/openai'
+import { AI_PROMPTS } from '@/lib/openai'
 
 // Helper function to decode HTML entities
 function decodeHtmlEntities(text: string | null | undefined): string | null {
@@ -32,13 +32,12 @@ async function generateEventSummary(event: { title: string; description: string 
 
     console.log(`Generating AI summary for event: ${event.title}`)
 
-    const prompt = await AI_PROMPTS.eventSummarizer({
+    // AI_PROMPTS.eventSummarizer already calls the API and returns the result
+    const response = await AI_PROMPTS.eventSummarizer({
       title: event.title,
       description: event.description,
       venue: event.venue
     })
-
-    const response = await callOpenAI(prompt, 200, 0.7)
 
     if (response && response.event_summary) {
       console.log(`Generated summary (${response.word_count} words): ${response.event_summary}`)

@@ -484,6 +484,41 @@ ${i + 1}. ${item.road_name}
       'ai_prompt_road_work_validator',
       placeholders
     )
+  },
+
+  wordleDefinition: async (word: string) => {
+    const placeholders = {
+      word: word
+    }
+
+    return await callAIWithPrompt(
+      'ai_prompt_wordle_definition',
+      placeholders
+    )
+  },
+
+  wordleFact: async (word: string) => {
+    const placeholders = {
+      word: word
+    }
+
+    return await callAIWithPrompt(
+      'ai_prompt_wordle_fact',
+      placeholders
+    )
+  },
+
+  roadWorkParser: async (content: string, targetDate: string, sourceUrl: string) => {
+    const placeholders = {
+      content: content.substring(0, 10000), // Limit content length
+      targetDate: targetDate,
+      sourceUrl: sourceUrl
+    }
+
+    return await callAIWithPrompt(
+      'ai_prompt_road_work_parser',
+      placeholders
+    )
   }
 }
 

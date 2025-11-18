@@ -1,4 +1,5 @@
 import { RoadWorkItem } from '@/types/database'
+import { AI_PROMPTS } from './openai'
 
 /**
  * Scrape road work data from known government sources
@@ -124,38 +125,12 @@ export async function getRoadWorkWithChatGPT(targetDate: string): Promise<RoadWo
     return []
   }
 
-  // Now ask ChatGPT to extract road work from the pages
-  const prompt = `You are analyzing real road construction web pages from St. Cloud, MN area government websites.
-
-Today's date: ${targetDate}
-
-I have fetched the following pages:
-${pageContents.map(p => `\n--- ${p.url} ---\n${p.content.substring(0, 3000)}`).join('\n\n')}
-
-Extract ALL active road work projects that are currently ongoing on ${targetDate}. Return ONLY a JSON array with this exact format:
-
-[
-  {
-    "road_name": "Highway 15",
-    "road_range": "from 2nd St to County Rd 75",
-    "city_or_township": "St. Cloud",
-    "reason": "Bridge maintenance",
-    "start_date": "Sep 15",
-    "expected_reopen": "Oct 10",
-    "source_url": "https://www.dot.state.mn.us/d3/"
-  }
-]
-
-CRITICAL:
-- Extract real, specific projects from the page content above
-- Only include projects active on ${targetDate}
-- Use the actual source URL where you found each project
-- Extract 6-9 projects if available
-- Use short date format (mmm d)
-- Return ONLY the JSON array, no markdown or explanations`
+  // Use AI to extract road work from the pages
+  const combinedContent = pageContents.map(p => `\n--- ${p.url} ---\n${p.content.substring(0, 3000)}`).join('\n\n')
+  const sourceUrls = pageContents.map(p => p.url).join(', ')
 
   try {
-    const response = await callOpenAI(prompt, 3000, 0.2)
+    const response = await AI_PROMPTS.roadWorkParser(combinedContent, targetDate, sourceUrls)
 
     console.log('ChatGPT response type:', typeof response)
 

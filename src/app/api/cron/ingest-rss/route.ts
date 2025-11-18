@@ -76,13 +76,13 @@ export async function GET(request: NextRequest) {
         // Save each item to database
         for (const item of items) {
           try {
-            // Check if post already exists (by title + link)
+            // Check if post already exists (by title + source_url)
             const { data: existingPost } = await supabaseAdmin
               .from('rss_posts')
               .select('id')
               .eq('feed_id', feed.id)
               .eq('title', item.title)
-              .eq('link', item.link)
+              .eq('source_url', item.link)
               .maybeSingle()
 
             if (existingPost) {
@@ -97,11 +97,11 @@ export async function GET(request: NextRequest) {
               .insert({
                 feed_id: feed.id,
                 title: item.title,
-                link: item.link,
+                source_url: item.link,
                 description: item.description || null,
                 content: item.content || null,
                 image_url: item.imageUrl || null,
-                published_at: item.publishedAt || new Date().toISOString(),
+                publication_date: item.publishedAt || new Date().toISOString(),
                 processed_at: new Date().toISOString()
               })
               .select()

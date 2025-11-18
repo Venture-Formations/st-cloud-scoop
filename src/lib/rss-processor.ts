@@ -422,6 +422,11 @@ export class RSSProcessor {
             imageUrl = itemAny.thumbnail || itemAny.image || itemAny['media:thumbnail']?.url || null
           }
 
+          // Debug: Check if URL has HTML entities
+          if (imageUrl && imageUrl.includes('&amp;')) {
+            console.log(`⚠️  WARNING: Image URL contains HTML entities (&amp;)`)
+            console.log(`⚠️  Original URL: ${imageUrl.substring(0, 150)}...`)
+          }
           console.log(`Post: "${item.title}" - Image URL: ${imageUrl || 'None found'}`)
 
           // Check if post already exists

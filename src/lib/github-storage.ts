@@ -137,7 +137,13 @@ export class GitHubImageStorage {
         .replace(/&quot;/g, '"')
         .replace(/&#39;/g, "'")
 
-      console.log(`Downloading image from: ${decodedUrl}`)
+      // Debug logging to see URL transformation
+      if (imageUrl !== decodedUrl) {
+        console.log(`[GitHub Storage] Original URL had HTML entities`)
+        console.log(`[GitHub Storage] Original: ${imageUrl.substring(0, 150)}...`)
+        console.log(`[GitHub Storage] Decoded:  ${decodedUrl.substring(0, 150)}...`)
+      }
+      console.log(`[GitHub Storage] Downloading from: ${decodedUrl.substring(0, 100)}...`)
 
       // Download image with timeout
       const controller = new AbortController()

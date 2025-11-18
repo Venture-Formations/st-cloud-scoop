@@ -33,6 +33,34 @@ async function getPrompt(key: string): Promise<string> {
   }
 }
 
+// Helper function to recursively replace placeholders in any structure
+function replacePlaceholdersDeep(obj: any, placeholders: Record<string, string>): any {
+  if (typeof obj === 'string') {
+    // Replace all placeholders in string
+    return Object.entries(placeholders).reduce(
+      (str, [key, value]) => str.replace(new RegExp(`\\{\\{${key}\\}\\}`, 'g'), value),
+      obj
+    )
+  }
+
+  if (Array.isArray(obj)) {
+    // Recursively process arrays
+    return obj.map(item => replacePlaceholdersDeep(item, placeholders))
+  }
+
+  if (obj && typeof obj === 'object') {
+    // Recursively process objects
+    const result: any = {}
+    for (const [key, value] of Object.entries(obj)) {
+      result[key] = replacePlaceholdersDeep(value, placeholders)
+    }
+    return result
+  }
+
+  // Return primitives as-is
+  return obj
+}
+
 // Helper function to call OpenAI or Perplexity with structured prompt configuration
 // Supports structured JSON prompts with model parameters and conversation history
 export async function callWithStructuredPrompt(
@@ -40,28 +68,8 @@ export async function callWithStructuredPrompt(
   placeholders: Record<string, string>,
   provider: 'openai' | 'perplexity' = 'openai'
 ): Promise<string> {
-  // Replace placeholders in messages/input array if it exists
-  let processedInput = config.input || config.messages
-
-  if (processedInput && Array.isArray(processedInput)) {
-    processedInput = processedInput.map((msg: any) => {
-      // Only process if content is a string
-      if (msg.content && typeof msg.content === 'string') {
-        return {
-          ...msg,
-          content: Object.entries(placeholders).reduce(
-            (content, [key, value]) => content.replace(
-              new RegExp(`\\{\\{${key}\\}\\}`, 'g'),
-              value
-            ),
-            msg.content
-          )
-        }
-      }
-      // Return message as-is if content isn't a string
-      return msg
-    })
-  }
+  // Deep replace all placeholders in the entire config
+  const processedConfig = replacePlaceholdersDeep(config, placeholders)
 
   // Select client based on provider
   const client = provider === 'perplexity' ? perplexity : openai
@@ -72,24 +80,16 @@ export async function callWithStructuredPrompt(
     : 'gpt-4o'
 
   console.log(`[AI] Calling ${provider.toUpperCase()} with structured prompt:`, {
-    model: config.model || defaultModel,
-    temperature: config.temperature ?? 0.7,
-    input_count: processedInput?.length || 0
+    model: processedConfig.model || defaultModel,
+    temperature: processedConfig.temperature ?? 0.7,
+    input_count: processedConfig.input?.length || processedConfig.messages?.length || 0
   })
 
   if (provider === 'openai') {
-    // Use Responses API for OpenAI
-    // Pass config as-is (user maintains correct Responses API format in database)
-    const request: any = { ...config }
+    // Use Responses API for OpenAI - send processed config directly
+    console.log('[AI] OpenAI Responses API request:', Object.keys(processedConfig))
 
-    // Only override input if we processed placeholders
-    if (processedInput) {
-      request.input = processedInput
-    }
-
-    console.log('[AI] OpenAI Responses API request (as-is):', Object.keys(request))
-
-    const response = await (client as any).responses.create(request)
+    const response = await (client as any).responses.create(processedConfig)
 
     // Log full response metadata for debugging
     console.log(`[AI] OpenAI Responses API full metadata:`, {
@@ -130,13 +130,13 @@ export async function callWithStructuredPrompt(
   } else {
     // Perplexity still uses Chat Completions API
     const response = await client.chat.completions.create({
-      model: config.model || defaultModel,
-      messages: processedInput || config.messages || config.input,
-      temperature: config.temperature ?? 0.7,
-      max_tokens: config.max_output_tokens || 1000,
-      top_p: config.top_p,
-      presence_penalty: config.presence_penalty,
-      frequency_penalty: config.frequency_penalty,
+      model: processedConfig.model || defaultModel,
+      messages: processedConfig.input || processedConfig.messages,
+      temperature: processedConfig.temperature ?? 0.7,
+      max_tokens: processedConfig.max_output_tokens || 1000,
+      top_p: processedConfig.top_p,
+      presence_penalty: processedConfig.presence_penalty,
+      frequency_penalty: processedConfig.frequency_penalty,
     })
 
     const result = response.choices[0]?.message?.content || ''

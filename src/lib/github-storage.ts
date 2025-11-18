@@ -128,15 +128,15 @@ export class GitHubImageStorage {
   }
 
   async uploadImage(imageUrl: string, articleTitle: string): Promise<string | null> {
-    try {
-      // Decode HTML entities in URL (&amp; -> &, etc.)
-      const decodedUrl = imageUrl
-        .replace(/&amp;/g, '&')
-        .replace(/&lt;/g, '<')
-        .replace(/&gt;/g, '>')
-        .replace(/&quot;/g, '"')
-        .replace(/&#39;/g, "'")
+    // Decode HTML entities in URL (&amp; -> &, etc.)
+    const decodedUrl = imageUrl
+      .replace(/&amp;/g, '&')
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>')
+      .replace(/&quot;/g, '"')
+      .replace(/&#39;/g, "'")
 
+    try {
       // Debug logging to see URL transformation
       if (imageUrl !== decodedUrl) {
         console.log(`[GitHub Storage] Original URL had HTML entities`)

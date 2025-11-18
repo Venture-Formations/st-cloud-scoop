@@ -81,7 +81,9 @@ export async function callWithStructuredPrompt(
 
   console.log(`[AI] Calling ${provider.toUpperCase()} with structured prompt:`, {
     model: processedConfig.model || defaultModel,
-    temperature: processedConfig.temperature ?? 0.7,
+    ...(provider === 'openai'
+      ? { reasoning: processedConfig.reasoning }
+      : { temperature: processedConfig.temperature ?? 0.7 }),
     input_count: processedConfig.input?.length || processedConfig.messages?.length || 0
   })
 

@@ -89,7 +89,7 @@
       "maxDuration": 30
     },
     "app/api/cron/sync-events/route.ts": {
-      "maxDuration": 300
+      "maxDuration": 600
     },
     "app/api/cron/generate-weather/route.ts": {
       "maxDuration": 180
@@ -98,10 +98,10 @@
       "maxDuration": 120
     },
     "app/api/events/sync/route.ts": {
-      "maxDuration": 300
+      "maxDuration": 600
     },
     "app/api/events/manual-sync/route.ts": {
-      "maxDuration": 300
+      "maxDuration": 600
     },
     "app/api/cron/cleanup-pending-submissions/route.ts": {
       "maxDuration": 60

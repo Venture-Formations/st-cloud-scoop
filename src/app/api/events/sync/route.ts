@@ -240,7 +240,7 @@ export async function POST(request: NextRequest) {
 
       // Check if we're approaching timeout (leave 60 seconds for cleanup)
       const elapsed = Date.now() - functionStartTime
-      if (elapsed > 240000) { // 4 minutes
+      if (elapsed > 540000) { // 9 minutes (leave 1 minute for cleanup before 10 minute timeout)
         console.log(`⏰ Approaching timeout after ${Math.round(elapsed/1000)}s, stopping processing at batch ${batchIndex + 1}`)
         break
       }

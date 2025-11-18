@@ -335,10 +335,13 @@ function extractRSSItems(xml: string): Array<{title: string, link: string, descr
     const title = extractTag(itemXml, 'title')
     const link = extractTag(itemXml, 'link')
     const description = extractTag(itemXml, 'description')
-    const content = extractTag(itemXml, 'content:encoded') || extractTag(itemXml, 'content')
+    const contentEncoded = extractTag(itemXml, 'content:encoded') || extractTag(itemXml, 'content')
     const pubDate = extractTag(itemXml, 'pubDate')
     const author = extractTag(itemXml, 'dc:creator') || extractTag(itemXml, 'author')
     const guid = extractTag(itemXml, 'guid')
+
+    // Use content:encoded if available, otherwise fall back to description
+    const content = contentEncoded || description
 
     // Try to extract image
     let imageUrl: string | undefined
@@ -376,11 +379,14 @@ function extractRSSItems(xml: string): Array<{title: string, link: string, descr
       const title = extractTag(entryXml, 'title')
       const linkMatch = entryXml.match(/<link[^>]*href="([^"]*)"/)
       const link = linkMatch ? linkMatch[1] : extractTag(entryXml, 'id')
-      const summary = extractTag(entryXml, 'summary') || extractTag(entryXml, 'content')
-      const content = extractTag(entryXml, 'content')
+      const summary = extractTag(entryXml, 'summary')
+      const contentTag = extractTag(entryXml, 'content')
       const published = extractTag(entryXml, 'published') || extractTag(entryXml, 'updated')
       const authorName = extractTag(entryXml, 'author')
       const id = extractTag(entryXml, 'id')
+
+      // Use content if available, otherwise fall back to summary
+      const content = contentTag || summary
 
       if (title && link) {
         items.push({

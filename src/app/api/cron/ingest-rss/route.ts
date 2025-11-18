@@ -87,6 +87,7 @@ export async function GET(request: NextRequest) {
 
             if (existingPost) {
               // Post already exists, skip
+              console.log(`[RSS Ingest] Skipping duplicate post: ${item.title.substring(0, 50)}`)
               continue
             }
 
@@ -107,15 +108,21 @@ export async function GET(request: NextRequest) {
               .select()
               .single()
 
-            if (!insertError && newPost) {
+            if (insertError) {
+              console.error(`[RSS Ingest] Insert error for ${item.title.substring(0, 50)}:`, insertError.message, insertError.code)
+              continue
+            }
+
+            if (newPost) {
               newPostsCount++
+              console.log(`[RSS Ingest] Inserted new post: ${newPost.title.substring(0, 50)}`)
 
               // Score the post with multi-criteria AI
               try {
                 await scorePost(newPost)
-                console.log(`[RSS Ingest] Scored post: ${newPost.title}`)
+                console.log(`[RSS Ingest] Scored post: ${newPost.title.substring(0, 50)}`)
               } catch (scoreError) {
-                console.error(`[RSS Ingest] Failed to score post ${newPost.title}:`, scoreError)
+                console.error(`[RSS Ingest] Failed to score post ${newPost.title.substring(0, 50)}:`, scoreError)
                 // Continue even if scoring fails
               }
             }

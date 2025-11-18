@@ -100,6 +100,8 @@ export async function GET(request: NextRequest) {
                 source_url: item.link,
                 description: item.description || null,
                 content: item.content || null,
+                author: item.author || null,
+                external_id: item.externalId || null,
                 image_url: item.imageUrl || null,
                 publication_date: item.publishedAt || new Date().toISOString(),
                 processed_at: new Date().toISOString()
@@ -114,7 +116,7 @@ export async function GET(request: NextRequest) {
 
             if (newPost) {
               newPostsCount++
-              console.log(`[RSS Ingest] Inserted new post: ${newPost.title.substring(0, 50)}`)
+              console.log(`[RSS Ingest] Inserted new post: ${newPost.title.substring(0, 50)} [author: ${item.author ? 'yes' : 'no'}, content: ${item.content ? 'yes' : 'no'}, external_id: ${item.externalId ? 'yes' : 'no'}]`)
 
               // Score the post with multi-criteria AI
               try {
@@ -321,8 +323,8 @@ async function scorePost(post: any) {
  * Extract RSS items from XML text
  * Supports both RSS 2.0 and Atom formats
  */
-function extractRSSItems(xml: string): Array<{title: string, link: string, description?: string, content?: string, imageUrl?: string, publishedAt?: string}> {
-  const items: Array<{title: string, link: string, description?: string, content?: string, imageUrl?: string, publishedAt?: string}> = []
+function extractRSSItems(xml: string): Array<{title: string, link: string, description?: string, content?: string, imageUrl?: string, publishedAt?: string, author?: string, externalId?: string}> {
+  const items: Array<{title: string, link: string, description?: string, content?: string, imageUrl?: string, publishedAt?: string, author?: string, externalId?: string}> = []
 
   // Try RSS 2.0 format first
   const rssItemMatches = Array.from(xml.matchAll(/<item>([\s\S]*?)<\/item>/gi))
@@ -335,6 +337,8 @@ function extractRSSItems(xml: string): Array<{title: string, link: string, descr
     const description = extractTag(itemXml, 'description')
     const content = extractTag(itemXml, 'content:encoded') || extractTag(itemXml, 'content')
     const pubDate = extractTag(itemXml, 'pubDate')
+    const author = extractTag(itemXml, 'dc:creator') || extractTag(itemXml, 'author')
+    const guid = extractTag(itemXml, 'guid')
 
     // Try to extract image
     let imageUrl: string | undefined
@@ -355,7 +359,9 @@ function extractRSSItems(xml: string): Array<{title: string, link: string, descr
         description: description ? cleanText(description) : undefined,
         content: content ? cleanText(content) : undefined,
         imageUrl,
-        publishedAt: pubDate ? new Date(pubDate).toISOString() : new Date().toISOString()
+        publishedAt: pubDate ? new Date(pubDate).toISOString() : new Date().toISOString(),
+        author: author ? cleanText(author) : undefined,
+        externalId: guid ? cleanText(guid) : link // Use guid if available, fallback to link
       })
     }
   }
@@ -373,6 +379,8 @@ function extractRSSItems(xml: string): Array<{title: string, link: string, descr
       const summary = extractTag(entryXml, 'summary') || extractTag(entryXml, 'content')
       const content = extractTag(entryXml, 'content')
       const published = extractTag(entryXml, 'published') || extractTag(entryXml, 'updated')
+      const authorName = extractTag(entryXml, 'author')
+      const id = extractTag(entryXml, 'id')
 
       if (title && link) {
         items.push({
@@ -380,7 +388,9 @@ function extractRSSItems(xml: string): Array<{title: string, link: string, descr
           link: cleanText(link),
           description: summary ? cleanText(summary) : undefined,
           content: content ? cleanText(content) : undefined,
-          publishedAt: published ? new Date(published).toISOString() : new Date().toISOString()
+          publishedAt: published ? new Date(published).toISOString() : new Date().toISOString(),
+          author: authorName ? cleanText(authorName) : undefined,
+          externalId: id ? cleanText(id) : link
         })
       }
     }

@@ -96,7 +96,6 @@ export async function GET(request: NextRequest) {
               .from('rss_posts')
               .insert({
                 feed_id: feed.id,
-                feed_name: feed.name,
                 title: item.title,
                 link: item.link,
                 description: item.description || null,

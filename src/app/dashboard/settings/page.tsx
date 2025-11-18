@@ -1607,7 +1607,12 @@ function AIPromptsSettings() {
       'ai_prompt_event_summary': 'eventSummarizer',
       'ai_prompt_road_work': 'roadWorkGenerator',
       'ai_prompt_image_analyzer': 'imageAnalyzer',
-      'ai_prompt_topic_deduper': 'topicDeduper'
+      'ai_prompt_topic_deduper': 'topicDeduper',
+      'ai_prompt_fact_checker': 'factChecker',
+      'ai_prompt_road_work_validator': 'roadWorkValidator',
+      'ai_prompt_wordle_definition': 'wordleDefinition',
+      'ai_prompt_wordle_fact': 'wordleFact',
+      'ai_prompt_road_work_parser': 'roadWorkParser'
     }
 
     const testType = promptTypeMap[key]

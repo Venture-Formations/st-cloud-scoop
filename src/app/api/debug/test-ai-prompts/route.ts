@@ -129,6 +129,23 @@ ${i + 1}. ${item.road_name}
           items: itemsText
         }
         break
+      case 'wordleDefinition':
+        placeholders = {
+          word: testData.wordleDefinition.word
+        }
+        break
+      case 'wordleFact':
+        placeholders = {
+          word: testData.wordleFact.word
+        }
+        break
+      case 'roadWorkParser':
+        placeholders = {
+          content: testData.roadWorkParser.content,
+          targetDate: testData.roadWorkParser.targetDate,
+          sourceUrl: testData.roadWorkParser.sourceUrl
+        }
+        break
     }
 
     // Call AI with custom prompt config
@@ -326,6 +343,28 @@ export async function POST(request: NextRequest) {
           }
         ],
         targetDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+      },
+      wordleDefinition: {
+        word: 'CLOUD'
+      },
+      wordleFact: {
+        word: 'SCOOP'
+      },
+      roadWorkParser: {
+        content: `--- https://www.dot.state.mn.us/d3/ ---
+MN DOT District 3 Road Construction Updates
+Current Projects in St. Cloud Area:
+Highway 15 Bridge Replacement - Division St to 33rd St S, St. Cloud
+Start: March 15, 2025 | Expected completion: June 1, 2025
+Bridge replacement and road resurfacing project
+
+--- https://www.co.stearns.mn.us/publicworks ---
+County Road 75 Improvements
+Location: 240th St to 250th St, Sartell
+Timeline: April 1 - April 30, 2025
+Utility work and pavement repairs`,
+        targetDate: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+        sourceUrl: 'https://www.dot.state.mn.us/d3/, https://www.co.stearns.mn.us/publicworks'
       }
     }
 
@@ -471,6 +510,28 @@ export async function GET(request: NextRequest) {
           }
         ],
         targetDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+      },
+      wordleDefinition: {
+        word: 'CLOUD'
+      },
+      wordleFact: {
+        word: 'SCOOP'
+      },
+      roadWorkParser: {
+        content: `--- https://www.dot.state.mn.us/d3/ ---
+MN DOT District 3 Road Construction Updates
+Current Projects in St. Cloud Area:
+Highway 15 Bridge Replacement - Division St to 33rd St S, St. Cloud
+Start: March 15, 2025 | Expected completion: June 1, 2025
+Bridge replacement and road resurfacing project
+
+--- https://www.co.stearns.mn.us/publicworks ---
+County Road 75 Improvements
+Location: 240th St to 250th St, Sartell
+Timeline: April 1 - April 30, 2025
+Utility work and pavement repairs`,
+        targetDate: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+        sourceUrl: 'https://www.dot.state.mn.us/d3/, https://www.co.stearns.mn.us/publicworks'
       },
       imageAnalyzer: 'Image analysis requires actual image input - use the image ingest endpoint instead'
     }
@@ -689,6 +750,70 @@ export async function GET(request: NextRequest) {
       }
     }
 
+    // Test Wordle Definition
+    if (promptType === 'all' || promptType === 'wordleDefinition') {
+      console.log('Testing Wordle Definition...')
+      try {
+        const response = await AI_PROMPTS.wordleDefinition(testData.wordleDefinition.word)
+        const parseResult = parseAIResponse(response)
+        results.wordleDefinition = {
+          success: true,
+          response,
+          ...parseResult,
+          format: 'Plain text definition (under 50 words)'
+        }
+      } catch (error) {
+        results.wordleDefinition = {
+          success: false,
+          error: error instanceof Error ? error.message : 'Unknown error'
+        }
+      }
+    }
+
+    // Test Wordle Fact
+    if (promptType === 'all' || promptType === 'wordleFact') {
+      console.log('Testing Wordle Fact...')
+      try {
+        const response = await AI_PROMPTS.wordleFact(testData.wordleFact.word)
+        const parseResult = parseAIResponse(response)
+        results.wordleFact = {
+          success: true,
+          response,
+          ...parseResult,
+          format: 'Plain text fact (under 80 words)'
+        }
+      } catch (error) {
+        results.wordleFact = {
+          success: false,
+          error: error instanceof Error ? error.message : 'Unknown error'
+        }
+      }
+    }
+
+    // Test Road Work Parser
+    if (promptType === 'all' || promptType === 'roadWorkParser') {
+      console.log('Testing Road Work Parser...')
+      try {
+        const response = await AI_PROMPTS.roadWorkParser(
+          testData.roadWorkParser.content,
+          testData.roadWorkParser.targetDate,
+          testData.roadWorkParser.sourceUrl
+        )
+        const parseResult = parseAIResponse(response)
+        results.roadWorkParser = {
+          success: true,
+          response,
+          ...parseResult,
+          format: 'JSON array of road work items'
+        }
+      } catch (error) {
+        results.roadWorkParser = {
+          success: false,
+          error: error instanceof Error ? error.message : 'Unknown error'
+        }
+      }
+    }
+
     // Image Analyzer note
     if (promptType === 'all' || promptType === 'imageAnalyzer') {
       results.imageAnalyzer = {
@@ -703,7 +828,7 @@ export async function GET(request: NextRequest) {
       prompt_type: promptType,
       test_data: promptType === 'all' ? 'Sample data for all prompts' : testData[promptType as keyof typeof testData],
       results,
-      usage_note: 'Add ?type=promptName to test individual prompts (contentEvaluator, criteria_1, criteria_2, criteria_3, criteria_4, criteria_5, newsletterWriter, subjectLineGenerator, eventSummarizer, factChecker, topicDeduper, roadWorkGenerator, roadWorkValidator, imageAnalyzer)',
+      usage_note: 'Add ?type=promptName to test individual prompts (contentEvaluator, criteria_1, criteria_2, criteria_3, criteria_4, criteria_5, newsletterWriter, subjectLineGenerator, eventSummarizer, factChecker, topicDeduper, roadWorkGenerator, roadWorkValidator, wordleDefinition, wordleFact, roadWorkParser, imageAnalyzer)',
       timestamp: new Date().toISOString()
     })
 

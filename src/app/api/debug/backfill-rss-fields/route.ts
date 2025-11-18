@@ -308,7 +308,7 @@ function extractTag(xml: string, tagName: string): string | null {
  */
 function cleanText(text: string): string {
   return text
-    .replace(/<!\\[CDATA\\[([\\s\\S]*?)\\]\\]>/g, '$1')  // Remove CDATA
+    .replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, '$1')  // Remove CDATA
     .replace(/<[^>]+>/g, '')  // Remove HTML tags
     .replace(/&lt;/g, '<')
     .replace(/&gt;/g, '>')

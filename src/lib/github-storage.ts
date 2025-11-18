@@ -137,13 +137,6 @@ export class GitHubImageStorage {
       .replace(/&#39;/g, "'")
 
     try {
-      // Debug logging to see URL transformation
-      if (imageUrl !== decodedUrl) {
-        console.log(`[GitHub Storage] Original URL had HTML entities`)
-        console.log(`[GitHub Storage] Original: ${imageUrl.substring(0, 150)}...`)
-        console.log(`[GitHub Storage] Decoded:  ${decodedUrl.substring(0, 150)}...`)
-      }
-      console.log(`[GitHub Storage] Downloading from: ${decodedUrl.substring(0, 100)}...`)
 
       // Download image with timeout
       const controller = new AbortController()
@@ -161,15 +154,11 @@ export class GitHubImageStorage {
       clearTimeout(timeoutId)
 
       if (!response.ok) {
-        // For Facebook CDN, just log a concise warning (expected for expired URLs)
         if (decodedUrl.includes('fbcdn.net')) {
-          console.warn(`[GitHub Storage] Facebook CDN URL expired (${response.status}), skipping re-host`)
+          console.warn(`FB CDN expired (${response.status})`)
         } else {
-          // For other URLs, log more details
-          console.error(`[GitHub Storage] Failed to download image: HTTP ${response.status} ${response.statusText}`)
-          console.error(`[GitHub Storage] URL: ${decodedUrl}`)
+          console.error(`Image download failed: ${response.status}`)
         }
-
         return null
       }
 
@@ -205,7 +194,6 @@ export class GitHubImageStorage {
         })
 
         if (existingFile && 'download_url' in existingFile && existingFile.download_url) {
-          console.log(`Image already exists in GitHub: ${fileName}`)
           return existingFile.download_url
         }
       } catch (error: any) {
@@ -229,18 +217,16 @@ export class GitHubImageStorage {
       })
 
       if (uploadResponse.data.content?.download_url) {
-        console.log(`Image uploaded to GitHub: ${uploadResponse.data.content.download_url}`)
+        console.log(`✓ Uploaded: ${fileName}`)
         return uploadResponse.data.content.download_url
-      } else {
-        console.error('Upload successful but no download URL returned')
-        return null
       }
+      return null
 
     } catch (error) {
       if (error instanceof Error && error.name === 'AbortError') {
-        console.error(`[GitHub Storage] Image download timeout for: ${decodedUrl}`)
+        console.error(`Image download timeout`)
       } else {
-        console.error(`[GitHub Storage] Error uploading image:`, error)
+        console.error(`Image upload error:`, error)
       }
       return null
     }

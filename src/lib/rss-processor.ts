@@ -358,14 +358,6 @@ export class RSSProcessor {
           // Check if author's images should be blocked
           const author = item.creator || (item as any)['dc:creator'] || '(No Author)'
           const blockImages = excludedSources.includes(author)
-          if (blockImages) {
-            console.log(`Blocking images from source: "${author}" - "${item.title}"`)
-          }
-          console.log(`\n=== DEBUGGING ITEM: "${item.title}" ===`)
-          console.log('Raw item keys:', Object.keys(item))
-          console.log('media:content:', JSON.stringify(item['media:content'], null, 2))
-          console.log('Raw content preview:', (item.content || '').substring(0, 200))
-          console.log('Raw contentSnippet:', (item.contentSnippet || '').substring(0, 200))
 
           // Extract image URL with comprehensive methods
           let imageUrl = null
@@ -422,25 +414,15 @@ export class RSSProcessor {
             imageUrl = itemAny.thumbnail || itemAny.image || itemAny['media:thumbnail']?.url || null
           }
 
-          // CRITICAL: Decode HTML entities in URL immediately after extraction
-          // RSS feeds often contain &amp; instead of & which breaks HTTP requests
+          // Decode HTML entities in URL (&amp; -> &, etc.)
           if (imageUrl) {
-            const originalUrl = imageUrl
             imageUrl = imageUrl
               .replace(/&amp;/g, '&')
               .replace(/&lt;/g, '<')
               .replace(/&gt;/g, '>')
               .replace(/&quot;/g, '"')
               .replace(/&#39;/g, "'")
-
-            if (originalUrl !== imageUrl) {
-              console.log(`✓ Decoded HTML entities in image URL`)
-              console.log(`  Before: ${originalUrl.substring(0, 100)}...`)
-              console.log(`  After:  ${imageUrl.substring(0, 100)}...`)
-            }
           }
-
-          console.log(`Post: "${item.title}" - Image URL: ${imageUrl || 'None found'}`)
 
           // Check if post already exists
           const { data: existingPost } = await supabaseAdmin
@@ -454,28 +436,22 @@ export class RSSProcessor {
             continue // Skip if already processed
           }
 
-          // Attempt to download and re-host image immediately if it's a Facebook URL
-          // But only if images are not blocked for this source
+          // Re-host Facebook images immediately (only if images not blocked)
           let finalImageUrl = imageUrl
           if (!blockImages && imageUrl && imageUrl.includes('fbcdn.net')) {
-            console.log(`Attempting to re-host Facebook image immediately: ${imageUrl}`)
             try {
               const githubUrl = await this.githubStorage.uploadImage(imageUrl, item.title || 'Untitled')
               if (githubUrl) {
                 finalImageUrl = githubUrl
-                console.log(`Successfully re-hosted Facebook image: ${githubUrl}`)
-              } else {
-                console.warn(`Failed to re-host Facebook image, keeping original URL: ${imageUrl}`)
               }
             } catch (error) {
-              console.warn(`Error re-hosting Facebook image: ${error}`)
+              // Keep original URL on error
             }
           }
 
           // Block image if source is in excluded list
           if (blockImages) {
             finalImageUrl = null
-            console.log(`Image blocked for excluded source: ${author}`)
           }
 
           // Insert new post
@@ -500,8 +476,6 @@ export class RSSProcessor {
             console.error('Error inserting post:', postError)
             continue
           }
-
-          console.log(`Inserted post: ${item.title}`)
 
         } catch (error) {
           console.error(`Error processing item from ${feed.name}:`, error)

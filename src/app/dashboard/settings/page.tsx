@@ -1873,41 +1873,58 @@ function AIPromptsSettings() {
                             className="w-full px-3 py-2 border border-gray-300 rounded-md font-mono text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                           />
                           <div className="mt-3 flex items-center justify-between">
-                            <div className="flex gap-2">
+                            <button
+                              onClick={() => handleTestPrompt(promptKey, editingPrompt?.value)}
+                              disabled={isSaving}
+                              className="px-4 py-2 text-sm font-medium text-purple-700 bg-white border border-purple-300 rounded-md hover:bg-purple-50 disabled:opacity-50"
+                            >
+                              Test Prompt
+                            </button>
+                            <div className="flex items-center space-x-3">
+                              <button
+                                onClick={handleCancel}
+                                disabled={isSaving}
+                                className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50"
+                              >
+                                Cancel
+                              </button>
                               <button
                                 onClick={() => handleSave(promptKey)}
                                 disabled={isSaving}
-                                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
+                                className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 disabled:opacity-50"
                               >
                                 {isSaving ? 'Saving...' : 'Save Changes'}
-                              </button>
-                              <button
-                                onClick={handleCancel}
-                                className="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300"
-                              >
-                                Cancel
                               </button>
                             </div>
                           </div>
                         </>
                       ) : (
                         <>
-                          <pre className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50 overflow-x-auto text-xs font-mono whitespace-pre-wrap">
+                          <div className="bg-gray-50 border border-gray-200 rounded-md p-4 font-mono text-xs whitespace-pre-wrap overflow-x-auto max-h-96 overflow-y-auto">
                             {typeof prompt.value === 'string' ? prompt.value : JSON.stringify(prompt.value, null, 2)}
-                          </pre>
-                          <div className="mt-3 flex items-center gap-2">
+                          </div>
+                          <div className="mt-3 flex items-center justify-between">
+                            <div className="flex items-center space-x-3">
+                              <button
+                                onClick={() => handleReset(promptKey)}
+                                disabled={isSaving}
+                                className="px-4 py-2 text-sm font-medium text-red-700 bg-white border border-red-300 rounded-md hover:bg-red-50 disabled:opacity-50"
+                              >
+                                {isSaving ? 'Resetting...' : 'Reset to Default'}
+                              </button>
+                              <button
+                                onClick={() => handleSaveAsDefault(promptKey)}
+                                disabled={isSaving}
+                                className="px-4 py-2 text-sm font-medium text-green-700 bg-white border border-green-300 rounded-md hover:bg-green-50 disabled:opacity-50"
+                              >
+                                {isSaving ? 'Saving...' : 'Save as Default'}
+                              </button>
+                            </div>
                             <button
                               onClick={() => handleEdit(prompt)}
-                              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-sm"
+                              className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700"
                             >
                               Edit Prompt
-                            </button>
-                            <button
-                              onClick={() => handleReset(promptKey)}
-                              disabled={isSaving}
-                              className="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 disabled:opacity-50 text-sm"
-                            >
-                              {isSaving ? 'Resetting...' : 'Reset to Default'}
                             </button>
                           </div>
                         </>

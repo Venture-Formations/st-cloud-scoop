@@ -105,6 +105,9 @@
     },
     "app/api/cron/cleanup-pending-submissions/route.ts": {
       "maxDuration": 60
+    },
+    "app/.well-known/workflow/v1/step/route.ts": {
+      "maxDuration": 800
     }
   }
 }

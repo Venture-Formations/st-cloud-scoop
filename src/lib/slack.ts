@@ -201,7 +201,7 @@ export class SlackNotificationService {
    */
   async sendLowArticleCountAlert(campaignId: string, articleCount: number, campaignDate: string) {
     // Check if low article count alerts are enabled
-    const isEnabled = await this.checkNotificationSetting('low_article_count_alerts')
+    const isEnabled = await this.isNotificationEnabled('low_article_count_alerts')
     if (!isEnabled) {
       console.log('Low article count alerts are disabled in settings - skipping notification')
       return

@@ -20,12 +20,12 @@ export default function NewCampaignPage() {
     setError(null)
 
     try {
-      const response = await fetch('/api/campaigns', {
+      const response = await fetch('/api/campaigns/create-with-workflow', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ date }),
+        body: JSON.stringify({ campaign_date: date }),
       })
 
       const data = await response.json()
@@ -34,8 +34,9 @@ export default function NewCampaignPage() {
         throw new Error(data.message || data.error || 'Failed to create campaign')
       }
 
-      // Redirect to the newly created campaign
-      router.push(`/dashboard/campaigns/${data.campaign.id}`)
+      // Show success message and redirect to campaigns list
+      alert(`Campaign workflow started successfully!\n\nThe workflow is now processing in the background (10-30 minutes).\n\nThe campaign will appear in the list once complete.`)
+      router.push('/dashboard/campaigns')
     } catch (error) {
       setError(error instanceof Error ? error.message : 'Unknown error')
     } finally {

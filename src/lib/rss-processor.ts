@@ -475,7 +475,8 @@ export class RSSProcessor {
             .single()
 
           if (postError) {
-            console.error('Error inserting post:', postError)
+            // Silently skip posts that fail to insert (e.g., duplicate constraint violations)
+            // This happens when the same RSS post was already added to a different campaign
             continue
           }
 

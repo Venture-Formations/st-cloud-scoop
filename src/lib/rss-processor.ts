@@ -424,16 +424,18 @@ export class RSSProcessor {
               .replace(/&#39;/g, "'")
           }
 
-          // Check if post already exists
+          // Check if post already exists FOR THIS CAMPAIGN
+          // We only want to skip if the exact post is already in THIS campaign
           const { data: existingPost } = await supabaseAdmin
             .from('rss_posts')
             .select('id')
+            .eq('campaign_id', campaignId)
             .eq('feed_id', feed.id)
             .eq('external_id', item.guid || item.link || '')
             .single()
 
           if (existingPost) {
-            continue // Skip if already processed
+            continue // Skip if already processed for this campaign
           }
 
           // Re-host Facebook images immediately (only if images not blocked)

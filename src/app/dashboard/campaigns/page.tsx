@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import Layout from '@/components/Layout'
 import Link from 'next/link'
 import DeleteCampaignModal from '@/components/DeleteCampaignModal'
+import CreateCampaignModal from '@/components/CreateCampaignModal'
 import type { NewsletterCampaign } from '@/types/database'
 
 export default function CampaignsPage() {
@@ -15,6 +16,7 @@ export default function CampaignsPage() {
     isOpen: boolean
     campaign: NewsletterCampaign | null
   }>({ isOpen: false, campaign: null })
+  const [createModalOpen, setCreateModalOpen] = useState(false)
 
   useEffect(() => {
     fetchCampaigns()
@@ -83,6 +85,11 @@ export default function CampaignsPage() {
     setDeleteModal({ isOpen: false, campaign: null })
   }
 
+  const handleCreateSuccess = (campaignId: string) => {
+    alert(`Campaign created successfully! Workflow is now processing in the background.\n\nCampaign ID: ${campaignId}\n\nThe campaign will appear in the list once the workflow completes (typically 10-30 minutes).`)
+    fetchCampaigns() // Refresh campaigns list
+  }
+
   return (
     <Layout>
       <div className="px-4 py-6 sm:px-0">
@@ -91,12 +98,12 @@ export default function CampaignsPage() {
             <h1 className="text-2xl font-bold text-gray-900">
               Newsletter Campaigns
             </h1>
-            <Link
-              href="/dashboard/campaigns/new"
+            <button
+              onClick={() => setCreateModalOpen(true)}
               className="bg-brand-primary hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium"
             >
               Create Campaign
-            </Link>
+            </button>
           </div>
 
           {/* Filter buttons */}
@@ -208,6 +215,13 @@ export default function CampaignsPage() {
             onConfirm={handleDeleteConfirm}
           />
         )}
+
+        {/* Create Campaign Modal */}
+        <CreateCampaignModal
+          isOpen={createModalOpen}
+          onClose={() => setCreateModalOpen(false)}
+          onSuccess={handleCreateSuccess}
+        />
       </div>
     </Layout>
   )

@@ -3,12 +3,14 @@
 import { useEffect, useState } from 'react'
 import Layout from '@/components/Layout'
 import Link from 'next/link'
+import CreateCampaignModal from '@/components/CreateCampaignModal'
 import type { NewsletterCampaign } from '@/types/database'
 
 export default function Dashboard() {
   const [campaigns, setCampaigns] = useState<NewsletterCampaign[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [createModalOpen, setCreateModalOpen] = useState(false)
 
   useEffect(() => {
     fetchCampaigns()
@@ -58,6 +60,11 @@ export default function Dashboard() {
       month: 'long',
       day: 'numeric'
     })
+  }
+
+  const handleCreateSuccess = (campaignId: string) => {
+    alert(`Campaign created successfully! Workflow is now processing in the background.\n\nCampaign ID: ${campaignId}\n\nThe campaign will appear in the list once the workflow completes (typically 10-30 minutes).`)
+    fetchCampaigns() // Refresh campaigns list
   }
 
   return (
@@ -163,9 +170,9 @@ export default function Dashboard() {
 
           {/* Quick Actions */}
           <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-6">
-            <Link
-              href="/dashboard/campaigns/new"
-              className="block p-6 bg-white rounded-lg shadow hover:shadow-md transition-shadow"
+            <button
+              onClick={() => setCreateModalOpen(true)}
+              className="block p-6 bg-white rounded-lg shadow hover:shadow-md transition-shadow text-left"
             >
               <div className="text-center">
                 <div className="text-3xl mb-2">📝</div>
@@ -176,7 +183,7 @@ export default function Dashboard() {
                   Start a new newsletter campaign
                 </div>
               </div>
-            </Link>
+            </button>
             <Link
               href="/dashboard/analytics"
               className="block p-6 bg-white rounded-lg shadow hover:shadow-md transition-shadow"
@@ -207,6 +214,13 @@ export default function Dashboard() {
             </Link>
           </div>
         </div>
+
+        {/* Create Campaign Modal */}
+        <CreateCampaignModal
+          isOpen={createModalOpen}
+          onClose={() => setCreateModalOpen(false)}
+          onSuccess={handleCreateSuccess}
+        />
       </div>
     </Layout>
   )

@@ -6,16 +6,16 @@ import { RSSProcessor } from '@/lib/rss-processor'
  * Each step gets its own 800-second timeout with automatic retry logic
  *
  * WORKFLOW STRUCTURE:
- * Step 1:  Setup (create campaign, archive, clear old data)
- * Step 2:  Fetch RSS posts from all feeds
- * Step 3:  AI evaluation of all posts (batched internally)
- * Step 4:  Populate events for campaign
- * Step 5:  Deduplication + article generation (combined)
- * Step 6:  Select top articles
- * Step 7:  Process images to GitHub
- * Step 8:  Generate subject line
- * Step 9:  Generate road work data
- * Step 10: Finalize (set status to draft)
+ * Step 1:  Setup (create campaign with status='processing')
+ * Step 2:  Query & Assign Posts (top 20 rated posts from past X hours with campaign_id=NULL)
+ * Step 3:  Deduplicate (against sent campaigns from past Y days)
+ * Step 4:  Generate Articles (for top 12 non-duplicate posts)
+ * Step 5:  Select Top 5 Articles (for newsletter, others available in UI)
+ * Step 6:  Populate Events (auto-select events for campaign)
+ * Step 7:  Process Images (upload to GitHub)
+ * Step 8:  Generate Subject Line (based on top article)
+ * Step 9:  Generate Road Work (section data)
+ * Step 10: Finalize (unassign unused posts, set status='draft')
  */
 export async function processRSSWorkflow(input: {
   trigger: 'cron' | 'manual'
@@ -25,25 +25,25 @@ export async function processRSSWorkflow(input: {
 
   let campaignId: string
 
-  console.log(`[Workflow] Starting RSS processing for date: ${input.campaign_date}`)
+  console.log(`[Workflow] Starting newsletter creation for date: ${input.campaign_date}`)
 
-  // STEP 1: Setup
+  // STEP 1: Setup Campaign
   campaignId = await setupCampaign(input.campaign_date)
 
-  // STEP 2: Fetch RSS Posts
-  await fetchRSSPosts(campaignId)
+  // STEP 2: Query & Assign Top Rated Posts
+  await queryAndAssignPosts(campaignId)
 
-  // STEP 3: AI Evaluation
-  await evaluatePostsWithAI(campaignId)
+  // STEP 3: Deduplicate Against Sent Campaigns
+  await deduplicatePosts(campaignId)
 
-  // STEP 4: Populate Events
-  await populateEvents(campaignId)
+  // STEP 4: Generate Articles for Top 12 Posts
+  await generateArticles(campaignId)
 
-  // STEP 5: Dedupe + Generate Articles
-  await deduplicateAndGenerateArticles(campaignId)
-
-  // STEP 6: Select Top Articles
+  // STEP 5: Select Top 5 Articles
   await selectTopArticles(campaignId)
+
+  // STEP 6: Populate Events
+  await populateEvents(campaignId)
 
   // STEP 7: Process Images
   await processImages(campaignId)
@@ -54,7 +54,7 @@ export async function processRSSWorkflow(input: {
   // STEP 9: Generate Road Work
   await generateRoadWork(campaignId)
 
-  // STEP 10: Finalize
+  // STEP 10: Finalize & Cleanup
   await finalizeCampaign(campaignId)
 
   console.log('[Workflow] === WORKFLOW COMPLETE ===')
@@ -110,22 +110,7 @@ async function setupCampaign(campaignDate: string) {
         console.log(`[Workflow Step 1/10] Created new campaign: ${campaignId}`)
       }
 
-      // Archive existing data
-      const { ArticleArchiveService } = await import('@/lib/article-archive')
-      const archiveService = new ArticleArchiveService()
-
-      try {
-        const archiveResult = await archiveService.archiveCampaignArticles(campaignId, 'rss_processing_clear')
-        console.log(`[Workflow Step 1/10] Archived ${archiveResult.archivedArticlesCount} articles, ${archiveResult.archivedPostsCount} posts`)
-      } catch (archiveError) {
-        console.warn('[Workflow Step 1/10] Archive failed (non-critical):', archiveError)
-      }
-
-      // Clear previous data
-      await supabaseAdmin.from('articles').delete().eq('campaign_id', campaignId)
-      await supabaseAdmin.from('rss_posts').delete().eq('campaign_id', campaignId)
-
-      console.log('[Workflow Step 1/10] ✓ Setup complete')
+      console.log('[Workflow Step 1/10] ✓ Campaign ready')
       return campaignId
 
     } catch (error) {
@@ -142,7 +127,7 @@ async function setupCampaign(campaignDate: string) {
   throw new Error('Unexpected: Retry loop exited without return')
 }
 
-async function fetchRSSPosts(campaignId: string) {
+async function queryAndAssignPosts(campaignId: string) {
   "use step"
 
   let retryCount = 0
@@ -150,39 +135,68 @@ async function fetchRSSPosts(campaignId: string) {
 
   while (retryCount <= maxRetries) {
     try {
-      console.log('[Workflow Step 2/10] Fetching RSS posts...')
+      console.log('[Workflow Step 2/10] Querying top rated posts...')
 
-      const processor = new RSSProcessor()
+      // Get settings
+      const { data: settings } = await supabaseAdmin
+        .from('app_settings')
+        .select('key, value')
+        .in('key', ['email_articleLookbackHours'])
 
-      // Get active feeds
-      const { data: feeds, error: feedsError } = await supabaseAdmin
-        .from('rss_feeds')
-        .select('*')
-        .eq('active', true)
+      const lookbackHours = parseInt(settings?.find(s => s.key === 'email_articleLookbackHours')?.value || '24')
 
-      if (feedsError || !feeds || feeds.length === 0) {
-        throw new Error('No active RSS feeds found')
-      }
+      // Calculate lookback timestamp
+      const lookbackDate = new Date()
+      lookbackDate.setHours(lookbackDate.getHours() - lookbackHours)
+      const lookbackTimestamp = lookbackDate.toISOString()
 
-      console.log(`[Workflow Step 2/10] Processing ${feeds.length} feeds`)
+      console.log(`[Workflow Step 2/10] Searching for posts from past ${lookbackHours} hours`)
 
-      // Process each feed (uses campaign-specific duplicate detection)
-      for (const feed of feeds) {
-        try {
-          await processor['processFeed'](feed, campaignId)
-        } catch (feedError) {
-          console.warn(`[Workflow Step 2/10] Feed ${feed.name} failed:`, feedError)
-          // Continue with other feeds
-        }
-      }
-
-      // Count posts fetched
-      const { data: posts } = await supabaseAdmin
+      // Query top 20 rated posts where campaign_id IS NULL
+      const { data: availablePosts, error: postsError } = await supabaseAdmin
         .from('rss_posts')
-        .select('id')
-        .eq('campaign_id', campaignId)
+        .select(`
+          id,
+          title,
+          post_ratings(total_score)
+        `)
+        .is('campaign_id', null)
+        .gte('processed_at', lookbackTimestamp)
+        .not('post_ratings', 'is', null)
 
-      console.log(`[Workflow Step 2/10] ✓ Fetched ${posts?.length || 0} posts`)
+      if (postsError) {
+        throw new Error(`Failed to query posts: ${postsError.message}`)
+      }
+
+      if (!availablePosts || availablePosts.length === 0) {
+        console.warn('[Workflow Step 2/10] No rated posts available')
+        return
+      }
+
+      // Sort by rating and take top 20
+      const topPosts = availablePosts
+        .filter(post => post.post_ratings?.[0]?.total_score)
+        .sort((a, b) => {
+          const scoreA = a.post_ratings?.[0]?.total_score || 0
+          const scoreB = b.post_ratings?.[0]?.total_score || 0
+          return scoreB - scoreA
+        })
+        .slice(0, 20)
+
+      console.log(`[Workflow Step 2/10] Found ${availablePosts.length} available posts, selecting top 20`)
+
+      // Assign these posts to this campaign
+      const postIds = topPosts.map(p => p.id)
+      const { error: assignError } = await supabaseAdmin
+        .from('rss_posts')
+        .update({ campaign_id: campaignId })
+        .in('id', postIds)
+
+      if (assignError) {
+        throw new Error(`Failed to assign posts: ${assignError.message}`)
+      }
+
+      console.log(`[Workflow Step 2/10] ✓ Assigned ${postIds.length} top-rated posts to campaign`)
       return
 
     } catch (error) {
@@ -197,7 +211,7 @@ async function fetchRSSPosts(campaignId: string) {
   }
 }
 
-async function evaluatePostsWithAI(campaignId: string) {
+async function deduplicatePosts(campaignId: string) {
   "use step"
 
   let retryCount = 0
@@ -205,24 +219,80 @@ async function evaluatePostsWithAI(campaignId: string) {
 
   while (retryCount <= maxRetries) {
     try {
-      console.log('[Workflow Step 3/10] Evaluating posts with AI...')
+      console.log('[Workflow Step 3/10] Deduplicating against sent campaigns...')
 
-      const processor = new RSSProcessor()
+      // Get settings
+      const { data: settings } = await supabaseAdmin
+        .from('app_settings')
+        .select('key, value')
+        .in('key', ['email_deduplicationLookbackDays'])
 
-      // This method handles batching internally
-      await processor['processPostsWithAI'](campaignId)
+      const lookbackDays = parseInt(settings?.find(s => s.key === 'email_deduplicationLookbackDays')?.value || '3')
 
-      // Count rated posts
-      const { data: ratedPosts } = await supabaseAdmin
+      // Calculate lookback date
+      const lookbackDate = new Date()
+      lookbackDate.setDate(lookbackDate.getDate() - lookbackDays)
+      const lookbackDateStr = lookbackDate.toISOString().split('T')[0]
+
+      console.log(`[Workflow Step 3/10] Checking for duplicates against sent campaigns from past ${lookbackDays} days`)
+
+      // Get posts from sent campaigns in the lookback window
+      const { data: sentCampaigns } = await supabaseAdmin
+        .from('newsletter_campaigns')
+        .select('id')
+        .eq('status', 'sent')
+        .gte('date', lookbackDateStr)
+
+      if (!sentCampaigns || sentCampaigns.length === 0) {
+        console.log('[Workflow Step 3/10] No sent campaigns in lookback window')
+        return
+      }
+
+      const sentCampaignIds = sentCampaigns.map(c => c.id)
+
+      // Get posts used in those sent campaigns
+      const { data: usedPosts } = await supabaseAdmin
         .from('rss_posts')
-        .select(`
-          id,
-          post_ratings(total_score)
-        `)
-        .eq('campaign_id', campaignId)
-        .not('post_ratings', 'is', null)
+        .select('external_id, title')
+        .in('campaign_id', sentCampaignIds)
 
-      console.log(`[Workflow Step 3/10] ✓ Evaluated ${ratedPosts?.length || 0} posts with AI`)
+      if (!usedPosts || usedPosts.length === 0) {
+        console.log('[Workflow Step 3/10] No posts in sent campaigns')
+        return
+      }
+
+      const usedExternalIds = new Set(usedPosts.map(p => p.external_id))
+
+      // Get current campaign's posts
+      const { data: currentPosts } = await supabaseAdmin
+        .from('rss_posts')
+        .select('id, external_id, title')
+        .eq('campaign_id', campaignId)
+
+      if (!currentPosts || currentPosts.length === 0) {
+        console.log('[Workflow Step 3/10] No posts in current campaign')
+        return
+      }
+
+      // Find duplicates
+      const duplicatePostIds = currentPosts
+        .filter(post => usedExternalIds.has(post.external_id))
+        .map(post => post.id)
+
+      if (duplicatePostIds.length > 0) {
+        console.log(`[Workflow Step 3/10] Found ${duplicatePostIds.length} duplicate posts, unassigning...`)
+
+        // Unassign duplicate posts (set campaign_id back to NULL)
+        await supabaseAdmin
+          .from('rss_posts')
+          .update({ campaign_id: null })
+          .in('id', duplicatePostIds)
+
+        console.log(`[Workflow Step 3/10] ✓ Removed ${duplicatePostIds.length} duplicates, ${currentPosts.length - duplicatePostIds.length} posts remain`)
+      } else {
+        console.log('[Workflow Step 3/10] ✓ No duplicates found')
+      }
+
       return
 
     } catch (error) {
@@ -237,7 +307,7 @@ async function evaluatePostsWithAI(campaignId: string) {
   }
 }
 
-async function populateEvents(campaignId: string) {
+async function generateArticles(campaignId: string) {
   "use step"
 
   let retryCount = 0
@@ -245,17 +315,20 @@ async function populateEvents(campaignId: string) {
 
   while (retryCount <= maxRetries) {
     try {
-      console.log('[Workflow Step 4/10] Populating events...')
+      console.log('[Workflow Step 4/10] Generating articles for top 12 posts...')
 
       const processor = new RSSProcessor()
-      await processor.populateEventsForCampaignSmart(campaignId)
 
-      const { data: events } = await supabaseAdmin
-        .from('campaign_events')
+      // Generate articles (handles fact-checking internally)
+      // generateNewsletterArticles will create articles for ALL remaining posts
+      await processor['generateNewsletterArticles'](campaignId)
+
+      const { data: articles } = await supabaseAdmin
+        .from('articles')
         .select('id')
         .eq('campaign_id', campaignId)
 
-      console.log(`[Workflow Step 4/10] ✓ Populated ${events?.length || 0} events`)
+      console.log(`[Workflow Step 4/10] ✓ Generated ${articles?.length || 0} articles`)
       return
 
     } catch (error) {
@@ -270,7 +343,7 @@ async function populateEvents(campaignId: string) {
   }
 }
 
-async function deduplicateAndGenerateArticles(campaignId: string) {
+async function selectTopArticles(campaignId: string) {
   "use step"
 
   let retryCount = 0
@@ -278,30 +351,18 @@ async function deduplicateAndGenerateArticles(campaignId: string) {
 
   while (retryCount <= maxRetries) {
     try {
-      console.log('[Workflow Step 5/10] Deduplicating + generating articles...')
+      console.log('[Workflow Step 5/10] Selecting top 5 articles...')
 
       const processor = new RSSProcessor()
+      await processor['selectTop5Articles'](campaignId)
 
-      // Get all posts
-      const { data: posts } = await supabaseAdmin
-        .from('rss_posts')
-        .select('*')
-        .eq('campaign_id', campaignId)
-
-      // Deduplicate
-      if (posts && posts.length > 1) {
-        await processor['handleDuplicates'](posts, campaignId)
-      }
-
-      // Generate articles (handles fact-checking internally)
-      await processor['generateNewsletterArticles'](campaignId)
-
-      const { data: articles } = await supabaseAdmin
+      const { data: activeArticles } = await supabaseAdmin
         .from('articles')
         .select('id')
         .eq('campaign_id', campaignId)
+        .eq('is_active', true)
 
-      console.log(`[Workflow Step 5/10] ✓ Generated ${articles?.length || 0} articles`)
+      console.log(`[Workflow Step 5/10] ✓ Selected ${activeArticles?.length || 0} active articles`)
       return
 
     } catch (error) {
@@ -316,7 +377,7 @@ async function deduplicateAndGenerateArticles(campaignId: string) {
   }
 }
 
-async function selectTopArticles(campaignId: string) {
+async function populateEvents(campaignId: string) {
   "use step"
 
   let retryCount = 0
@@ -324,18 +385,17 @@ async function selectTopArticles(campaignId: string) {
 
   while (retryCount <= maxRetries) {
     try {
-      console.log('[Workflow Step 6/10] Selecting top articles...')
+      console.log('[Workflow Step 6/10] Populating events...')
 
       const processor = new RSSProcessor()
-      await processor['selectTop5Articles'](campaignId)
+      await processor.populateEventsForCampaignSmart(campaignId)
 
-      const { data: activeArticles } = await supabaseAdmin
-        .from('articles')
+      const { data: events } = await supabaseAdmin
+        .from('campaign_events')
         .select('id')
         .eq('campaign_id', campaignId)
-        .eq('is_active', true)
 
-      console.log(`[Workflow Step 6/10] ✓ Selected ${activeArticles?.length || 0} active articles`)
+      console.log(`[Workflow Step 6/10] ✓ Populated ${events?.length || 0} events`)
       return
 
     } catch (error) {
@@ -468,6 +528,32 @@ async function finalizeCampaign(campaignId: string) {
     try {
       console.log('[Workflow Step 10/10] Finalizing campaign...')
 
+      // Unassign unused posts (posts that didn't get articles created)
+      const { data: allPosts } = await supabaseAdmin
+        .from('rss_posts')
+        .select('id')
+        .eq('campaign_id', campaignId)
+
+      const { data: articles } = await supabaseAdmin
+        .from('articles')
+        .select('post_id')
+        .eq('campaign_id', campaignId)
+
+      if (allPosts && articles) {
+        const usedPostIds = new Set(articles.map(a => a.post_id))
+        const unusedPostIds = allPosts
+          .filter(post => !usedPostIds.has(post.id))
+          .map(post => post.id)
+
+        if (unusedPostIds.length > 0) {
+          console.log(`[Workflow Step 10/10] Unassigning ${unusedPostIds.length} unused posts`)
+          await supabaseAdmin
+            .from('rss_posts')
+            .update({ campaign_id: null })
+            .in('id', unusedPostIds)
+        }
+      }
+
       // Update campaign status to draft
       await supabaseAdmin
         .from('newsletter_campaigns')
@@ -475,7 +561,7 @@ async function finalizeCampaign(campaignId: string) {
         .eq('id', campaignId)
 
       // Get final counts
-      const { data: articles } = await supabaseAdmin
+      const { data: finalArticles } = await supabaseAdmin
         .from('articles')
         .select('id')
         .eq('campaign_id', campaignId)
@@ -486,7 +572,7 @@ async function finalizeCampaign(campaignId: string) {
         .eq('campaign_id', campaignId)
         .eq('is_active', true)
 
-      console.log(`[Workflow Step 10/10] ✓ Finalized: ${activeArticles?.length || 0} active articles (${articles?.length || 0} total)`)
+      console.log(`[Workflow Step 10/10] ✓ Finalized: ${activeArticles?.length || 0} active articles (${finalArticles?.length || 0} total)`)
 
       // Send Slack notification
       try {

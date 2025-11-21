@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { supabaseAdmin } from '@/lib/supabase'
-import { RSSProcessor } from '@/lib/rss-processor'
 import { ScheduleChecker } from '@/lib/schedule-checker'
-import { AI_PROMPTS, callOpenAI } from '@/lib/openai'
+import { start } from 'workflow/api'
+import { processRSSWorkflow } from '@/lib/workflows/process-rss-workflow'
 
 export async function POST(request: NextRequest) {
   try {
@@ -31,13 +30,11 @@ export async function POST(request: NextRequest) {
       })
     }
 
-    console.log('=== RSS PROCESSING STARTED (Time Matched) ===')
+    console.log('=== RSS WORKFLOW STARTING (Time Matched) ===')
     const currentCentralTime = new Date().toLocaleString("en-US", {timeZone: "America/Chicago"})
     console.log('Central Time:', currentCentralTime)
 
     // Get tomorrow's date for campaign creation (RSS processing is for next day)
-    // IMPORTANT: Calculate tomorrow based on Central Time, not UTC
-    // Fix for issue where RSS runs 8:15 PM CT Sept 22 but created campaign for Sept 24 instead of Sept 23
     const now = new Date()
 
     // Create a date in Central Time using Intl.DateTimeFormat
@@ -62,52 +59,31 @@ export async function POST(request: NextRequest) {
     console.log('Debug: Central date today:', centralDate)
     console.log('Debug: Central tomorrow:', campaignDate)
 
-    // STEP 1: Create new campaign for tomorrow (allow duplicate dates)
-    console.log('Creating new campaign for tomorrow...')
+    // Start workflow execution
+    console.log('Starting RSS workflow...')
+    await start(processRSSWorkflow, [{
+      trigger: 'cron',
+      campaign_date: campaignDate
+    }])
 
-    // Initialize RSS processor
-    const rssProcessor = new RSSProcessor()
-
-    // Always create a new campaign (duplicate dates are now allowed)
-    const { data: newCampaign, error: campaignError } = await supabaseAdmin
-      .from('newsletter_campaigns')
-      .insert([{
-        date: campaignDate,
-        status: 'processing'
-      }])
-      .select()
-      .single()
-
-    if (campaignError || !newCampaign) {
-      throw new Error(`Failed to create campaign: ${campaignError?.message}`)
-    }
-
-    const campaignId = newCampaign.id
-    console.log('Created new campaign:', campaignId, 'for date:', campaignDate)
-
-    // Process RSS feeds for the specific campaign
-    console.log('Starting RSS processing...')
-    await rssProcessor.processAllFeedsForCampaign(campaignId)
-
-    console.log('=== RSS PROCESSING COMPLETED ===')
-    console.log('Subject line generation now happens during RSS processing')
+    console.log('=== RSS WORKFLOW STARTED ===')
+    console.log('Workflow will process in background with 15 steps')
 
     return NextResponse.json({
       success: true,
-      message: 'RSS processing and subject line generation completed successfully for tomorrow\'s campaign',
-      campaignId: campaignId,
+      message: 'RSS workflow started successfully for tomorrow\'s campaign',
       campaignDate: campaignDate,
-      note: 'Campaign created for next day delivery with AI subject line',
+      note: 'Workflow running in background with 15 independent steps',
       timestamp: new Date().toISOString()
     })
 
   } catch (error) {
-    console.error('=== RSS PROCESSING FAILED ===')
+    console.error('=== RSS WORKFLOW START FAILED ===')
     console.error('Error:', error)
 
     return NextResponse.json({
       success: false,
-      error: 'RSS processing failed',
+      error: 'Failed to start RSS workflow',
       message: error instanceof Error ? error.message : 'Unknown error',
       timestamp: new Date().toISOString()
     }, { status: 500 })
@@ -145,13 +121,11 @@ export async function GET(request: NextRequest) {
       })
     }
 
-    console.log('=== RSS PROCESSING STARTED (Time Matched) ===')
+    console.log('=== RSS WORKFLOW STARTING (Time Matched) ===')
     const currentCentralTime = new Date().toLocaleString("en-US", {timeZone: "America/Chicago"})
     console.log('Central Time:', currentCentralTime)
 
     // Get tomorrow's date for campaign creation (RSS processing is for next day)
-    // IMPORTANT: Calculate tomorrow based on Central Time, not UTC
-    // Fix for issue where RSS runs 8:15 PM CT Sept 22 but created campaign for Sept 24 instead of Sept 23
     const now = new Date()
 
     // Create a date in Central Time using Intl.DateTimeFormat
@@ -176,56 +150,35 @@ export async function GET(request: NextRequest) {
     console.log('Debug: Central date today:', centralDate)
     console.log('Debug: Central tomorrow:', campaignDate)
 
-    // STEP 1: Create new campaign for tomorrow (allow duplicate dates)
-    console.log('Creating new campaign for tomorrow...')
+    // Start workflow execution
+    console.log('Starting RSS workflow...')
+    await start(processRSSWorkflow, [{
+      trigger: 'cron',
+      campaign_date: campaignDate
+    }])
 
-    // Always create a new campaign (duplicate dates are now allowed)
-    const { data: newCampaign, error: campaignError } = await supabaseAdmin
-      .from('newsletter_campaigns')
-      .insert([{
-        date: campaignDate,
-        subject_line: '', // Will be generated later
-        status: 'draft',
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      }])
-      .select('id')
-      .single()
-
-    if (campaignError || !newCampaign) {
-      throw new Error(`Failed to create campaign: ${campaignError?.message}`)
-    }
-
-    const campaignId = newCampaign.id
-    console.log('Created new campaign:', campaignId, 'for date:', campaignDate)
-
-    // Process RSS feeds for the specific campaign
-    console.log('Starting RSS processing...')
-    const rssProcessor = new RSSProcessor()
-    await rssProcessor.processAllFeedsForCampaign(campaignId)
-
-    console.log('=== RSS PROCESSING COMPLETED ===')
-    console.log('Subject line generation now happens during RSS processing')
+    console.log('=== RSS WORKFLOW STARTED ===')
+    console.log('Workflow will process in background with 15 steps')
 
     return NextResponse.json({
       success: true,
-      message: 'RSS processing and subject line generation completed successfully for tomorrow\'s campaign',
-      campaignId: campaignId,
+      message: 'RSS workflow started successfully for tomorrow\'s campaign',
       campaignDate: campaignDate,
-      note: 'Campaign created for next day delivery with AI subject line',
+      note: 'Workflow running in background with 15 independent steps',
       timestamp: new Date().toISOString()
     })
 
   } catch (error) {
-    console.error('=== RSS PROCESSING FAILED ===')
+    console.error('=== RSS WORKFLOW START FAILED ===')
     console.error('Error:', error)
 
     return NextResponse.json({
       success: false,
-      error: 'RSS processing failed',
+      error: 'Failed to start RSS workflow',
       message: error instanceof Error ? error.message : 'Unknown error',
       timestamp: new Date().toISOString()
     }, { status: 500 })
   }
 }
-export const maxDuration = 600  // 10 minutes
+
+export const maxDuration = 60  // Workflow trigger only needs 60 seconds

@@ -16,7 +16,8 @@
       "Bash(git restore:*)",
       "WebFetch(domain:rss.app)",
       "Bash(git push:*)",
-      "Bash(src/app/api/cron/rss-processing/route.ts)"
+      "Bash(src/app/api/cron/rss-processing/route.ts)",
+      "Bash(npm install:*)"
     ],
     "deny": [],
     "ask": []

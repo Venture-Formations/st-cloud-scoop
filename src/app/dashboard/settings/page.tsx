@@ -637,7 +637,11 @@ function EmailSettings() {
     // Daily Newsletter Settings (Central Time)
     dailyScheduleEnabled: false,
     dailyCampaignCreationTime: '04:30',  // 4:30 AM
-    dailyScheduledSendTime: '04:55'  // 4:55 AM
+    dailyScheduledSendTime: '04:55',  // 4:55 AM
+
+    // Content Selection Settings
+    articleLookbackHours: '24',  // How far back to search for posts
+    deduplicationLookbackDays: '3'  // Days back to check for duplicates
   })
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState('')
@@ -1254,6 +1258,57 @@ function EmailSettings() {
           <div className="text-sm text-green-800 space-y-1">
             <div>1. <strong>{settings.dailyCampaignCreationTime}</strong> - Create final newsletter with any changes made during review</div>
             <div>2. <strong>{settings.dailyScheduledSendTime}</strong> - Send final newsletter to main subscriber group</div>
+          </div>
+        </div>
+      </div>
+
+      {/* Content Selection Settings */}
+      <div className="bg-white shadow rounded-lg p-6">
+        <h3 className="text-lg font-medium text-gray-900 mb-4">Content Selection Settings</h3>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Article Lookback Hours
+            </label>
+            <input
+              type="number"
+              min="1"
+              max="168"
+              value={settings.articleLookbackHours}
+              onChange={(e) => handleChange('articleLookbackHours', e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-brand-primary"
+            />
+            <p className="text-xs text-gray-500 mt-1">
+              How many hours back to search for RSS posts when creating a newsletter (1-168 hours)
+            </p>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Deduplication Lookback Days
+            </label>
+            <input
+              type="number"
+              min="1"
+              max="14"
+              value={settings.deduplicationLookbackDays}
+              onChange={(e) => handleChange('deduplicationLookbackDays', e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-brand-primary"
+            />
+            <p className="text-xs text-gray-500 mt-1">
+              How many days back to check for duplicate content in sent newsletters (1-14 days)
+            </p>
+          </div>
+        </div>
+
+        <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+          <h4 className="font-medium text-blue-900 mb-2">How It Works</h4>
+          <div className="text-sm text-blue-800 space-y-1">
+            <div>• Workflow queries top 20 rated posts from the past <strong>{settings.articleLookbackHours}</strong> hours</div>
+            <div>• Deduplicates against content in sent newsletters from the past <strong>{settings.deduplicationLookbackDays}</strong> days</div>
+            <div>• Generates articles for top 12 non-duplicate posts</div>
+            <div>• Top 5 articles are selected for the newsletter, others available in UI for manual selection</div>
           </div>
         </div>
       </div>

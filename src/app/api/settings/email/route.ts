@@ -39,7 +39,9 @@ export async function GET(request: NextRequest) {
       scheduledSendTime: '21:00',  // 9:00 PM CT
       dailyScheduleEnabled: 'false',
       dailyCampaignCreationTime: '04:30',  // 4:30 AM CT
-      dailyScheduledSendTime: '04:55'  // 4:55 AM CT
+      dailyScheduledSendTime: '04:55',  // 4:55 AM CT
+      articleLookbackHours: '24',  // How far back to search for posts
+      deduplicationLookbackDays: '3'  // Days back to check for duplicates
     }
 
     return NextResponse.json({
@@ -82,6 +84,25 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Validate numeric settings
+    if (settings.articleLookbackHours) {
+      const hours = parseInt(settings.articleLookbackHours)
+      if (isNaN(hours) || hours < 1 || hours > 168) {
+        return NextResponse.json({
+          error: 'Article Lookback Hours must be between 1 and 168'
+        }, { status: 400 })
+      }
+    }
+
+    if (settings.deduplicationLookbackDays) {
+      const days = parseInt(settings.deduplicationLookbackDays)
+      if (isNaN(days) || days < 1 || days > 14) {
+        return NextResponse.json({
+          error: 'Deduplication Lookback Days must be between 1 and 14'
+        }, { status: 400 })
+      }
+    }
+
     // Save settings as individual key-value pairs
     const settingsToSave = [
       { key: 'email_reviewGroupId', value: settings.reviewGroupId || '' },
@@ -94,7 +115,9 @@ export async function POST(request: NextRequest) {
       { key: 'email_scheduledSendTime', value: settings.scheduledSendTime },
       { key: 'email_dailyScheduleEnabled', value: settings.dailyScheduleEnabled ? 'true' : 'false' },
       { key: 'email_dailyCampaignCreationTime', value: settings.dailyCampaignCreationTime },
-      { key: 'email_dailyScheduledSendTime', value: settings.dailyScheduledSendTime }
+      { key: 'email_dailyScheduledSendTime', value: settings.dailyScheduledSendTime },
+      { key: 'email_articleLookbackHours', value: settings.articleLookbackHours || '24' },
+      { key: 'email_deduplicationLookbackDays', value: settings.deduplicationLookbackDays || '3' }
     ]
 
     // Upsert each setting

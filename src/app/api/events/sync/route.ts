@@ -169,7 +169,7 @@ export async function POST(request: NextRequest) {
         }
       }
     } else {
-      // For daily sync, fetch each of the next 7 days individually
+      // For daily sync, fetch each of the next 7 days individually with rate limiting
       console.log('🗓️ Using daily fetch strategy for better results')
       console.log('⏰ Daily fetch start time:', new Date().toISOString())
 
@@ -180,33 +180,66 @@ export async function POST(request: NextRequest) {
 
         console.log(`📍 Fetching events for day ${dayOffset + 1}/7: ${dayString} at ${new Date().toISOString()}`)
 
-        try {
-          const apiUrl = `https://www.visitstcloud.com/wp-json/tribe/events/v1/events?start_date=${dayString}&end_date=${dayString}&per_page=100&status=publish`
+        // Retry logic with exponential backoff for 503 errors
+        let retryCount = 0
+        const maxRetries = 3
+        let success = false
 
-          const response = await fetch(apiUrl, {
-            headers: {
-              'User-Agent': 'St. Cloud Scoop Newsletter (stcscoop.com)',
-              'Accept': 'application/json'
+        while (retryCount <= maxRetries && !success) {
+          try {
+            const apiUrl = `https://www.visitstcloud.com/wp-json/tribe/events/v1/events?start_date=${dayString}&end_date=${dayString}&per_page=100&status=publish`
+
+            const response = await fetch(apiUrl, {
+              headers: {
+                'User-Agent': 'St. Cloud Scoop Newsletter (stcscoop.com)',
+                'Accept': 'application/json'
+              }
+            })
+
+            if (response.status === 503 && retryCount < maxRetries) {
+              // 503 Service Unavailable - retry with exponential backoff
+              const waitTime = Math.pow(2, retryCount) * 2000 // 2s, 4s, 8s
+              console.warn(`⚠️ 503 error for ${dayString}, retrying in ${waitTime/1000}s (attempt ${retryCount + 1}/${maxRetries})`)
+              await new Promise(resolve => setTimeout(resolve, waitTime))
+              retryCount++
+              continue
             }
-          })
 
-          if (!response.ok) {
-            console.warn(`API error for ${dayString}: ${response.status} ${response.statusText}`)
-            continue // Skip this day and continue with others
+            if (!response.ok) {
+              console.warn(`❌ API error for ${dayString}: ${response.status} ${response.statusText}`)
+              break // Skip this day
+            }
+
+            const data = await response.json()
+            const dayEvents: VisitStCloudEvent[] = data.events || []
+
+            if (dayEvents.length > 0) {
+              allEvents = allEvents.concat(dayEvents)
+              console.log(`✅ Day ${dayString}: fetched ${dayEvents.length} events (total so far: ${allEvents.length})`)
+            } else {
+              console.log(`📭 Day ${dayString}: no events found`)
+            }
+
+            success = true
+          } catch (error) {
+            if (retryCount < maxRetries) {
+              const waitTime = Math.pow(2, retryCount) * 2000
+              console.warn(`⚠️ Error fetching ${dayString}, retrying in ${waitTime/1000}s (attempt ${retryCount + 1}/${maxRetries}):`, error)
+              await new Promise(resolve => setTimeout(resolve, waitTime))
+              retryCount++
+            } else {
+              console.warn(`❌ Failed to fetch events for ${dayString} after ${maxRetries} retries:`, error)
+              break
+            }
           }
+        }
 
-          const data = await response.json()
-          const dayEvents: VisitStCloudEvent[] = data.events || []
-
-          if (dayEvents.length > 0) {
-            allEvents = allEvents.concat(dayEvents)
-            console.log(`Day ${dayString}: fetched ${dayEvents.length} events (total so far: ${allEvents.length})`)
-          } else {
-            console.log(`Day ${dayString}: no events found`)
-          }
-        } catch (error) {
-          console.warn(`Error fetching events for ${dayString}:`, error)
-          // Continue with other days even if one fails
+        // Add delay between successful API calls to avoid rate limiting
+        // Skip delay on last iteration
+        if (dayOffset < 6) {
+          const delayMs = 3000 // 3 second delay between requests
+          console.log(`⏱️ Waiting ${delayMs/1000}s before next request to avoid rate limiting...`)
+          await new Promise(resolve => setTimeout(resolve, delayMs))
         }
       }
     }

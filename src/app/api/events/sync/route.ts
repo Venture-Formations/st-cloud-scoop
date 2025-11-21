@@ -47,8 +47,6 @@ async function generateEventSummary(event: { title: string; description: string 
       return null // Skip very short descriptions
     }
 
-    console.log(`Generating AI summary for event: ${event.title}`)
-
     // AI_PROMPTS.eventSummarizer already calls the API and returns the result
     const response = await AI_PROMPTS.eventSummarizer({
       title: event.title,
@@ -57,13 +55,12 @@ async function generateEventSummary(event: { title: string; description: string 
     })
 
     if (response && response.event_summary) {
-      console.log(`Generated summary (${response.word_count} words): ${response.event_summary}`)
       return response.event_summary
     }
 
     return null
   } catch (error) {
-    console.error('Error generating event summary:', error)
+    console.error('AI summary error:', error)
     return null
   }
 }
@@ -99,14 +96,12 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    console.log('🔄 Starting events sync from Visit St. Cloud API...')
+    console.log('🔄 Starting events sync...')
     const functionStartTime = Date.now()
-    console.log('⏰ Function start time:', new Date().toISOString())
 
     // For testing/manual sync, allow date override from query params
     const overrideStartDate = searchParams.get('start_date')
     const overrideEndDate = searchParams.get('end_date')
-    console.log('📅 Date overrides:', { overrideStartDate, overrideEndDate })
 
     let startDateString, endDateString
 
@@ -114,7 +109,6 @@ export async function POST(request: NextRequest) {
       // Use override dates if provided
       startDateString = overrideStartDate
       endDateString = overrideEndDate
-      console.log('Using override dates:', startDateString, 'to', endDateString)
     } else {
       // We'll fetch each day individually instead of using a date range
       const startDate = new Date()
@@ -170,15 +164,10 @@ export async function POST(request: NextRequest) {
       }
     } else {
       // For daily sync, fetch each of the next 7 days individually with rate limiting
-      console.log('🗓️ Using daily fetch strategy for better results')
-      console.log('⏰ Daily fetch start time:', new Date().toISOString())
-
       for (let dayOffset = 0; dayOffset < 7; dayOffset++) {
         const currentDate = new Date()
         currentDate.setDate(currentDate.getDate() + dayOffset)
         const dayString = currentDate.toISOString().split('T')[0]
-
-        console.log(`📍 Fetching events for day ${dayOffset + 1}/7: ${dayString} at ${new Date().toISOString()}`)
 
         // Retry logic with exponential backoff for 503 errors
         let retryCount = 0
@@ -199,14 +188,14 @@ export async function POST(request: NextRequest) {
             if (response.status === 503 && retryCount < maxRetries) {
               // 503 Service Unavailable - retry with exponential backoff
               const waitTime = Math.pow(2, retryCount) * 2000 // 2s, 4s, 8s
-              console.warn(`⚠️ 503 error for ${dayString}, retrying in ${waitTime/1000}s (attempt ${retryCount + 1}/${maxRetries})`)
+              console.warn(`⚠️ 503 error for ${dayString}, retry ${retryCount + 1}/${maxRetries}`)
               await new Promise(resolve => setTimeout(resolve, waitTime))
               retryCount++
               continue
             }
 
             if (!response.ok) {
-              console.warn(`❌ API error for ${dayString}: ${response.status} ${response.statusText}`)
+              console.warn(`❌ API error ${dayString}: ${response.status}`)
               break // Skip this day
             }
 
@@ -215,45 +204,35 @@ export async function POST(request: NextRequest) {
 
             if (dayEvents.length > 0) {
               allEvents = allEvents.concat(dayEvents)
-              console.log(`✅ Day ${dayString}: fetched ${dayEvents.length} events (total so far: ${allEvents.length})`)
-            } else {
-              console.log(`📭 Day ${dayString}: no events found`)
             }
 
             success = true
           } catch (error) {
             if (retryCount < maxRetries) {
               const waitTime = Math.pow(2, retryCount) * 2000
-              console.warn(`⚠️ Error fetching ${dayString}, retrying in ${waitTime/1000}s (attempt ${retryCount + 1}/${maxRetries}):`, error)
+              console.warn(`⚠️ Error ${dayString}, retry ${retryCount + 1}/${maxRetries}`)
               await new Promise(resolve => setTimeout(resolve, waitTime))
               retryCount++
             } else {
-              console.warn(`❌ Failed to fetch events for ${dayString} after ${maxRetries} retries:`, error)
+              console.warn(`❌ Failed ${dayString} after ${maxRetries} retries`)
               break
             }
           }
         }
 
-        // Add delay between successful API calls to avoid rate limiting
-        // Skip delay on last iteration
+        // Add delay between API calls to avoid rate limiting (skip on last iteration)
         if (dayOffset < 6) {
-          const delayMs = 3000 // 3 second delay between requests
-          console.log(`⏱️ Waiting ${delayMs/1000}s before next request to avoid rate limiting...`)
-          await new Promise(resolve => setTimeout(resolve, delayMs))
+          await new Promise(resolve => setTimeout(resolve, 3000))
         }
       }
     }
 
     const events = allEvents
-    console.log(`✅ Fetched total ${events.length} events from API using daily strategy`)
-    console.log('⏰ API fetch complete time:', new Date().toISOString())
+    console.log(`✅ Fetched ${events.length} events`)
 
     let newEvents = 0
     let updatedEvents = 0
     let errors = 0
-
-    console.log('🔄 Starting event processing loop...')
-    console.log('⏰ Event processing start time:', new Date().toISOString())
 
     // Process events in smaller batches to prevent timeout
     const BATCH_SIZE = 5
@@ -263,27 +242,22 @@ export async function POST(request: NextRequest) {
       batches.push(events.slice(i, i + BATCH_SIZE))
     }
 
-    console.log(`📦 Processing ${events.length} events in ${batches.length} batches of ${BATCH_SIZE}`)
+    console.log(`📦 Processing ${events.length} events...`)
 
     // Process each batch
     for (let batchIndex = 0; batchIndex < batches.length; batchIndex++) {
       const batch = batches[batchIndex]
 
-      console.log(`📊 Processing batch ${batchIndex + 1}/${batches.length} (${batch.length} events) at ${new Date().toISOString()}`)
-
       // Check if we're approaching timeout (leave 60 seconds for cleanup)
       const elapsed = Date.now() - functionStartTime
       if (elapsed > 540000) { // 9 minutes (leave 1 minute for cleanup before 10 minute timeout)
-        console.log(`⏰ Approaching timeout after ${Math.round(elapsed/1000)}s, stopping processing at batch ${batchIndex + 1}`)
+        console.log(`⏰ Timeout approaching, stopping at batch ${batchIndex + 1}/${batches.length}`)
         break
       }
 
       // Process events in current batch
       for (let i = 0; i < batch.length; i++) {
         const apiEvent = batch[i]
-        const globalIndex = batchIndex * BATCH_SIZE + i
-
-        console.log(`🔍 Processing event ${globalIndex + 1}/${events.length}: ${apiEvent.title}`)
 
         try {
         const eventData = {
@@ -304,7 +278,6 @@ export async function POST(request: NextRequest) {
         }
 
         // Check if event already exists and get its status
-        console.log(`🔍 Checking existing event ${globalIndex + 1}/${events.length} at ${new Date().toISOString()}`)
 
         const { data: existingEvent } = await supabaseAdmin
           .from('events')
@@ -363,29 +336,22 @@ export async function POST(request: NextRequest) {
           }
         }
       } catch (error) {
-        console.error(`❌ Error processing event ${globalIndex + 1}/${events.length}:`, error)
+        console.error(`Error processing event:`, error)
         errors++
       }
     }
 
     // Small delay between batches to prevent overwhelming the database
     if (batchIndex < batches.length - 1) {
-      console.log(`⏸️ Batch ${batchIndex + 1} complete, pausing 1 second before next batch...`)
       await new Promise(resolve => setTimeout(resolve, 1000))
     }
   }
 
-    console.log('🔄 Processing complete, handling inactive events...')
-    console.log('⏰ Deactivation start time:', new Date().toISOString())
-
     // Only deactivate events that have already ended (are in the past)
-    // This prevents deactivating future events that just aren't in today's API fetch window
     const now = new Date()
     const yesterday = new Date(now)
     yesterday.setDate(yesterday.getDate() - 1)
     const yesterdayStr = yesterday.toISOString()
-
-    console.log(`📋 Deactivating only events that ended before ${yesterdayStr}`)
 
     // Get events that have ended and are not in the current API response
     const apiExternalIds = events.map(e => `visitstcloud_${e.id}`)
@@ -398,7 +364,6 @@ export async function POST(request: NextRequest) {
         .eq('is_selected', true)
 
       const protectedEventIds = new Set(activeCampaignEvents?.map(ce => ce.event_id) || [])
-      console.log(`🛡️ Protecting ${protectedEventIds.size} events currently used in campaigns`)
 
       // Get past events that should be deactivated
       const { data: eventsToDeactivate } = await supabaseAdmin
@@ -416,8 +381,6 @@ export async function POST(request: NextRequest) {
           .map(event => event.id)
 
         if (idsToDeactivate.length > 0) {
-          console.log(`📋 Deactivating ${idsToDeactivate.length} past events (${eventsToDeactivate.length - idsToDeactivate.length} protected)`)
-
           const { error: deactivateError } = await supabaseAdmin
             .from('events')
             .update({ active: false, updated_at: new Date().toISOString() })
@@ -426,16 +389,11 @@ export async function POST(request: NextRequest) {
           if (deactivateError) {
             console.error('Error deactivating old events:', deactivateError)
           }
-        } else {
-          console.log('📋 All past events in deactivation list are protected by active campaigns')
         }
-      } else {
-        console.log('📋 No past events found to deactivate')
       }
     }
 
-    console.log(`✅ Events sync complete. New: ${newEvents}, Updated: ${updatedEvents}, Errors: ${errors}`)
-    console.log('⏰ Function complete time:', new Date().toISOString())
+    console.log(`✅ Sync complete. New: ${newEvents}, Updated: ${updatedEvents}, Errors: ${errors}`)
 
     return NextResponse.json({
       success: true,

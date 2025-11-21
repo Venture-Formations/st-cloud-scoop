@@ -1193,11 +1193,39 @@ export class RSSProcessor {
       }
     }
 
-    if (!result.headline || !result.content || !result.word_count) {
-      throw new Error('Invalid newsletter content response')
+    // Extract headline - handle both string and nested object formats
+    let headline: string
+    if (typeof result.headline === 'string') {
+      headline = result.headline
+    } else if (typeof result.headline === 'object' && result.headline.headline) {
+      // Handle nested format: { "headline": { "headline": "text" } }
+      headline = result.headline.headline
+    } else {
+      throw new Error(`Invalid headline format in response: ${JSON.stringify(result.headline)}`)
     }
 
-    return result as NewsletterContent
+    // Extract content - handle both string and nested object formats
+    let content: string
+    if (typeof result.content === 'string') {
+      content = result.content
+    } else if (typeof result.content === 'object' && result.content.content) {
+      content = result.content.content
+    } else {
+      throw new Error(`Invalid content format in response: ${JSON.stringify(result.content)}`)
+    }
+
+    // Extract word_count
+    const word_count = typeof result.word_count === 'number' ? result.word_count : parseInt(result.word_count)
+
+    if (!headline || !content || !word_count) {
+      throw new Error('Invalid newsletter content response - missing required fields')
+    }
+
+    return {
+      headline,
+      content,
+      word_count
+    }
   }
 
   private async factCheckContent(newsletterContent: string, originalContent: string): Promise<FactCheckResult> {

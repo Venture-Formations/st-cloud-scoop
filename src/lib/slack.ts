@@ -198,9 +198,15 @@ export class SlackNotificationService {
 
   /**
    * Alert when campaign has 6 or fewer articles available
-   * CRITICAL: This alert bypasses notification settings and always sends
    */
   async sendLowArticleCountAlert(campaignId: string, articleCount: number, campaignDate: string) {
+    // Check if low article count alerts are enabled
+    const isEnabled = await this.checkNotificationSetting('low_article_count_alerts')
+    if (!isEnabled) {
+      console.log('Low article count alerts are disabled in settings - skipping notification')
+      return
+    }
+
     const webhookUrl = await this.getWebhookUrl()
     if (!webhookUrl) {
       console.warn('Slack webhook URL not configured - cannot send low article count alert')
@@ -208,20 +214,17 @@ export class SlackNotificationService {
     }
 
     const message = [
-      `⚠️ 📰 CRITICAL: Low Article Count Alert`,
+      `⚠️ 📰 Low Article Count Alert`,
       ``,
       `Campaign: ${campaignId}`,
       `Date: ${campaignDate}`,
       `Article Count: ${articleCount} articles (≤6 threshold)`,
       ``,
       `⚠️ Newsletter may not have enough content for quality delivery`,
-      `🔍 Action Required: Manual review before sending`,
-      ``,
-      `This is a critical alert and cannot be disabled in settings.`
+      `🔍 Action Required: Manual review before sending`
     ].join('\n')
 
     try {
-      // Send directly without checking notification settings (this is critical)
       const payload = {
         text: message
       }
@@ -233,12 +236,12 @@ export class SlackNotificationService {
         .from('system_logs')
         .insert([{
           level: 'warn',
-          message: 'Critical low article count alert sent',
+          message: 'Low article count alert sent',
           context: {
             campaignId,
             articleCount,
             campaignDate,
-            alert_type: 'low_article_count_critical'
+            alert_type: 'low_article_count'
           },
           source: 'slack_service'
         }])

@@ -88,6 +88,12 @@ async function setupCampaign(campaignDate: string) {
       if (existing) {
         campaignId = existing.id
         console.log(`[Workflow Step 1/10] Using existing campaign: ${campaignId}`)
+
+        // Update status to processing
+        await supabaseAdmin
+          .from('newsletter_campaigns')
+          .update({ status: 'processing' })
+          .eq('id', campaignId)
       } else {
         // Create new campaign
         const { data: newCampaign, error } = await supabaseAdmin

@@ -17,7 +17,8 @@
       "WebFetch(domain:rss.app)",
       "Bash(git push:*)",
       "Bash(src/app/api/cron/rss-processing/route.ts)",
-      "Bash(npm install:*)"
+      "Bash(npm install:*)",
+      "mcp__vercel__getDeployments"
     ],
     "deny": [],
     "ask": []

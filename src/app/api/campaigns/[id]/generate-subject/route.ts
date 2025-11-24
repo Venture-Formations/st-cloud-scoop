@@ -120,18 +120,23 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     let subjectLine = ''
 
     if (typeof result === 'string') {
-      // Try to parse as JSON first (in case it's a JSON string)
+      // First, clean the string by removing markdown wrappers
+      let cleanedResult = result.trim().replace(/^```json\s*/, '').replace(/\s*```$/, '').trim()
+
+      // Try to parse as JSON (in case it's a JSON string)
       try {
-        const parsed = JSON.parse(result)
+        const parsed = JSON.parse(cleanedResult)
         if (parsed.headline) {
           subjectLine = parsed.headline
+        } else if (parsed.subject_line) {
+          subjectLine = parsed.subject_line
         } else {
-          // Not JSON or no headline field, use as-is
-          subjectLine = result
+          // Not a recognized JSON format, use the cleaned string
+          subjectLine = cleanedResult
         }
       } catch {
-        // Not JSON, use the plain string
-        subjectLine = result
+        // Not JSON, use the cleaned string
+        subjectLine = cleanedResult
       }
     } else if (typeof result === 'object' && result) {
       // If it's already an object
@@ -147,16 +152,12 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       }
     }
 
-    if (subjectLine && subjectLine.trim()) {
-      subjectLine = subjectLine.trim()
-
-      // Remove any markdown code block wrappers if present
-      subjectLine = subjectLine.replace(/^```json\s*/, '').replace(/\s*```$/, '')
-
-      console.log(`Processed subject line: "${subjectLine}" (${subjectLine.length} chars)`)
-    } else {
+    if (!subjectLine || !subjectLine.trim()) {
       throw new Error('Empty subject line response from AI')
     }
+
+    subjectLine = subjectLine.trim()
+    console.log(`Processed subject line: "${subjectLine}" (${subjectLine.length} chars)`)
 
     // Update campaign with generated subject line
     const { error: updateError } = await supabaseAdmin

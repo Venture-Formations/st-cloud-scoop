@@ -1378,23 +1378,30 @@ export class RSSProcessor {
       let generatedSubject = ''
 
       if (typeof aiResponse === 'string') {
-        // Try to parse as JSON first (in case it's a JSON string)
+        // First, clean the string by removing markdown wrappers
+        let cleanedResponse = aiResponse.trim().replace(/^```json\s*/, '').replace(/\s*```$/, '').trim()
+
+        // Try to parse as JSON (in case it's a JSON string)
         try {
-          const parsed = JSON.parse(aiResponse)
+          const parsed = JSON.parse(cleanedResponse)
           if (parsed.headline) {
             generatedSubject = parsed.headline
+          } else if (parsed.subject_line) {
+            generatedSubject = parsed.subject_line
           } else {
-            // Not JSON or no headline field, use as-is
-            generatedSubject = aiResponse
+            // Not a recognized JSON format, use the cleaned string
+            generatedSubject = cleanedResponse
           }
         } catch {
-          // Not JSON, use the plain string
-          generatedSubject = aiResponse
+          // Not JSON, use the cleaned string
+          generatedSubject = cleanedResponse
         }
       } else if (typeof aiResponse === 'object' && aiResponse) {
         // If it's already an object
         if ('headline' in aiResponse) {
           generatedSubject = (aiResponse as any).headline
+        } else if ('subject_line' in aiResponse) {
+          generatedSubject = (aiResponse as any).subject_line
         } else if ('raw' in aiResponse) {
           generatedSubject = (aiResponse as any).raw
         } else {
@@ -1405,10 +1412,6 @@ export class RSSProcessor {
 
       if (generatedSubject && generatedSubject.trim()) {
         generatedSubject = generatedSubject.trim()
-
-        // Remove any markdown code block wrappers if present
-        generatedSubject = generatedSubject.replace(/^```json\s*/, '').replace(/\s*```$/, '')
-
         console.log('Generated subject line:', generatedSubject)
 
         // Update campaign with generated subject line

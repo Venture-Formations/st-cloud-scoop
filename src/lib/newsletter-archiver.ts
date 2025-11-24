@@ -183,20 +183,60 @@ export class NewsletterArchiver {
 
       // 8. Fetch Weather data
       const { data: weatherData } = await supabaseAdmin
-        .from('weather_data')
+        .from('weather_forecasts')
         .select('weather_html, forecast_date')
         .eq('campaign_id', campaignId)
         .single()
 
-      // 9. Fetch Road Work data
-      const { data: roadWorkData } = await supabaseAdmin
-        .from('road_work_data')
-        .select('road_work_data, generated_at')
+      // 9. Fetch Road Work selections
+      const { data: roadWorkSelections, error: roadWorkError } = await supabaseAdmin
+        .from('campaign_road_work_selections')
+        .select('road_work_item_id, display_order')
         .eq('campaign_id', campaignId)
-        .eq('is_active', true)
-        .single()
+        .order('display_order', { ascending: true })
 
-      // 10. Fetch Business Spotlight
+      if (roadWorkError) {
+        console.error('[ARCHIVE] Error fetching road work selections:', roadWorkError)
+      }
+
+      // Fetch road work items separately
+      const roadWorkItemIds = roadWorkSelections?.map((s: any) => s.road_work_item_id).filter(Boolean) || []
+      let roadWorkItems: any[] = []
+
+      if (roadWorkItemIds.length > 0) {
+        const { data: items } = await supabaseAdmin
+          .from('road_work_items')
+          .select('id, road_name, road_range, city_or_township, reason, expected_reopen')
+          .in('id', roadWorkItemIds)
+
+        roadWorkItems = items || []
+      }
+
+      // 10. Fetch Advertisements
+      const { data: adSelections, error: adError } = await supabaseAdmin
+        .from('campaign_advertisements')
+        .select('advertisement_id, display_order')
+        .eq('campaign_id', campaignId)
+        .order('display_order', { ascending: true })
+
+      if (adError) {
+        console.error('[ARCHIVE] Error fetching advertisement selections:', adError)
+      }
+
+      // Fetch advertisements separately
+      const adIds = adSelections?.map((s: any) => s.advertisement_id).filter(Boolean) || []
+      let advertisements: any[] = []
+
+      if (adIds.length > 0) {
+        const { data: ads } = await supabaseAdmin
+          .from('advertisements')
+          .select('id, business_name, ad_content, image_url, link_url, placement_type, display_order')
+          .in('id', adIds)
+
+        advertisements = ads || []
+      }
+
+      // 11. Fetch Business Spotlight
       const { data: spotlightData } = await supabaseAdmin
         .from('business_spotlights')
         .select(`
@@ -207,7 +247,7 @@ export class NewsletterArchiver {
         .eq('is_active', true)
         .single()
 
-      // 11. Build sections object
+      // 12. Build sections object
       const sections: any = {}
 
       if (wordleData) {
@@ -233,18 +273,21 @@ export class NewsletterArchiver {
         }
       }
 
-      if (roadWorkData && roadWorkData.road_work_data) {
+      if (roadWorkItems.length > 0) {
         sections.road_work = {
-          items: roadWorkData.road_work_data,
-          generated_at: roadWorkData.generated_at
+          items: roadWorkItems
         }
+      }
+
+      if (advertisements.length > 0) {
+        sections.advertisements = { ads: advertisements }
       }
 
       if (spotlightData) {
         sections.business_spotlight = spotlightData
       }
 
-      // 12. Gather metadata
+      // 13. Gather metadata
       const metadata = {
         total_articles: transformedArticles.length,
         total_events: events.length,
@@ -253,12 +296,13 @@ export class NewsletterArchiver {
         has_getaways: vrboProperties.length > 0,
         has_dining_deals: diningDeals.length > 0,
         has_weather: !!weatherData,
-        has_road_work: !!roadWorkData,
+        has_road_work: roadWorkItems.length > 0,
+        has_advertisements: advertisements.length > 0,
         has_business_spotlight: !!spotlightData,
         archived_at: new Date().toISOString()
       }
 
-      // 13. Create archive record
+      // 14. Create archive record
       const archiveData: Partial<ArchivedNewsletter> = {
         campaign_id: campaignId,
         newsletter_id: 'stcscoop', // Default newsletter ID

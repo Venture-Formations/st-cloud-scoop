@@ -2,19 +2,35 @@ import { NextRequest, NextResponse } from 'next/server'
 import { AI_PROMPTS, callOpenAI, callAIWithPrompt } from '@/lib/openai'
 import { supabaseAdmin } from '@/lib/supabase'
 
+// Prompts that are expected to return plain text (not JSON)
+const PLAIN_TEXT_PROMPTS = [
+  'wordleDefinition',
+  'wordleFact',
+  'eventSummarizer'
+]
+
 // Helper function to parse AI response and extract fields
-function parseAIResponse(response: any) {
+function parseAIResponse(response: any, promptType?: string) {
   let parsedResponse = null
   let parseError = null
   let responseType = typeof response
 
-  try {
-    parsedResponse = typeof response === 'string' ? JSON.parse(response) : response
-    responseType = typeof parsedResponse
-  } catch (error) {
-    parseError = error instanceof Error ? error.message : 'Failed to parse response'
-    // If it's not JSON, treat it as plain text
+  // Skip JSON parsing for prompts that return plain text
+  const isPlainTextPrompt = promptType && PLAIN_TEXT_PROMPTS.includes(promptType)
+
+  if (isPlainTextPrompt) {
+    // Plain text prompt - don't try to parse as JSON
     parsedResponse = response
+    responseType = 'string'
+  } else {
+    try {
+      parsedResponse = typeof response === 'string' ? JSON.parse(response) : response
+      responseType = typeof parsedResponse
+    } catch (error) {
+      parseError = error instanceof Error ? error.message : 'Failed to parse response'
+      // If it's not JSON, treat it as plain text
+      parsedResponse = response
+    }
   }
 
   return {
@@ -249,7 +265,8 @@ ${i + 1}. ${item.road_name}
     }
 
     // Parse the response to extract expected fields
-    const parseResult = parseAIResponse(result)
+    // Pass actualType to suppress parse errors for plain text prompts
+    const parseResult = parseAIResponse(result, actualType)
 
     return {
       success: true,
@@ -676,7 +693,7 @@ Utility work and pavement repairs`,
       try {
         const prompt = await AI_PROMPTS.eventSummarizer(testData.eventSummarizer)
         const response = await callOpenAI(prompt, 200, 0.7)
-        const parseResult = parseAIResponse(response)
+        const parseResult = parseAIResponse(response, 'eventSummarizer')
         results.eventSummarizer = {
           success: true,
           response,
@@ -792,7 +809,7 @@ Utility work and pavement repairs`,
       console.log('Testing Wordle Definition...')
       try {
         const response = await AI_PROMPTS.wordleDefinition(testData.wordleDefinition.word)
-        const parseResult = parseAIResponse(response)
+        const parseResult = parseAIResponse(response, 'wordleDefinition')
         results.wordleDefinition = {
           success: true,
           response,
@@ -812,7 +829,7 @@ Utility work and pavement repairs`,
       console.log('Testing Wordle Fact...')
       try {
         const response = await AI_PROMPTS.wordleFact(testData.wordleFact.word)
-        const parseResult = parseAIResponse(response)
+        const parseResult = parseAIResponse(response, 'wordleFact')
         results.wordleFact = {
           success: true,
           response,

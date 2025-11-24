@@ -47,7 +47,8 @@ export class NewsletterArchiver {
           rank,
           final_position,
           created_at,
-          rss_post:rss_posts(
+          post_id,
+          rss_post:rss_posts!post_id(
             title,
             source_url,
             image_url,

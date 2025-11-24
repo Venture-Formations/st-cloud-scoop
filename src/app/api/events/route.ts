@@ -40,9 +40,14 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // Filter by active status
-    if (active !== null && active !== undefined) {
+    // Filter by active status - DEFAULT TO TRUE if not specified
+    if (active === 'all') {
+      // Return both active and inactive events (no filter)
+    } else if (active === 'true' || active === 'false') {
       query = query.eq('active', active === 'true')
+    } else {
+      // Default: only return active events unless explicitly requesting all
+      query = query.eq('active', true)
     }
 
     // Filter by featured status

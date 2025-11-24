@@ -65,7 +65,9 @@ export default function EventsDatabasePage() {
 
   const fetchEvents = async () => {
     try {
-      const response = await fetch('/api/events')
+      // Fetch all events (both active and inactive) so client-side filtering works
+      // The frontend will filter by active status based on dateFilter (upcoming/past/all)
+      const response = await fetch('/api/events?active=all')
       if (response.ok) {
         const data = await response.json()
         setEvents(data.events || [])

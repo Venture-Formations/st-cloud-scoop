@@ -416,6 +416,47 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Cleanup: Delete events older than 30 days (keeps historical data manageable)
+    const thirtyDaysAgo = new Date()
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
+    const thirtyDaysAgoStr = thirtyDaysAgo.toISOString()
+
+    // Get event IDs that are currently used in campaigns (protect these)
+    const { data: protectedCampaignEvents } = await supabaseAdmin
+      .from('campaign_events')
+      .select('event_id')
+
+    const protectedEventIdsForCleanup = new Set(protectedCampaignEvents?.map(ce => ce.event_id) || [])
+
+    // Get old inactive events to delete
+    const { data: eventsToDelete } = await supabaseAdmin
+      .from('events')
+      .select('id, title, start_date')
+      .eq('active', false)
+      .lt('start_date', thirtyDaysAgoStr)
+
+    if (eventsToDelete && eventsToDelete.length > 0) {
+      // Filter out protected events
+      const idsToDelete = eventsToDelete
+        .filter(event => !protectedEventIdsForCleanup.has(event.id))
+        .map(event => event.id)
+
+      if (idsToDelete.length > 0) {
+        console.log(`🗑️ Deleting ${idsToDelete.length} inactive events older than 30 days`)
+
+        const { error: deleteError } = await supabaseAdmin
+          .from('events')
+          .delete()
+          .in('id', idsToDelete)
+
+        if (deleteError) {
+          console.error('Error deleting old events:', deleteError)
+        } else {
+          console.log(`✅ Successfully deleted ${idsToDelete.length} old events`)
+        }
+      }
+    }
+
     console.log(`✅ Sync complete. New: ${newEvents}, Updated: ${updatedEvents}, Errors: ${errors}`)
 
     return NextResponse.json({

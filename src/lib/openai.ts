@@ -159,8 +159,31 @@ export async function callWithStructuredPrompt(
 }
 
 /**
+ * Detect AI provider based on model name in prompt config
+ * Perplexity models: sonar, sonar-pro, sonar-deep-research, etc.
+ * OpenAI models: gpt-4o, gpt-4, o1, o1-mini, o1-pro, etc.
+ */
+function detectProviderFromModel(model: string | undefined): 'openai' | 'perplexity' {
+  if (!model) return 'openai'
+
+  const modelLower = model.toLowerCase()
+
+  // Perplexity models start with 'sonar'
+  if (modelLower.startsWith('sonar')) {
+    return 'perplexity'
+  }
+
+  // Default to OpenAI for gpt-*, o1*, and anything else
+  return 'openai'
+}
+
+/**
  * Universal AI prompt caller - works with OpenAI or Perplexity
  * Loads complete JSON API request from database and executes it
+ *
+ * Provider is auto-detected from the model in the prompt:
+ * - sonar* models → Perplexity
+ * - gpt-*, o1* models → OpenAI
  *
  * @param promptKey - Database key (e.g., 'ai_prompt_content_evaluator')
  * @param placeholders - Dynamic content to replace in prompts (e.g., {{title}}, {{content}})
@@ -193,8 +216,14 @@ export async function callAIWithPrompt(
     // No validation - let API validate the structure
     console.log(`[AI-PROMPT] Prompt config keys:`, Object.keys(promptConfig))
 
-    // Get provider (default to 'openai')
-    const provider = (data.ai_provider === 'perplexity' ? 'perplexity' : 'openai') as 'openai' | 'perplexity'
+    // Auto-detect provider from model in prompt config (overrides database setting)
+    const detectedProvider = detectProviderFromModel(promptConfig.model)
+    const dbProvider = data.ai_provider === 'perplexity' ? 'perplexity' : 'openai'
+
+    // Use detected provider from model, fall back to database setting
+    const provider = detectedProvider !== 'openai' ? detectedProvider : dbProvider
+
+    console.log(`[AI-PROMPT] Model: ${promptConfig.model || 'not specified'}, Provider: ${provider} (detected: ${detectedProvider}, db: ${dbProvider})`)
 
     // Call AI with structured prompt
     const response = await callWithStructuredPrompt(promptConfig, placeholders, provider)

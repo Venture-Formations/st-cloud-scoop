@@ -234,118 +234,130 @@ export async function POST(request: NextRequest) {
     let updatedEvents = 0
     let errors = 0
 
-    // Process events in smaller batches to prevent timeout
-    const BATCH_SIZE = 5
+    // Process events in parallel batches for faster AI processing
+    const BATCH_SIZE = 10 // Increased from 5 since we're now processing in parallel
     const batches = []
 
     for (let i = 0; i < events.length; i += BATCH_SIZE) {
       batches.push(events.slice(i, i + BATCH_SIZE))
     }
 
-    console.log(`📦 Processing ${events.length} events...`)
+    console.log(`📦 Processing ${events.length} events in ${batches.length} parallel batches...`)
 
     // Process each batch
     for (let batchIndex = 0; batchIndex < batches.length; batchIndex++) {
       const batch = batches[batchIndex]
 
-      // Check if we're approaching timeout (leave 60 seconds for cleanup)
+      // Check if we're approaching timeout (leave 80 seconds for cleanup)
       const elapsed = Date.now() - functionStartTime
-      if (elapsed > 540000) { // 9 minutes (leave 1 minute for cleanup before 10 minute timeout)
+      if (elapsed > 720000) { // 12 minutes (leave 80 seconds for cleanup before 800 second timeout)
         console.log(`⏰ Timeout approaching, stopping at batch ${batchIndex + 1}/${batches.length}`)
         break
       }
 
-      // Process events in current batch
-      for (let i = 0; i < batch.length; i++) {
-        const apiEvent = batch[i]
+      // Process all events in current batch in parallel
+      const batchResults = await Promise.allSettled(
+        batch.map(async (apiEvent) => {
+          try {
+            const eventData = {
+              external_id: `visitstcloud_${apiEvent.id}`,
+              title: decodeHtmlEntities(apiEvent.title) || 'Untitled Event',
+              description: decodeHtmlEntities(apiEvent.description),
+              start_date: new Date(apiEvent.start_date).toISOString(),
+              end_date: apiEvent.end_date ? new Date(apiEvent.end_date).toISOString() : null,
+              venue: decodeHtmlEntities(apiEvent.venue?.venue),
+              address: decodeHtmlEntities(apiEvent.venue?.address),
+              url: apiEvent.url || null,
+              website: apiEvent.website || null,
+              image_url: apiEvent.image?.url || null,
+              featured: false, // Will be set manually
+              active: true,
+              raw_data: apiEvent,
+              updated_at: new Date().toISOString()
+            }
 
-        try {
-        const eventData = {
-          external_id: `visitstcloud_${apiEvent.id}`,
-          title: decodeHtmlEntities(apiEvent.title) || 'Untitled Event',
-          description: decodeHtmlEntities(apiEvent.description),
-          start_date: new Date(apiEvent.start_date).toISOString(),
-          end_date: apiEvent.end_date ? new Date(apiEvent.end_date).toISOString() : null,
-          venue: decodeHtmlEntities(apiEvent.venue?.venue),
-          address: decodeHtmlEntities(apiEvent.venue?.address),
-          url: apiEvent.url || null,
-          website: apiEvent.website || null,
-          image_url: apiEvent.image?.url || null,
-          featured: false, // Will be set manually
-          active: true,
-          raw_data: apiEvent,
-          updated_at: new Date().toISOString()
-        }
+            // Check if event already exists and get its status
+            const { data: existingEvent } = await supabaseAdmin
+              .from('events')
+              .select('id, updated_at, event_summary, featured, paid_placement')
+              .eq('external_id', eventData.external_id)
+              .single()
 
-        // Check if event already exists and get its status
+            // Generate event summary if needed (for new events or existing events without summaries)
+            let eventSummary = null
+            const shouldGenerateSummary = !existingEvent || !existingEvent.event_summary
 
-        const { data: existingEvent } = await supabaseAdmin
-          .from('events')
-          .select('id, updated_at, event_summary, featured, paid_placement')
-          .eq('external_id', eventData.external_id)
-          .single()
+            if (shouldGenerateSummary && eventData.description) {
+              eventSummary = await generateEventSummary({
+                title: eventData.title,
+                description: eventData.description,
+                venue: eventData.venue
+              })
+            }
 
-        // Generate event summary if needed (for new events or existing events without summaries)
-        let eventSummary = null
-        const shouldGenerateSummary = !existingEvent || !existingEvent.event_summary
+            // Add event_summary to eventData if generated
+            if (eventSummary) {
+              (eventData as any).event_summary = eventSummary
+            }
 
-        if (shouldGenerateSummary && eventData.description) {
-          eventSummary = await generateEventSummary({
-            title: eventData.title,
-            description: eventData.description,
-            venue: eventData.venue
-          })
-        }
+            if (existingEvent) {
+              // Preserve manual settings (featured, paid_placement) from existing event
+              const updateData = {
+                ...eventData,
+                featured: existingEvent.featured, // Preserve manual featured status
+                paid_placement: existingEvent.paid_placement // Preserve manual paid_placement status
+              }
 
-        // Add event_summary to eventData if generated
-        if (eventSummary) {
-          (eventData as any).event_summary = eventSummary
-        }
+              // Update existing event (including new summary if generated)
+              const { error: updateError } = await supabaseAdmin
+                .from('events')
+                .update(updateData)
+                .eq('id', existingEvent.id)
 
-        if (existingEvent) {
-          // Preserve manual settings (featured, paid_placement) from existing event
-          const updateData = {
-            ...eventData,
-            featured: existingEvent.featured, // Preserve manual featured status
-            paid_placement: existingEvent.paid_placement // Preserve manual paid_placement status
+              if (updateError) {
+                console.error('Error updating event:', updateError)
+                return { success: false, isNew: false }
+              } else {
+                return { success: true, isNew: false }
+              }
+            } else {
+              // Insert new event
+              const { error: insertError } = await supabaseAdmin
+                .from('events')
+                .insert([eventData])
+
+              if (insertError) {
+                console.error('Error inserting event:', insertError)
+                return { success: false, isNew: true }
+              } else {
+                return { success: true, isNew: true }
+              }
+            }
+          } catch (error) {
+            console.error(`Error processing event:`, error)
+            return { success: false, isNew: false }
           }
+        })
+      )
 
-          // Update existing event (including new summary if generated)
-          const { error: updateError } = await supabaseAdmin
-            .from('events')
-            .update(updateData)
-            .eq('id', existingEvent.id)
-
-          if (updateError) {
-            console.error('Error updating event:', updateError)
-            errors++
+      // Count results from this batch
+      batchResults.forEach(result => {
+        if (result.status === 'fulfilled' && result.value.success) {
+          if (result.value.isNew) {
+            newEvents++
           } else {
             updatedEvents++
           }
         } else {
-          // Insert new event
-          const { error: insertError } = await supabaseAdmin
-            .from('events')
-            .insert([eventData])
-
-          if (insertError) {
-            console.error('Error inserting event:', insertError)
-            errors++
-          } else {
-            newEvents++
-          }
+          errors++
         }
-      } catch (error) {
-        console.error(`Error processing event:`, error)
-        errors++
+      })
+
+      // Small delay between batches to prevent overwhelming the database
+      if (batchIndex < batches.length - 1) {
+        await new Promise(resolve => setTimeout(resolve, 1000))
       }
     }
-
-    // Small delay between batches to prevent overwhelming the database
-    if (batchIndex < batches.length - 1) {
-      await new Promise(resolve => setTimeout(resolve, 1000))
-    }
-  }
 
     // Only deactivate events that have already ended (are in the past)
     const now = new Date()

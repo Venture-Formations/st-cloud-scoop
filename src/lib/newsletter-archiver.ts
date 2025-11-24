@@ -67,22 +67,27 @@ export class NewsletterArchiver {
       console.log(`[ARCHIVE] Found ${articles?.length || 0} articles`)
 
       // Transform articles to match interface (rss_post is array from DB, but we want single object)
-      const transformedArticles = articles?.map((article: any) => ({
-        id: article.id,
-        headline: article.headline,
-        content: article.content,
-        word_count: article.word_count,
-        rank: article.rank,
-        final_position: article.final_position,
-        rss_post: Array.isArray(article.rss_post) && article.rss_post.length > 0
-          ? {
-              title: article.rss_post[0].title,
-              source_url: article.rss_post[0].source_url,
-              image_url: article.rss_post[0].image_url,
-              publication_date: article.rss_post[0].publication_date
-            }
-          : undefined
-      })) || []
+      const transformedArticles = articles?.map((article: any) => {
+        const rssPostData = Array.isArray(article.rss_post) && article.rss_post.length > 0
+          ? article.rss_post[0]
+          : null
+
+        return {
+          id: article.id,
+          headline: article.headline,
+          content: article.content,
+          word_count: article.word_count,
+          rank: article.rank,
+          final_position: article.final_position,
+          image_url: rssPostData?.image_url || null, // Direct access to image
+          rss_post: rssPostData ? {
+              title: rssPostData.title,
+              source_url: rssPostData.source_url,
+              image_url: rssPostData.image_url,
+              publication_date: rssPostData.publication_date
+            } : null
+        }
+      }) || []
 
       // 3. Fetch events for this campaign
       const { data: campaignEvents, error: eventsError } = await supabaseAdmin

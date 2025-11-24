@@ -20,6 +20,7 @@ interface Newsletter {
   articles?: Array<{
     id: string
     headline: string
+    image_url?: string
     rss_post?: {
       image_url?: string
       title?: string
@@ -71,13 +72,17 @@ export default function NewslettersPage() {
   }
 
   const getNewsletterImage = (newsletter: Newsletter) => {
-    // Try to get image from first article
+    // Use first article image (primary source)
     const firstArticle = newsletter.articles?.[0]
+    if (firstArticle?.image_url) {
+      return firstArticle.image_url
+    }
+    // Fallback to nested rss_post structure (for backward compatibility)
     if (firstArticle?.rss_post?.image_url) {
       return firstArticle.rss_post.image_url
     }
 
-    // Try to get image from first event
+    // Fallback to first event image
     const firstEvent = newsletter.events?.[0]
     if (firstEvent?.cropped_image_url) {
       return firstEvent.cropped_image_url

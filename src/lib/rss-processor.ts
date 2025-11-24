@@ -909,19 +909,53 @@ export class RSSProcessor {
 
       if (allRatedPosts && allRatedPosts.length > 0) {
         // Use these posts instead, excluding duplicates
-        const filteredPosts = allRatedPosts.filter(post => !duplicatePostIds.has(post.id))
-        for (const post of filteredPosts.slice(0, 12)) {
-          await this.processPostIntoArticle(post, campaignId)
+        const filteredPosts = allRatedPosts.filter(post => !duplicatePostIds.has(post.id)).slice(0, 12)
+
+        // Process in parallel batches
+        const BATCH_SIZE = 4
+        const batches = []
+        for (let i = 0; i < filteredPosts.length; i += BATCH_SIZE) {
+          batches.push(filteredPosts.slice(i, i + BATCH_SIZE))
+        }
+
+        for (const batch of batches) {
+          await Promise.allSettled(
+            batch.map(post => this.processPostIntoArticle(post, campaignId))
+          )
         }
       }
       return
     }
 
-    for (const post of postsWithRatings) {
-      await this.processPostIntoArticle(post, campaignId)
+    // Process articles in parallel batches for faster generation
+    const BATCH_SIZE = 4 // Process 4 articles at a time
+    const batches = []
+
+    for (let i = 0; i < postsWithRatings.length; i += BATCH_SIZE) {
+      batches.push(postsWithRatings.slice(i, i + BATCH_SIZE))
     }
 
-    console.log('Newsletter article generation complete')
+    console.log(`Processing ${postsWithRatings.length} articles in ${batches.length} parallel batches...`)
+
+    let successCount = 0
+    let failureCount = 0
+
+    for (const batch of batches) {
+      const results = await Promise.allSettled(
+        batch.map(post => this.processPostIntoArticle(post, campaignId))
+      )
+
+      results.forEach(result => {
+        if (result.status === 'fulfilled') {
+          successCount++
+        } else {
+          failureCount++
+          console.error('Article generation failed:', result.reason)
+        }
+      })
+    }
+
+    console.log(`Newsletter article generation complete: ${successCount} succeeded, ${failureCount} failed`)
 
     // Auto-select top 5 articles based on ratings
     console.log('=== ABOUT TO SELECT TOP 5 ARTICLES ===')
@@ -1229,14 +1263,27 @@ export class RSSProcessor {
   }
 
   private async factCheckContent(newsletterContent: string, originalContent: string): Promise<FactCheckResult> {
-    // AI_PROMPTS.factChecker already calls the API and returns the result
-    const result = await AI_PROMPTS.factChecker(newsletterContent, originalContent)
+    try {
+      // AI_PROMPTS.factChecker already calls the API and returns the result
+      const result = await AI_PROMPTS.factChecker(newsletterContent, originalContent)
 
-    if (typeof result.score !== 'number' || typeof result.passed !== 'boolean') {
-      throw new Error('Invalid fact-check response')
+      // Handle empty or invalid responses
+      if (!result || typeof result !== 'object') {
+        console.error('Fact-checker returned empty or invalid response, failing check')
+        return { score: 0, passed: false }
+      }
+
+      if (typeof result.score !== 'number' || typeof result.passed !== 'boolean') {
+        console.error('Fact-checker response missing required fields:', result)
+        return { score: 0, passed: false }
+      }
+
+      return result as FactCheckResult
+    } catch (error) {
+      console.error('Fact-checker error:', error)
+      // Fail the check gracefully instead of throwing
+      return { score: 0, passed: false }
     }
-
-    return result as FactCheckResult
   }
 
   private async logInfo(message: string, context: Record<string, any> = {}) {

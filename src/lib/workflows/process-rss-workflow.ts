@@ -7,15 +7,16 @@ import { RSSProcessor } from '@/lib/rss-processor'
  *
  * WORKFLOW STRUCTURE:
  * Step 1:  Setup (create campaign with status='processing')
- * Step 2:  Query & Assign Posts (top 20 rated posts from past X hours with campaign_id=NULL)
+ * Step 2:  Query Top Posts (identify top 20 rated posts from past X hours with campaign_id=NULL)
  * Step 3:  Deduplicate (against sent campaigns from past Y days)
- * Step 4:  Generate Articles (for top 12 non-duplicate posts)
- * Step 5:  Select Top 5 Articles (for newsletter, others available in UI)
- * Step 6:  Populate Events (auto-select events for campaign)
- * Step 7:  Process Images (upload to GitHub)
- * Step 8:  Generate Subject Line (based on top article)
- * Step 9:  Generate Road Work (section data)
- * Step 10: Finalize (unassign unused posts, set status='draft')
+ * Step 4:  Assign Posts (assign non-duplicate posts to campaign)
+ * Step 5:  Generate Articles (for top 12 non-duplicate posts)
+ * Step 6:  Select Top 5 Articles (for newsletter, others available in UI)
+ * Step 7:  Populate Events (auto-select events for campaign)
+ * Step 8:  Process Images (upload to GitHub)
+ * Step 9:  Generate Subject Line (based on top article)
+ * Step 10: Generate Road Work (section data)
+ * Step 11: Finalize (unassign unused posts, set status='draft')
  */
 export async function processRSSWorkflow(input: {
   trigger: 'cron' | 'manual'
@@ -24,37 +25,41 @@ export async function processRSSWorkflow(input: {
   "use workflow"
 
   let campaignId: string
+  let topPostIds: string[] = []
 
   console.log(`[Workflow] Starting newsletter creation for date: ${input.campaign_date}`)
 
   // STEP 1: Setup Campaign
   campaignId = await setupCampaign(input.campaign_date)
 
-  // STEP 2: Query & Assign Top Rated Posts
-  await queryAndAssignPosts(campaignId)
+  // STEP 2: Query Top Rated Posts (but don't assign yet)
+  topPostIds = await queryTopPosts()
 
   // STEP 3: Deduplicate Against Sent Campaigns
-  await deduplicatePosts(campaignId)
+  topPostIds = await deduplicatePosts(topPostIds)
 
-  // STEP 4: Generate Articles for Top 12 Posts
+  // STEP 4: Assign Non-Duplicate Posts to Campaign
+  await assignPostsToCampaign(campaignId, topPostIds)
+
+  // STEP 5: Generate Articles for Top 12 Posts
   await generateArticles(campaignId)
 
-  // STEP 5: Select Top 5 Articles
+  // STEP 6: Select Top 5 Articles
   await selectTopArticles(campaignId)
 
-  // STEP 6: Populate Events
+  // STEP 7: Populate Events
   await populateEvents(campaignId)
 
-  // STEP 7: Process Images
+  // STEP 8: Process Images
   await processImages(campaignId)
 
-  // STEP 8: Generate Subject Line
+  // STEP 9: Generate Subject Line
   await generateSubjectLine(campaignId)
 
-  // STEP 9: Generate Road Work
+  // STEP 10: Generate Road Work
   await generateRoadWork(campaignId)
 
-  // STEP 10: Finalize & Cleanup
+  // STEP 11: Finalize & Cleanup
   await finalizeCampaign(campaignId)
 
   console.log('[Workflow] === WORKFLOW COMPLETE ===')
@@ -127,7 +132,7 @@ async function setupCampaign(campaignDate: string) {
   throw new Error('Unexpected: Retry loop exited without return')
 }
 
-async function queryAndAssignPosts(campaignId: string) {
+async function queryTopPosts(): Promise<string[]> {
   "use step"
 
   let retryCount = 0
@@ -135,7 +140,7 @@ async function queryAndAssignPosts(campaignId: string) {
 
   while (retryCount <= maxRetries) {
     try {
-      console.log('[Workflow Step 2/10] Querying top rated posts...')
+      console.log('[Workflow Step 2/11] Querying top rated posts...')
 
       // Get settings
       const { data: settings } = await supabaseAdmin
@@ -150,7 +155,7 @@ async function queryAndAssignPosts(campaignId: string) {
       lookbackDate.setHours(lookbackDate.getHours() - lookbackHours)
       const lookbackTimestamp = lookbackDate.toISOString()
 
-      console.log(`[Workflow Step 2/10] Searching for posts from past ${lookbackHours} hours`)
+      console.log(`[Workflow Step 2/11] Searching for posts from past ${lookbackHours} hours`)
 
       // Query top 20 rated posts where campaign_id IS NULL
       const { data: availablePosts, error: postsError } = await supabaseAdmin
@@ -169,8 +174,8 @@ async function queryAndAssignPosts(campaignId: string) {
       }
 
       if (!availablePosts || availablePosts.length === 0) {
-        console.warn('[Workflow Step 2/10] No rated posts available')
-        return
+        console.warn('[Workflow Step 2/11] No rated posts available')
+        return []
       }
 
       // Sort by rating and take top 20
@@ -183,35 +188,28 @@ async function queryAndAssignPosts(campaignId: string) {
         })
         .slice(0, 20)
 
-      console.log(`[Workflow Step 2/10] Found ${availablePosts.length} available posts, selecting top 20`)
+      console.log(`[Workflow Step 2/11] Found ${availablePosts.length} available posts, selecting top 20`)
 
-      // Assign these posts to this campaign
       const postIds = topPosts.map(p => p.id)
-      const { error: assignError } = await supabaseAdmin
-        .from('rss_posts')
-        .update({ campaign_id: campaignId })
-        .in('id', postIds)
+      console.log(`[Workflow Step 2/11] ✓ Identified ${postIds.length} top-rated posts (NOT assigned yet)`)
 
-      if (assignError) {
-        throw new Error(`Failed to assign posts: ${assignError.message}`)
-      }
-
-      console.log(`[Workflow Step 2/10] ✓ Assigned ${postIds.length} top-rated posts to campaign`)
-      return
+      return postIds
 
     } catch (error) {
       retryCount++
       if (retryCount > maxRetries) {
-        console.error(`[Workflow Step 2/10] Failed after ${maxRetries} retries`)
+        console.error(`[Workflow Step 2/11] Failed after ${maxRetries} retries`)
         throw error
       }
-      console.log(`[Workflow Step 2/10] Error occurred, retrying (${retryCount}/${maxRetries})...`)
+      console.log(`[Workflow Step 2/11] Error occurred, retrying (${retryCount}/${maxRetries})...`)
       await new Promise(resolve => setTimeout(resolve, 2000))
     }
   }
+
+  return []
 }
 
-async function deduplicatePosts(campaignId: string) {
+async function deduplicatePosts(topPostIds: string[]): Promise<string[]> {
   "use step"
 
   let retryCount = 0
@@ -219,7 +217,12 @@ async function deduplicatePosts(campaignId: string) {
 
   while (retryCount <= maxRetries) {
     try {
-      console.log('[Workflow Step 3/10] Deduplicating against sent campaigns...')
+      console.log('[Workflow Step 3/11] Deduplicating against sent campaigns...')
+
+      if (topPostIds.length === 0) {
+        console.log('[Workflow Step 3/11] No posts to deduplicate')
+        return []
+      }
 
       // Get settings
       const { data: settings } = await supabaseAdmin
@@ -234,7 +237,7 @@ async function deduplicatePosts(campaignId: string) {
       lookbackDate.setDate(lookbackDate.getDate() - lookbackDays)
       const lookbackDateStr = lookbackDate.toISOString().split('T')[0]
 
-      console.log(`[Workflow Step 3/10] Checking for duplicates against sent campaigns from past ${lookbackDays} days`)
+      console.log(`[Workflow Step 3/11] Checking for duplicates against sent campaigns from past ${lookbackDays} days`)
 
       // Get posts from sent campaigns in the lookback window
       const { data: sentCampaigns } = await supabaseAdmin
@@ -244,8 +247,8 @@ async function deduplicatePosts(campaignId: string) {
         .gte('date', lookbackDateStr)
 
       if (!sentCampaigns || sentCampaigns.length === 0) {
-        console.log('[Workflow Step 3/10] No sent campaigns in lookback window')
-        return
+        console.log('[Workflow Step 3/11] No sent campaigns in lookback window - all posts are unique')
+        return topPostIds
       }
 
       const sentCampaignIds = sentCampaigns.map(c => c.id)
@@ -257,51 +260,84 @@ async function deduplicatePosts(campaignId: string) {
         .in('campaign_id', sentCampaignIds)
 
       if (!usedPosts || usedPosts.length === 0) {
-        console.log('[Workflow Step 3/10] No posts in sent campaigns')
-        return
+        console.log('[Workflow Step 3/11] No posts in sent campaigns - all posts are unique')
+        return topPostIds
       }
 
       const usedExternalIds = new Set(usedPosts.map(p => p.external_id))
 
-      // Get current campaign's posts
-      const { data: currentPosts } = await supabaseAdmin
+      // Get the candidate posts to check for duplicates
+      const { data: candidatePosts } = await supabaseAdmin
         .from('rss_posts')
         .select('id, external_id, title')
-        .eq('campaign_id', campaignId)
+        .in('id', topPostIds)
 
-      if (!currentPosts || currentPosts.length === 0) {
-        console.log('[Workflow Step 3/10] No posts in current campaign')
+      if (!candidatePosts || candidatePosts.length === 0) {
+        console.log('[Workflow Step 3/11] No candidate posts found')
+        return []
+      }
+
+      // Filter out duplicates
+      const nonDuplicatePosts = candidatePosts.filter(post => !usedExternalIds.has(post.external_id))
+      const duplicateCount = candidatePosts.length - nonDuplicatePosts.length
+
+      if (duplicateCount > 0) {
+        console.log(`[Workflow Step 3/11] ✓ Found ${duplicateCount} duplicates, ${nonDuplicatePosts.length} unique posts remain`)
+      } else {
+        console.log('[Workflow Step 3/11] ✓ No duplicates found, all posts are unique')
+      }
+
+      return nonDuplicatePosts.map(p => p.id)
+
+    } catch (error) {
+      retryCount++
+      if (retryCount > maxRetries) {
+        console.error(`[Workflow Step 3/11] Failed after ${maxRetries} retries`)
+        throw error
+      }
+      console.log(`[Workflow Step 3/11] Error occurred, retrying (${retryCount}/${maxRetries})...`)
+      await new Promise(resolve => setTimeout(resolve, 2000))
+    }
+  }
+
+  return []
+}
+
+async function assignPostsToCampaign(campaignId: string, postIds: string[]) {
+  "use step"
+
+  let retryCount = 0
+  const maxRetries = 2
+
+  while (retryCount <= maxRetries) {
+    try {
+      console.log('[Workflow Step 4/11] Assigning non-duplicate posts to campaign...')
+
+      if (postIds.length === 0) {
+        console.warn('[Workflow Step 4/11] No posts to assign')
         return
       }
 
-      // Find duplicates
-      const duplicatePostIds = currentPosts
-        .filter(post => usedExternalIds.has(post.external_id))
-        .map(post => post.id)
+      // Assign these posts to this campaign
+      const { error: assignError } = await supabaseAdmin
+        .from('rss_posts')
+        .update({ campaign_id: campaignId })
+        .in('id', postIds)
 
-      if (duplicatePostIds.length > 0) {
-        console.log(`[Workflow Step 3/10] Found ${duplicatePostIds.length} duplicate posts, unassigning...`)
-
-        // Unassign duplicate posts (set campaign_id back to NULL)
-        await supabaseAdmin
-          .from('rss_posts')
-          .update({ campaign_id: null })
-          .in('id', duplicatePostIds)
-
-        console.log(`[Workflow Step 3/10] ✓ Removed ${duplicatePostIds.length} duplicates, ${currentPosts.length - duplicatePostIds.length} posts remain`)
-      } else {
-        console.log('[Workflow Step 3/10] ✓ No duplicates found')
+      if (assignError) {
+        throw new Error(`Failed to assign posts: ${assignError.message}`)
       }
 
+      console.log(`[Workflow Step 4/11] ✓ Assigned ${postIds.length} non-duplicate posts to campaign`)
       return
 
     } catch (error) {
       retryCount++
       if (retryCount > maxRetries) {
-        console.error(`[Workflow Step 3/10] Failed after ${maxRetries} retries`)
+        console.error(`[Workflow Step 4/11] Failed after ${maxRetries} retries`)
         throw error
       }
-      console.log(`[Workflow Step 3/10] Error occurred, retrying (${retryCount}/${maxRetries})...`)
+      console.log(`[Workflow Step 4/11] Error occurred, retrying (${retryCount}/${maxRetries})...`)
       await new Promise(resolve => setTimeout(resolve, 2000))
     }
   }
@@ -315,7 +351,7 @@ async function generateArticles(campaignId: string) {
 
   while (retryCount <= maxRetries) {
     try {
-      console.log('[Workflow Step 4/10] Generating articles for top 12 posts...')
+      console.log('[Workflow Step 5/11] Generating articles for top 12 posts...')
 
       const processor = new RSSProcessor()
 
@@ -328,16 +364,16 @@ async function generateArticles(campaignId: string) {
         .select('id')
         .eq('campaign_id', campaignId)
 
-      console.log(`[Workflow Step 4/10] ✓ Generated ${articles?.length || 0} articles`)
+      console.log(`[Workflow Step 5/11] ✓ Generated ${articles?.length || 0} articles`)
       return
 
     } catch (error) {
       retryCount++
       if (retryCount > maxRetries) {
-        console.error(`[Workflow Step 4/10] Failed after ${maxRetries} retries`)
+        console.error(`[Workflow Step 5/11] Failed after ${maxRetries} retries`)
         throw error
       }
-      console.log(`[Workflow Step 4/10] Error occurred, retrying (${retryCount}/${maxRetries})...`)
+      console.log(`[Workflow Step 5/11] Error occurred, retrying (${retryCount}/${maxRetries})...`)
       await new Promise(resolve => setTimeout(resolve, 2000))
     }
   }
@@ -351,7 +387,7 @@ async function selectTopArticles(campaignId: string) {
 
   while (retryCount <= maxRetries) {
     try {
-      console.log('[Workflow Step 5/10] Selecting top 5 articles...')
+      console.log('[Workflow Step 6/11] Selecting top 5 articles...')
 
       const processor = new RSSProcessor()
       await processor['selectTop5Articles'](campaignId)
@@ -362,16 +398,16 @@ async function selectTopArticles(campaignId: string) {
         .eq('campaign_id', campaignId)
         .eq('is_active', true)
 
-      console.log(`[Workflow Step 5/10] ✓ Selected ${activeArticles?.length || 0} active articles`)
+      console.log(`[Workflow Step 6/11] ✓ Selected ${activeArticles?.length || 0} active articles`)
       return
 
     } catch (error) {
       retryCount++
       if (retryCount > maxRetries) {
-        console.error(`[Workflow Step 5/10] Failed after ${maxRetries} retries`)
+        console.error(`[Workflow Step 6/11] Failed after ${maxRetries} retries`)
         throw error
       }
-      console.log(`[Workflow Step 5/10] Error occurred, retrying (${retryCount}/${maxRetries})...`)
+      console.log(`[Workflow Step 6/11] Error occurred, retrying (${retryCount}/${maxRetries})...`)
       await new Promise(resolve => setTimeout(resolve, 2000))
     }
   }
@@ -385,7 +421,7 @@ async function populateEvents(campaignId: string) {
 
   while (retryCount <= maxRetries) {
     try {
-      console.log('[Workflow Step 6/10] Populating events...')
+      console.log('[Workflow Step 7/11] Populating events...')
 
       const processor = new RSSProcessor()
       await processor.populateEventsForCampaignSmart(campaignId)
@@ -395,16 +431,16 @@ async function populateEvents(campaignId: string) {
         .select('id')
         .eq('campaign_id', campaignId)
 
-      console.log(`[Workflow Step 6/10] ✓ Populated ${events?.length || 0} events`)
+      console.log(`[Workflow Step 7/11] ✓ Populated ${events?.length || 0} events`)
       return
 
     } catch (error) {
       retryCount++
       if (retryCount > maxRetries) {
-        console.error(`[Workflow Step 6/10] Failed after ${maxRetries} retries`)
+        console.error(`[Workflow Step 7/11] Failed after ${maxRetries} retries`)
         throw error
       }
-      console.log(`[Workflow Step 6/10] Error occurred, retrying (${retryCount}/${maxRetries})...`)
+      console.log(`[Workflow Step 7/11] Error occurred, retrying (${retryCount}/${maxRetries})...`)
       await new Promise(resolve => setTimeout(resolve, 2000))
     }
   }
@@ -418,21 +454,21 @@ async function processImages(campaignId: string) {
 
   while (retryCount <= maxRetries) {
     try {
-      console.log('[Workflow Step 7/10] Processing images to GitHub...')
+      console.log('[Workflow Step 8/11] Processing images to GitHub...')
 
       const processor = new RSSProcessor()
       await processor['processArticleImages'](campaignId)
 
-      console.log('[Workflow Step 7/10] ✓ Images processed')
+      console.log('[Workflow Step 8/11] ✓ Images processed')
       return
 
     } catch (error) {
       retryCount++
       if (retryCount > maxRetries) {
-        console.error(`[Workflow Step 7/10] Failed after ${maxRetries} retries`)
+        console.error(`[Workflow Step 8/11] Failed after ${maxRetries} retries`)
         throw error
       }
-      console.log(`[Workflow Step 7/10] Error occurred, retrying (${retryCount}/${maxRetries})...`)
+      console.log(`[Workflow Step 8/11] Error occurred, retrying (${retryCount}/${maxRetries})...`)
       await new Promise(resolve => setTimeout(resolve, 2000))
     }
   }
@@ -446,7 +482,7 @@ async function generateSubjectLine(campaignId: string) {
 
   while (retryCount <= maxRetries) {
     try {
-      console.log('[Workflow Step 8/10] Generating subject line...')
+      console.log('[Workflow Step 9/11] Generating subject line...')
 
       const processor = new RSSProcessor()
       await processor.generateSubjectLineForCampaign(campaignId)
@@ -457,16 +493,16 @@ async function generateSubjectLine(campaignId: string) {
         .eq('id', campaignId)
         .single()
 
-      console.log(`[Workflow Step 8/10] ✓ Subject: "${campaign?.subject_line || 'Not generated'}"`)
+      console.log(`[Workflow Step 9/11] ✓ Subject: "${campaign?.subject_line || 'Not generated'}"`)
       return
 
     } catch (error) {
       retryCount++
       if (retryCount > maxRetries) {
-        console.error(`[Workflow Step 8/10] Failed after ${maxRetries} retries`)
+        console.error(`[Workflow Step 9/11] Failed after ${maxRetries} retries`)
         throw error
       }
-      console.log(`[Workflow Step 8/10] Error occurred, retrying (${retryCount}/${maxRetries})...`)
+      console.log(`[Workflow Step 9/11] Error occurred, retrying (${retryCount}/${maxRetries})...`)
       await new Promise(resolve => setTimeout(resolve, 2000))
     }
   }
@@ -480,7 +516,7 @@ async function generateRoadWork(campaignId: string) {
 
   while (retryCount <= maxRetries) {
     try {
-      console.log('[Workflow Step 9/10] Generating road work data...')
+      console.log('[Workflow Step 10/11] Generating road work data...')
 
       const { generateDailyRoadWork, storeRoadWorkItems } = await import('@/lib/road-work-manager')
 
@@ -496,9 +532,9 @@ async function generateRoadWork(campaignId: string) {
 
         if (roadWorkData.road_work_data && roadWorkData.road_work_data.length > 0) {
           await storeRoadWorkItems(roadWorkData.road_work_data, campaignId)
-          console.log(`[Workflow Step 9/10] ✓ Generated ${roadWorkData.road_work_data.length} road work items`)
+          console.log(`[Workflow Step 10/11] ✓ Generated ${roadWorkData.road_work_data.length} road work items`)
         } else {
-          console.log('[Workflow Step 9/10] ⚠️ No road work items generated')
+          console.log('[Workflow Step 10/11] ⚠️ No road work items generated')
         }
       }
 
@@ -507,12 +543,12 @@ async function generateRoadWork(campaignId: string) {
     } catch (error) {
       retryCount++
       if (retryCount > maxRetries) {
-        console.error(`[Workflow Step 9/10] Failed after ${maxRetries} retries`)
+        console.error(`[Workflow Step 10/11] Failed after ${maxRetries} retries`)
         // Don't throw - road work is non-critical
-        console.log('[Workflow Step 9/10] Continuing despite road work failure')
+        console.log('[Workflow Step 10/11] Continuing despite road work failure')
         return
       }
-      console.log(`[Workflow Step 9/10] Error occurred, retrying (${retryCount}/${maxRetries})...`)
+      console.log(`[Workflow Step 10/11] Error occurred, retrying (${retryCount}/${maxRetries})...`)
       await new Promise(resolve => setTimeout(resolve, 2000))
     }
   }
@@ -526,7 +562,7 @@ async function finalizeCampaign(campaignId: string) {
 
   while (retryCount <= maxRetries) {
     try {
-      console.log('[Workflow Step 10/10] Finalizing campaign...')
+      console.log('[Workflow Step 11/11] Finalizing campaign...')
 
       // Unassign unused posts (posts that didn't get articles created)
       const { data: allPosts } = await supabaseAdmin
@@ -546,7 +582,7 @@ async function finalizeCampaign(campaignId: string) {
           .map(post => post.id)
 
         if (unusedPostIds.length > 0) {
-          console.log(`[Workflow Step 10/10] Unassigning ${unusedPostIds.length} unused posts`)
+          console.log(`[Workflow Step 11/11] Unassigning ${unusedPostIds.length} unused posts`)
           await supabaseAdmin
             .from('rss_posts')
             .update({ campaign_id: null })
@@ -572,7 +608,7 @@ async function finalizeCampaign(campaignId: string) {
         .eq('campaign_id', campaignId)
         .eq('is_active', true)
 
-      console.log(`[Workflow Step 10/10] ✓ Finalized: ${activeArticles?.length || 0} active articles (${finalArticles?.length || 0} total)`)
+      console.log(`[Workflow Step 11/11] ✓ Finalized: ${activeArticles?.length || 0} active articles (${finalArticles?.length || 0} total)`)
 
       // Send Slack notification
       try {
@@ -591,7 +627,7 @@ async function finalizeCampaign(campaignId: string) {
           campaignInfo?.date || 'Unknown'
         )
       } catch (slackError) {
-        console.log('[Workflow Step 10/10] Slack notification failed (non-critical)')
+        console.log('[Workflow Step 11/11] Slack notification failed (non-critical)')
       }
 
       return
@@ -599,10 +635,10 @@ async function finalizeCampaign(campaignId: string) {
     } catch (error) {
       retryCount++
       if (retryCount > maxRetries) {
-        console.error(`[Workflow Step 10/10] Failed after ${maxRetries} retries`)
+        console.error(`[Workflow Step 11/11] Failed after ${maxRetries} retries`)
         throw error
       }
-      console.log(`[Workflow Step 10/10] Error occurred, retrying (${retryCount}/${maxRetries})...`)
+      console.log(`[Workflow Step 11/11] Error occurred, retrying (${retryCount}/${maxRetries})...`)
       await new Promise(resolve => setTimeout(resolve, 2000))
     }
   }

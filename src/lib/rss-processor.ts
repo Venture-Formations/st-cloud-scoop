@@ -1378,16 +1378,37 @@ export class RSSProcessor {
       let generatedSubject = ''
 
       if (typeof aiResponse === 'string') {
-        generatedSubject = aiResponse
-      } else if (typeof aiResponse === 'object' && aiResponse && 'raw' in aiResponse) {
-        generatedSubject = (aiResponse as any).raw
-      } else if (typeof aiResponse === 'object') {
-        // Fallback: convert to string
-        generatedSubject = JSON.stringify(aiResponse)
+        // Try to parse as JSON first (in case it's a JSON string)
+        try {
+          const parsed = JSON.parse(aiResponse)
+          if (parsed.headline) {
+            generatedSubject = parsed.headline
+          } else {
+            // Not JSON or no headline field, use as-is
+            generatedSubject = aiResponse
+          }
+        } catch {
+          // Not JSON, use the plain string
+          generatedSubject = aiResponse
+        }
+      } else if (typeof aiResponse === 'object' && aiResponse) {
+        // If it's already an object
+        if ('headline' in aiResponse) {
+          generatedSubject = (aiResponse as any).headline
+        } else if ('raw' in aiResponse) {
+          generatedSubject = (aiResponse as any).raw
+        } else {
+          // Fallback: convert to string
+          generatedSubject = JSON.stringify(aiResponse)
+        }
       }
 
       if (generatedSubject && generatedSubject.trim()) {
         generatedSubject = generatedSubject.trim()
+
+        // Remove any markdown code block wrappers if present
+        generatedSubject = generatedSubject.replace(/^```json\s*/, '').replace(/\s*```$/, '')
+
         console.log('Generated subject line:', generatedSubject)
 
         // Update campaign with generated subject line

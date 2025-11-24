@@ -54,9 +54,32 @@ async function testWithCustomPrompt(type: string, customPromptJson: string, test
     const { callWithStructuredPrompt } = await import('@/lib/openai')
 
     // Get placeholders based on prompt type
+    // Map prompt keys to test data types
+    const typeMapping: Record<string, string> = {
+      'ai_prompt_content_evaluator': 'contentEvaluator',
+      'ai_prompt_criteria_1': 'criteria_1',
+      'ai_prompt_criteria_2': 'criteria_2',
+      'ai_prompt_criteria_3': 'criteria_3',
+      'ai_prompt_criteria_4': 'criteria_4',
+      'ai_prompt_criteria_5': 'criteria_5',
+      'ai_prompt_newsletter_writer': 'newsletterWriter',
+      'ai_prompt_subject_line_generator': 'subjectLineGenerator',
+      'ai_prompt_event_summarizer': 'eventSummarizer',
+      'ai_prompt_fact_checker': 'factChecker',
+      'ai_prompt_topic_deduper': 'topicDeduper',
+      'ai_prompt_road_work_generator': 'roadWorkGenerator',
+      'ai_prompt_road_work_validator': 'roadWorkValidator',
+      'ai_prompt_wordle_definition': 'wordleDefinition',
+      'ai_prompt_wordle_fact': 'wordleFact',
+      'ai_prompt_road_work_parser': 'roadWorkParser'
+    }
+
+    // Use mapped type if available, otherwise use the provided type
+    const actualType = promptKey && typeMapping[promptKey] ? typeMapping[promptKey] : type
+
     let placeholders: Record<string, string> = {}
 
-    switch (type) {
+    switch (actualType) {
       case 'contentEvaluator':
         placeholders = {
           title: testData.contentEvaluator.title,

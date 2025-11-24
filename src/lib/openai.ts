@@ -93,8 +93,10 @@ export async function callWithStructuredPrompt(
 
     const response = await (client as any).responses.create(processedConfig)
 
-    // Extract content using fallback chain (handles different response structures)
+    // Debug: Log the full response structure when output is empty
     const outputArray = response.output?.[0]?.content
+
+    // Extract content using fallback chain (handles different response structures)
     const jsonSchemaItem = outputArray?.find((c: any) => c.type === "json_schema")
     const textItem = outputArray?.find((c: any) => c.type === "text")
 
@@ -111,8 +113,25 @@ export async function callWithStructuredPrompt(
     console.log(`[AI] OpenAI Responses API result:`, {
       length: typeof rawContent === 'string' ? rawContent.length : JSON.stringify(rawContent).length,
       type: typeof rawContent,
-      contentTypes: outputArray?.map((c: any) => c.type)
+      contentTypes: outputArray?.map((c: any) => c.type),
+      hasOutput: !!response.output,
+      outputLength: response.output?.length
     })
+
+    // If we got an empty response, log the full response for debugging
+    if (!rawContent || (typeof rawContent === 'string' && rawContent.length === 0)) {
+      console.error('[AI] Empty response detected! Full response structure:', JSON.stringify(response, null, 2))
+
+      // Try one more fallback: check if there's error information
+      if (response.error) {
+        throw new Error(`OpenAI API error: ${JSON.stringify(response.error)}`)
+      }
+
+      // Last resort: return the entire response as JSON if nothing else works
+      if (response.output) {
+        return JSON.stringify(response.output)
+      }
+    }
 
     // Handle already-parsed JSON objects
     if (typeof rawContent === 'object' && rawContent !== null) {

@@ -1666,8 +1666,7 @@ function AIPromptsSettings() {
       'ai_prompt_fact_checker': 'factChecker',
       'ai_prompt_road_work_validator': 'roadWorkValidator',
       'ai_prompt_wordle_definition': 'wordleDefinition',
-      'ai_prompt_wordle_fact': 'wordleFact',
-      'ai_prompt_road_work_parser': 'roadWorkParser'
+      'ai_prompt_wordle_fact': 'wordleFact'
     }
 
     const testType = promptTypeMap[key]

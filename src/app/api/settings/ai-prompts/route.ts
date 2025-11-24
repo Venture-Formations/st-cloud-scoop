@@ -21,8 +21,11 @@ export async function GET(request: NextRequest) {
       throw error
     }
 
+    // Filter out unused/legacy prompts
+    const filteredPrompts = prompts?.filter(p => p.key !== 'ai_prompt_road_work_parser') || []
+
     // Parse prompts into structured format
-    const formattedPrompts = prompts?.map(p => {
+    const formattedPrompts = filteredPrompts.map(p => {
       const description = p.description || ''
       const parts = description.split(' - ')
       const category = parts[0] || 'General'

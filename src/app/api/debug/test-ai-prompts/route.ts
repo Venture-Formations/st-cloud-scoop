@@ -70,8 +70,7 @@ async function testWithCustomPrompt(type: string, customPromptJson: string, test
       'ai_prompt_road_work_generator': 'roadWorkGenerator',
       'ai_prompt_road_work_validator': 'roadWorkValidator',
       'ai_prompt_wordle_definition': 'wordleDefinition',
-      'ai_prompt_wordle_fact': 'wordleFact',
-      'ai_prompt_road_work_parser': 'roadWorkParser'
+      'ai_prompt_wordle_fact': 'wordleFact'
     }
 
     // Use mapped type if available, otherwise use the provided type
@@ -160,13 +159,6 @@ ${i + 1}. ${item.road_name}
       case 'wordleFact':
         placeholders = {
           word: testData.wordleFact.word
-        }
-        break
-      case 'roadWorkParser':
-        placeholders = {
-          content: testData.roadWorkParser.content,
-          targetDate: testData.roadWorkParser.targetDate,
-          sourceUrl: testData.roadWorkParser.sourceUrl
         }
         break
     }

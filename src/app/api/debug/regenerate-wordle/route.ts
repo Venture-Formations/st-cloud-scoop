@@ -1,6 +1,78 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
-import { AI_PROMPTS } from '@/lib/openai'
+import { openai } from '@/lib/openai'
+
+// Helper function to call AI with prompt from database (same approach as test-ai-prompts POST)
+async function callWordlePrompt(promptKey: string, word: string): Promise<string> {
+  // Load prompt from database
+  const { data, error } = await supabaseAdmin
+    .from('app_settings')
+    .select('value')
+    .eq('key', promptKey)
+    .single()
+
+  if (error || !data) {
+    throw new Error(`Prompt '${promptKey}' not found in database`)
+  }
+
+  // Parse the prompt config
+  const promptConfig = typeof data.value === 'string'
+    ? JSON.parse(data.value)
+    : data.value
+
+  // Replace {{word}} placeholder in input/messages
+  let processedInput = promptConfig.input || promptConfig.messages
+  if (processedInput && Array.isArray(processedInput)) {
+    processedInput = processedInput.map((msg: any) => {
+      // Handle string content (legacy format)
+      if (msg.content && typeof msg.content === 'string') {
+        return {
+          ...msg,
+          content: msg.content.replace(/\{\{word\}\}/g, word)
+        }
+      }
+      // Handle array content (Responses API format)
+      else if (msg.content && Array.isArray(msg.content)) {
+        return {
+          ...msg,
+          content: msg.content.map((contentItem: any) => {
+            if (contentItem.type === 'input_text' && contentItem.text) {
+              return {
+                ...contentItem,
+                text: contentItem.text.replace(/\{\{word\}\}/g, word)
+              }
+            }
+            return contentItem
+          })
+        }
+      }
+      return msg
+    })
+  }
+
+  // Prepare the request
+  const request: any = { ...promptConfig }
+  if (processedInput) {
+    request.input = processedInput
+  }
+
+  // Make the API call
+  const response = await (openai as any).responses.create(request)
+
+  // Extract content
+  const outputArray = response.output?.[0]?.content
+  const textItem = outputArray?.find((c: any) => c.type === 'text' || c.type === 'output_text')
+
+  let rawContent = textItem?.text ??
+    response.output?.[0]?.content?.[0]?.text ??
+    response.output_text ??
+    response.text ??
+    ''
+
+  return typeof rawContent === 'object' && rawContent !== null
+    ? JSON.stringify(rawContent)
+    : rawContent
+}
 
 export async function GET(request: NextRequest) {
   try {
@@ -39,11 +111,11 @@ export async function GET(request: NextRequest) {
       console.log(`[REGENERATE-WORDLE] Processing ${entry.date}: ${word}`)
 
       try {
-        // Generate new definition using the updated prompt
-        const newDefinition = await AI_PROMPTS.wordleDefinition(word)
+        // Generate new definition using the same method as test-ai-prompts
+        const newDefinition = await callWordlePrompt('ai_prompt_wordle_definition', word)
 
-        // Generate new interesting fact using the updated prompt
-        const newFact = await AI_PROMPTS.wordleFact(word)
+        // Generate new interesting fact using the same method as test-ai-prompts
+        const newFact = await callWordlePrompt('ai_prompt_wordle_fact', word)
 
         const result: Record<string, any> = {
           date: entry.date,

@@ -1270,19 +1270,19 @@ export class RSSProcessor {
       // Handle empty or invalid responses
       if (!result || typeof result !== 'object') {
         console.error('Fact-checker returned empty or invalid response, failing check')
-        return { score: 0, passed: false }
+        return { score: 0, passed: false, details: 'Empty or invalid AI response' }
       }
 
       if (typeof result.score !== 'number' || typeof result.passed !== 'boolean') {
         console.error('Fact-checker response missing required fields:', result)
-        return { score: 0, passed: false }
+        return { score: 0, passed: false, details: 'Missing required fields in AI response' }
       }
 
       return result as FactCheckResult
     } catch (error) {
       console.error('Fact-checker error:', error)
       // Fail the check gracefully instead of throwing
-      return { score: 0, passed: false }
+      return { score: 0, passed: false, details: `Error: ${error instanceof Error ? error.message : 'Unknown error'}` }
     }
   }
 

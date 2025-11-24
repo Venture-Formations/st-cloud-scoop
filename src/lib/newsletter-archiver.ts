@@ -79,13 +79,13 @@ export class NewsletterArchiver {
           word_count: article.word_count,
           rank: article.rank,
           final_position: article.final_position,
-          image_url: rssPostData?.image_url || null, // Direct access to image
+          image_url: rssPostData?.image_url, // Direct access to image
           rss_post: rssPostData ? {
               title: rssPostData.title,
               source_url: rssPostData.source_url,
               image_url: rssPostData.image_url,
               publication_date: rssPostData.publication_date
-            } : null
+            } : undefined
         }
       }) || []
 

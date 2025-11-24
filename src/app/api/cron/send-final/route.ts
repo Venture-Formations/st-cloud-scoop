@@ -3,6 +3,7 @@ import { supabaseAdmin } from '@/lib/supabase'
 import { MailerLiteService } from '@/lib/mailerlite'
 import { ScheduleChecker } from '@/lib/schedule-checker'
 import { SlackNotificationService } from '@/lib/slack'
+import { newsletterArchiver } from '@/lib/newsletter-archiver'
 
 // Helper function to log article positions at final send
 async function logFinalArticlePositions(campaign: any) {
@@ -166,6 +167,27 @@ export async function POST(request: NextRequest) {
     await logFinalArticlePositions(campaign)
 
     const result = await mailerLiteService.createFinalCampaign(campaign, mainGroupId)
+
+    // Archive the newsletter for website display
+    try {
+      console.log('[SEND] Archiving newsletter for website...')
+      const archiveResult = await newsletterArchiver.archiveNewsletter({
+        campaignId: campaign.id,
+        campaignDate: campaign.date,
+        subjectLine: campaign.subject_line || 'Newsletter',
+        recipientCount: 0 // Recipient count tracked in MailerLite
+      })
+
+      if (!archiveResult.success) {
+        console.error('[SEND] Failed to archive newsletter:', archiveResult.error)
+        // Don't fail the send if archiving fails - just log it
+      } else {
+        console.log('[SEND] ✓ Newsletter archived successfully for', campaign.date)
+      }
+    } catch (archiveError) {
+      console.error('[SEND] Error archiving newsletter:', archiveError)
+      // Don't fail the send if archiving fails
+    }
 
     // Update campaign status to sent and capture the previous status
     const { error: updateError } = await supabaseAdmin
@@ -346,6 +368,27 @@ export async function GET(request: NextRequest) {
     await logFinalArticlePositions(campaign)
 
     const result = await mailerLiteService.createFinalCampaign(campaign, mainGroupId)
+
+    // Archive the newsletter for website display
+    try {
+      console.log('[SEND] Archiving newsletter for website...')
+      const archiveResult = await newsletterArchiver.archiveNewsletter({
+        campaignId: campaign.id,
+        campaignDate: campaign.date,
+        subjectLine: campaign.subject_line || 'Newsletter',
+        recipientCount: 0 // Recipient count tracked in MailerLite
+      })
+
+      if (!archiveResult.success) {
+        console.error('[SEND] Failed to archive newsletter:', archiveResult.error)
+        // Don't fail the send if archiving fails - just log it
+      } else {
+        console.log('[SEND] ✓ Newsletter archived successfully for', campaign.date)
+      }
+    } catch (archiveError) {
+      console.error('[SEND] Error archiving newsletter:', archiveError)
+      // Don't fail the send if archiving fails
+    }
 
     // Update campaign status to sent and capture the previous status
     const { error: updateError } = await supabaseAdmin

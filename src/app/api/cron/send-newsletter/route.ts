@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
 import { MailerLiteService } from '@/lib/mailerlite'
+import { newsletterArchiver } from '@/lib/newsletter-archiver'
 
 export async function POST(request: NextRequest) {
   try {
@@ -111,6 +112,27 @@ export async function POST(request: NextRequest) {
     const result = await mailerLiteService.createFinalCampaign(campaign, mainGroupId)
 
     console.log('MailerLite final campaign created:', result.campaignId)
+
+    // Archive the newsletter for website display
+    try {
+      console.log('[SEND] Archiving newsletter for website...')
+      const archiveResult = await newsletterArchiver.archiveNewsletter({
+        campaignId: campaign.id,
+        campaignDate: campaign.date,
+        subjectLine: campaign.subject_line || 'Newsletter',
+        recipientCount: 0 // Recipient count tracked in MailerLite
+      })
+
+      if (!archiveResult.success) {
+        console.error('[SEND] Failed to archive newsletter:', archiveResult.error)
+        // Don't fail the send if archiving fails - just log it
+      } else {
+        console.log('[SEND] ✓ Newsletter archived successfully for', campaign.date)
+      }
+    } catch (archiveError) {
+      console.error('[SEND] Error archiving newsletter:', archiveError)
+      // Don't fail the send if archiving fails
+    }
 
     // Update campaign status to sent and capture the previous status
     const { error: updateError } = await supabaseAdmin

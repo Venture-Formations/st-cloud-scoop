@@ -18,7 +18,11 @@
       "Bash(git push:*)",
       "Bash(src/app/api/cron/rss-processing/route.ts)",
       "Bash(npm install:*)",
-      "mcp__vercel__getDeployments"
+      "mcp__vercel__getDeployments",
+      "mcp__vercel__getDeploymentEvents",
+      "Bash(python3:*)",
+      "Bash(npx ts-node:*)",
+      "Bash(npx tsx:*)"
     ],
     "deny": [],
     "ask": []

@@ -186,6 +186,7 @@ ${i + 1}. ${item.road_name}
       let processedInput = customPromptConfig.input || customPromptConfig.messages
       if (processedInput && Array.isArray(processedInput)) {
         processedInput = processedInput.map((msg: any) => {
+          // Handle string content (legacy format)
           if (msg.content && typeof msg.content === 'string') {
             return {
               ...msg,
@@ -196,6 +197,27 @@ ${i + 1}. ${item.road_name}
                 ),
                 msg.content
               )
+            }
+          }
+          // Handle array content (Responses API format)
+          else if (msg.content && Array.isArray(msg.content)) {
+            return {
+              ...msg,
+              content: msg.content.map((contentItem: any) => {
+                if (contentItem.type === 'input_text' && contentItem.text) {
+                  return {
+                    ...contentItem,
+                    text: Object.entries(placeholders).reduce(
+                      (text, [key, value]) => text.replace(
+                        new RegExp(`\\{\\{${key}\\}\\}`, 'g'),
+                        value
+                      ),
+                      contentItem.text
+                    )
+                  }
+                }
+                return contentItem
+              })
             }
           }
           return msg

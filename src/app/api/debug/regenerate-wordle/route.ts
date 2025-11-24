@@ -13,7 +13,7 @@ export async function GET(request: NextRequest) {
 
     // Fetch wordle data for the date range
     const { data: wordleData, error: fetchError } = await supabaseAdmin
-      .from('wordle_data')
+      .from('wordle')
       .select('*')
       .gte('date', startDate)
       .lte('date', endDate)
@@ -57,7 +57,7 @@ export async function GET(request: NextRequest) {
         if (!dryRun) {
           // Update the database
           const { error: updateError } = await supabaseAdmin
-            .from('wordle_data')
+            .from('wordle')
             .update({
               definition: newDefinition,
               interesting_fact: newFact,

@@ -389,13 +389,17 @@ export async function generateDailyRoadWork(campaignDate?: string): Promise<Road
 
     // Use the database prompt via AI_PROMPTS.roadWorkGenerator (same pattern as test-ai-prompts)
     console.log('🔍 Using AI_PROMPTS.roadWorkGenerator with database prompt...')
+    console.log('📅 Formatted date for prompt:', formattedDate)
 
     let aiResponse: any = null
 
     try {
       // Call the road work generator using the database prompt
+      console.log('⏳ Calling AI_PROMPTS.roadWorkGenerator...')
       const generatorResult = await AI_PROMPTS.roadWorkGenerator(formattedDate)
       console.log('📊 Road work generator raw response type:', typeof generatorResult)
+      console.log('📊 Road work generator raw response (first 500 chars):',
+        typeof generatorResult === 'string' ? generatorResult.substring(0, 500) : JSON.stringify(generatorResult).substring(0, 500))
 
       // Parse the response
       if (typeof generatorResult === 'string') {
@@ -424,8 +428,11 @@ export async function generateDailyRoadWork(campaignDate?: string): Promise<Road
       console.log('✅ Parsed road work generator response:', aiResponse?.length || 0, 'items')
     } catch (parseError) {
       console.error('❌ Failed to parse road work generator response:', parseError)
+      console.error('❌ Parse error details:', parseError instanceof Error ? parseError.message : String(parseError))
       aiResponse = []
     }
+
+    console.log('📊 After parsing: aiResponse is', Array.isArray(aiResponse) ? `array with ${aiResponse.length} items` : typeof aiResponse)
 
     // Parse AI response - simplified logic matching working debug endpoint
     let roadWorkItems: RoadWorkItem[] = []
@@ -493,29 +500,48 @@ export async function generateDailyRoadWork(campaignDate?: string): Promise<Road
 
     // Validate road work items for accuracy using AI
     console.log('🔍 Validating road work items for date accuracy and completeness...')
+    console.log('📊 Items to validate:', roadWorkItems.length)
 
     try {
       // AI_PROMPTS.roadWorkValidator already calls the API and returns the result
+      console.log('⏳ Calling AI_PROMPTS.roadWorkValidator...')
       const validationResponse = await AI_PROMPTS.roadWorkValidator(roadWorkItems, formattedDate)
+      console.log('📊 Validation response type:', typeof validationResponse)
 
       console.log('Validation response:', JSON.stringify(validationResponse, null, 2))
 
       if (validationResponse && validationResponse.validated_items) {
-        // Filter to only valid items
+        // Only filter out items that are CLEARLY completed (high confidence, reason includes "completed")
+        // Keep items with vague dates - the date parsing logic below will handle them
         const validIndices = validationResponse.validated_items
-          .filter((item: any) => item.valid === true && item.confidence >= 0.7)
+          .filter((item: any) => {
+            // Keep valid items
+            if (item.valid === true) return true
+            // Keep items rejected only for vague dates - we can still use them
+            const reason = (item.reason || '').toLowerCase()
+            if (reason.includes('vague') && !reason.includes('completed')) return true
+            // Reject items that are clearly completed
+            return false
+          })
           .map((item: any) => item.index)
 
         const beforeValidation = roadWorkItems.length
-        roadWorkItems = roadWorkItems.filter((_, index) => validIndices.includes(index))
+        // Only apply filtering if we'd have at least some items left
+        if (validIndices.length > 0) {
+          roadWorkItems = roadWorkItems.filter((_, index) => validIndices.includes(index + 1)) // index is 1-based in validation
 
-        console.log(`✅ AI Validation: ${roadWorkItems.length}/${beforeValidation} items passed (${validationResponse.summary?.accuracy_score || 'N/A'} accuracy score)`)
+          console.log(`✅ AI Validation: ${roadWorkItems.length}/${beforeValidation} items passed (kept items with vague dates)`)
+        } else {
+          console.log(`⚠️ AI Validation rejected all items, keeping unfiltered items (${beforeValidation} total)`)
+        }
 
         // Log rejected items for debugging
         validationResponse.validated_items
-          .filter((item: any) => !item.valid || item.confidence < 0.7)
+          .filter((item: any) => !item.valid)
           .forEach((item: any) => {
-            console.log(`   ❌ Rejected item ${item.index}: ${item.reason} (confidence: ${item.confidence})`)
+            const reason = (item.reason || '').toLowerCase()
+            const kept = reason.includes('vague') && !reason.includes('completed')
+            console.log(`   ${kept ? '⚠️ Kept (vague date)' : '❌ Rejected'} item ${item.index}: ${item.reason}`)
           })
       }
     } catch (validationError) {

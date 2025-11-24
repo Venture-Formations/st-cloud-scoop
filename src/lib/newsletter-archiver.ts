@@ -71,8 +71,6 @@ export class NewsletterArchiver {
         console.error('[ARCHIVE] Error fetching RSS posts:', rssError)
       }
 
-      console.log(`[ARCHIVE] Found ${rssPosts?.length || 0} RSS posts`)
-
       // Create a map of RSS posts by ID for quick lookup
       const rssPostMap = new Map()
       rssPosts?.forEach((post: any) => {
@@ -82,8 +80,6 @@ export class NewsletterArchiver {
       // Transform articles and attach RSS post data
       const transformedArticles = articles?.map((article: any) => {
         const rssPostData = article.post_id ? rssPostMap.get(article.post_id) : null
-
-        console.log(`[ARCHIVE] Article "${article.headline}": post_id=${article.post_id}, rss_post=${rssPostData ? 'FOUND' : 'NULL'}, image=${rssPostData?.image_url || 'NO IMAGE'}`)
 
         return {
           id: article.id,

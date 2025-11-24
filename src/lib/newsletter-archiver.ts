@@ -24,10 +24,10 @@ export class NewsletterArchiver {
 
       console.log(`[ARCHIVE] Archiving newsletter for campaign ${campaignId} (${campaignDate})...`)
 
-      // 1. Fetch campaign data
-      const { data: campaign, error: campaignError } = await supabaseAdmin
+      // 1. Verify campaign exists (we don't need to fetch data, just verify it exists)
+      const { error: campaignError } = await supabaseAdmin
         .from('newsletter_campaigns')
-        .select('newsletter_id')
+        .select('id')
         .eq('id', campaignId)
         .single()
 
@@ -155,7 +155,7 @@ export class NewsletterArchiver {
       // 7. Create archive record
       const archiveData: Partial<ArchivedNewsletter> = {
         campaign_id: campaignId,
-        newsletter_id: campaign.newsletter_id || 'stcscoop',
+        newsletter_id: 'stcscoop', // Default newsletter ID
         campaign_date: campaignDate,
         subject_line: subjectLine,
         send_date: new Date().toISOString(),

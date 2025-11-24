@@ -22,7 +22,8 @@
       "mcp__vercel__getDeploymentEvents",
       "Bash(python3:*)",
       "Bash(npx ts-node:*)",
-      "Bash(npx tsx:*)"
+      "Bash(npx tsx:*)",
+      "mcp__vercel__getDeployment"
     ],
     "deny": [],
     "ask": []

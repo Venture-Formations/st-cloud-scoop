@@ -359,13 +359,13 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Only deactivate events that have already ended (are in the past)
+    // Deactivate old events that are no longer returned by the API
     const now = new Date()
     const yesterday = new Date(now)
     yesterday.setDate(yesterday.getDate() - 1)
     const yesterdayStr = yesterday.toISOString()
 
-    // Get events that have ended and are not in the current API response
+    // Get events that are not in the current API response
     const apiExternalIds = events.map(e => `visitstcloud_${e.id}`)
 
     if (apiExternalIds.length > 0) {
@@ -377,14 +377,21 @@ export async function POST(request: NextRequest) {
 
       const protectedEventIds = new Set(activeCampaignEvents?.map(ce => ce.event_id) || [])
 
-      // Get past events that should be deactivated
+      // Get old events that should be deactivated
+      // These are events that:
+      // 1. Are from Visit St. Cloud (external_id starts with visitstcloud_)
+      // 2. Are NOT in the current API response
+      // 3. Are currently active
+      // 4. Have either:
+      //    - end_date before yesterday OR
+      //    - start_date before yesterday (for events with no end_date or future end_date)
       const { data: eventsToDeactivate } = await supabaseAdmin
         .from('events')
         .select('id, external_id, end_date, start_date')
         .like('external_id', 'visitstcloud_%')
         .not('external_id', 'in', `(${apiExternalIds.map(id => `'${id}'`).join(',')})`)
         .eq('active', true)
-        .lt('end_date', yesterdayStr) // Only events that ended before yesterday
+        .or(`end_date.lt.${yesterdayStr},start_date.lt.${yesterdayStr}`)
 
       if (eventsToDeactivate && eventsToDeactivate.length > 0) {
         // Filter out protected events
@@ -393,6 +400,8 @@ export async function POST(request: NextRequest) {
           .map(event => event.id)
 
         if (idsToDeactivate.length > 0) {
+          console.log(`⏰ Deactivating ${idsToDeactivate.length} old events that are no longer in API response`)
+
           const { error: deactivateError } = await supabaseAdmin
             .from('events')
             .update({ active: false, updated_at: new Date().toISOString() })
@@ -400,6 +409,8 @@ export async function POST(request: NextRequest) {
 
           if (deactivateError) {
             console.error('Error deactivating old events:', deactivateError)
+          } else {
+            console.log(`✅ Successfully deactivated ${idsToDeactivate.length} old events`)
           }
         }
       }

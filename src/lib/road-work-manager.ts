@@ -384,125 +384,47 @@ export async function generateDailyRoadWork(campaignDate?: string): Promise<Road
 
     let searchResults = ''
 
-    // Use Perplexity for real web search and data extraction
-    console.log('🔍 Using Perplexity to search for real road work data...')
-    const { callPerplexity } = await import('./perplexity')
-
     // Convert target date to the format expected by the prompts
     const formattedDate = new Date(targetDate).toISOString().split('T')[0] // Convert to YYYY-MM-DD
 
-    const searchPrompt = `Find road, lane, or bridge closures, detours, or traffic restrictions within 15 miles of St. Cloud, Minnesota (ZIP 56303) that are:
-1. Currently active on ${formattedDate}, OR
-2. Planned to start within the next 7 days (between ${formattedDate} and 7 days later)
-
-CRITICAL: Search these OFFICIAL government sources for REAL road work data:
-- https://www.dot.state.mn.us/d3/ (MnDOT District 3)
-- https://www.stearnscountymn.gov/185/Public-Works
-- https://www.ci.stcloud.mn.us/307/Road-Construction-Projects
-- https://www.cityofsartell.com/engineering/
-- https://www.ci.waitepark.mn.us/
-- https://ci.sauk-rapids.mn.us/
-- Local news: WJON Traffic, St. Cloud Times
-
-ONLY include road work that:
-- Is currently active on ${formattedDate} OR starts within next 7 days
-- Has CONFIRMED specific dates (not "TBD" or vague ranges)
-- Is from an official government or news source
-
-Return ONLY a JSON array with 6-9 real entries:
-[
-  {
-    "road_name": "[exact road name from source]",
-    "road_range": "[exact range from source, e.g., '2nd St NE to 7th St NE']",
-    "city_or_township": "[exact city from source]",
-    "reason": "[exact reason from source]",
-    "start_date": "[exact date like 'Oct 6' or 'May 1']",
-    "expected_reopen": "[exact date like 'Oct 20' or 'Nov 30']",
-    "source_url": "[actual URL where this info was found]"
-  }
-]
-
-CRITICAL: Return ONLY real, verified road work from actual sources. Better to return 3-4 confirmed items than 9 made-up items.
-
-Search these official sources:
-- MnDOT District 3: https://www.dot.state.mn.us/d3/
-- Stearns County Public Works: https://www.stearnscountymn.gov/185/Public-Works
-- Benton County Highway: https://www.co.benton.mn.us/180/Highway
-- Sherburne County: https://www.co.sherburne.mn.us/162/Public-Works
-- City of St. Cloud: https://www.ci.stcloud.mn.us
-- City of Sartell: https://www.sartellmn.com/engineering/
-- City of Sauk Rapids: https://ci.sauk-rapids.mn.us/
-- City of Waite Park: https://www.ci.waitepark.mn.us/
-- Metro Bus: https://www.ridemetrobus.com
-- Local news: WJON, St. Cloud Times
-
-Include: Road closures, lane closures, bridge work, detours, construction on highways, county roads, and city streets.
-
-Respond with ONLY a JSON array. No explanations or markdown.`
-
-    const userPrompt = `Today's date is ${formattedDate}. Search for ALL active road closures, construction, and traffic restrictions in St. Cloud, MN area that are CURRENTLY ACTIVE on this date.
-
-Return a JSON array with 6-9 items. Each item must use this exact format:
-
-{
-  "road_name": "Highway 15",
-  "road_range": "from 2nd St to County Rd 75",
-  "city_or_township": "St. Cloud",
-  "reason": "Bridge maintenance",
-  "start_date": "Sep 15",
-  "expected_reopen": "Oct 15",
-  "source_url": "https://www.dot.state.mn.us/d3/"
-}
-
-CRITICAL REQUIREMENTS:
-- Today is ${formattedDate}
-- Only include projects CURRENTLY ACTIVE on ${formattedDate}
-- DO NOT include projects that ended before ${formattedDate}
-- DO NOT include any projects from previous years
-- For expected_reopen dates, prefer specific day format: "Oct 15", "Nov 30", "Dec 5"
-- If only month is known, use format "Oct 2025", "Nov 2025" (will be treated as 20th of month)
-- Vague dates like "Late Aug", "Early Oct" are acceptable if specific dates unavailable
-- Search ALL the government sources provided
-- Include highways, county roads, and city streets
-- Find at least 6-9 real current projects still active on ${formattedDate}
-- Use short date format like "Oct 15" not ISO dates
-- Return ONLY the JSON array, starting with [ and ending with ]
-- No markdown formatting, no explanations`
-
-    // Use Perplexity to search for real road work data
-    console.log('🔍 Calling Perplexity for real road work data...')
-
-    const perplexityResult = await callPerplexity(searchPrompt, {
-      model: 'sonar-pro',
-      temperature: 0.2,
-      searchContextSize: 'high'
-    })
-
-    console.log('📊 Perplexity raw response:', perplexityResult)
+    // Use the database prompt via AI_PROMPTS.roadWorkGenerator (same pattern as test-ai-prompts)
+    console.log('🔍 Using AI_PROMPTS.roadWorkGenerator with database prompt...')
 
     let aiResponse: any = null
 
     try {
-      // Try to parse Perplexity's JSON response
-      aiResponse = JSON.parse(perplexityResult)
-      console.log('✅ Successfully parsed Perplexity JSON response:', aiResponse?.length || 0, 'items')
-    } catch (parseError) {
-      console.log('❌ Failed to parse Perplexity response as JSON, trying to extract from markdown...')
+      // Call the road work generator using the database prompt
+      const generatorResult = await AI_PROMPTS.roadWorkGenerator(formattedDate)
+      console.log('📊 Road work generator raw response type:', typeof generatorResult)
 
-      // Try to extract JSON from markdown code blocks
-      const jsonMatch = perplexityResult.match(/\[[\s\S]*\]/)?.[0]
-      if (jsonMatch) {
-        try {
+      // Parse the response
+      if (typeof generatorResult === 'string') {
+        // Clean markdown wrappers if present
+        let cleanedJson = generatorResult.trim()
+          .replace(/^```json\s*/i, '')
+          .replace(/^```\s*/i, '')
+          .replace(/\s*```$/i, '')
+
+        // Try to extract JSON array
+        const jsonMatch = cleanedJson.match(/\[[\s\S]*\]/)?.[0]
+        if (jsonMatch) {
           aiResponse = JSON.parse(jsonMatch)
-          console.log('✅ Extracted JSON from markdown:', aiResponse?.length || 0, 'items')
-        } catch (e) {
-          console.error('❌ Could not extract valid JSON from Perplexity response')
-          aiResponse = []
+        } else {
+          aiResponse = JSON.parse(cleanedJson)
         }
+      } else if (Array.isArray(generatorResult)) {
+        aiResponse = generatorResult
+      } else if (generatorResult && typeof generatorResult === 'object') {
+        // Handle object response (might have items array)
+        aiResponse = generatorResult.items || generatorResult.road_work_items || []
       } else {
-        console.error('❌ No JSON array found in Perplexity response')
         aiResponse = []
       }
+
+      console.log('✅ Parsed road work generator response:', aiResponse?.length || 0, 'items')
+    } catch (parseError) {
+      console.error('❌ Failed to parse road work generator response:', parseError)
+      aiResponse = []
     }
 
     // Parse AI response - simplified logic matching working debug endpoint

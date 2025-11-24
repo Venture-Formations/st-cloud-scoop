@@ -334,13 +334,14 @@ export default function NewsletterPage({ params }: PageProps) {
 
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     {dayEvents.map((event: any) => (
-                      <div key={event.id} className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
-                        {event.featured && (
-                          <span className="inline-block bg-blue-100 text-blue-800 text-xs font-semibold px-2 py-1 rounded mb-2">
-                            Featured
-                          </span>
-                        )}
-
+                      <div
+                        key={event.id}
+                        className={`rounded-lg p-4 hover:shadow-md transition-shadow ${
+                          event.featured
+                            ? 'border-2 border-blue-500 bg-blue-50'
+                            : 'border border-gray-200'
+                        }`}
+                      >
                         {event.cropped_image_url || event.image_url ? (
                           <div className="w-full h-32 relative rounded-lg overflow-hidden mb-3">
                             <Image
@@ -370,17 +371,13 @@ export default function NewsletterPage({ params }: PageProps) {
                           {event.event_summary || event.description}
                         </p>
 
-                        {event.url && (
-                          <a
-                            href={event.url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-blue-600 hover:text-blue-700 text-sm font-medium inline-flex items-center gap-1"
-                          >
-                            Learn more
-                            <ExternalLink className="w-3 h-3" />
-                          </a>
-                        )}
+                        <Link
+                          href={`/events/${event.id}`}
+                          className="text-blue-600 hover:text-blue-700 text-sm font-medium inline-flex items-center gap-1"
+                        >
+                          Learn more
+                          <ExternalLink className="w-3 h-3" />
+                        </Link>
                       </div>
                     ))}
                   </div>

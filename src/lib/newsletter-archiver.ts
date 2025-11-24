@@ -65,12 +65,15 @@ export class NewsletterArchiver {
       }
 
       console.log(`[ARCHIVE] Found ${articles?.length || 0} articles`)
+      console.log(`[ARCHIVE] First article structure:`, JSON.stringify(articles?.[0], null, 2))
 
       // Transform articles to match interface (rss_post is array from DB, but we want single object)
       const transformedArticles = articles?.map((article: any) => {
         const rssPostData = Array.isArray(article.rss_post) && article.rss_post.length > 0
           ? article.rss_post[0]
           : null
+
+        console.log(`[ARCHIVE] Article ${article.headline}: rssPostData =`, rssPostData ? 'FOUND' : 'NULL', rssPostData?.image_url || 'NO IMAGE')
 
         return {
           id: article.id,

@@ -45,7 +45,7 @@ export async function GET(request: NextRequest) {
         // Generate new interesting fact using the updated prompt
         const newFact = await AI_PROMPTS.wordleFact(word)
 
-        const result = {
+        const result: Record<string, any> = {
           date: entry.date,
           word: word,
           old_definition: entry.definition,

@@ -116,34 +116,47 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     console.log(result)
     console.log('=== END AI RESPONSE ===')
 
-    // Handle both plain text and JSON responses
+    // Handle both plain text and JSON responses (same logic as rss-processor.ts)
     let subjectLine = ''
+
     if (typeof result === 'string') {
-      subjectLine = result.trim()
-    } else if (result && typeof result === 'object') {
-      const resultObj = result as any
-      if (resultObj.subject_line) {
-        subjectLine = resultObj.subject_line.trim()
-      } else if (resultObj.raw) {
-        subjectLine = resultObj.raw.trim()
-      } else {
-        subjectLine = String(result).trim()
+      // Try to parse as JSON first (in case it's a JSON string)
+      try {
+        const parsed = JSON.parse(result)
+        if (parsed.headline) {
+          subjectLine = parsed.headline
+        } else {
+          // Not JSON or no headline field, use as-is
+          subjectLine = result
+        }
+      } catch {
+        // Not JSON, use the plain string
+        subjectLine = result
       }
-    } else {
-      subjectLine = String(result).trim()
+    } else if (typeof result === 'object' && result) {
+      // If it's already an object
+      if ('headline' in result) {
+        subjectLine = (result as any).headline
+      } else if ('subject_line' in result) {
+        subjectLine = (result as any).subject_line
+      } else if ('raw' in result) {
+        subjectLine = (result as any).raw
+      } else {
+        // Fallback: convert to string
+        subjectLine = JSON.stringify(result)
+      }
     }
 
-    if (!subjectLine) {
+    if (subjectLine && subjectLine.trim()) {
+      subjectLine = subjectLine.trim()
+
+      // Remove any markdown code block wrappers if present
+      subjectLine = subjectLine.replace(/^```json\s*/, '').replace(/\s*```$/, '')
+
+      console.log(`Processed subject line: "${subjectLine}" (${subjectLine.length} chars)`)
+    } else {
       throw new Error('Empty subject line response from AI')
     }
-
-    // Enforce character limit
-    if (subjectLine.length > 35) {
-      console.warn(`Subject line too long (${subjectLine.length} chars), truncating to 35`)
-      subjectLine = subjectLine.substring(0, 35).trim()
-    }
-
-    console.log(`Processed subject line: "${subjectLine}" (${subjectLine.length} chars)`)
 
     // Update campaign with generated subject line
     const { error: updateError } = await supabaseAdmin

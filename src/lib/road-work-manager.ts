@@ -511,37 +511,21 @@ export async function generateDailyRoadWork(campaignDate?: string): Promise<Road
       console.log('Validation response:', JSON.stringify(validationResponse, null, 2))
 
       if (validationResponse && validationResponse.validated_items) {
-        // Only filter out items that are CLEARLY completed (high confidence, reason includes "completed")
-        // Keep items with vague dates - the date parsing logic below will handle them
+        // Filter to only valid items
         const validIndices = validationResponse.validated_items
-          .filter((item: any) => {
-            // Keep valid items
-            if (item.valid === true) return true
-            // Keep items rejected only for vague dates - we can still use them
-            const reason = (item.reason || '').toLowerCase()
-            if (reason.includes('vague') && !reason.includes('completed')) return true
-            // Reject items that are clearly completed
-            return false
-          })
+          .filter((item: any) => item.valid === true && item.confidence >= 0.7)
           .map((item: any) => item.index)
 
         const beforeValidation = roadWorkItems.length
-        // Only apply filtering if we'd have at least some items left
-        if (validIndices.length > 0) {
-          roadWorkItems = roadWorkItems.filter((_, index) => validIndices.includes(index + 1)) // index is 1-based in validation
+        roadWorkItems = roadWorkItems.filter((_, index) => validIndices.includes(index + 1)) // index is 1-based in validation
 
-          console.log(`✅ AI Validation: ${roadWorkItems.length}/${beforeValidation} items passed (kept items with vague dates)`)
-        } else {
-          console.log(`⚠️ AI Validation rejected all items, keeping unfiltered items (${beforeValidation} total)`)
-        }
+        console.log(`✅ AI Validation: ${roadWorkItems.length}/${beforeValidation} items passed (${validationResponse.summary?.accuracy_score || 'N/A'} accuracy score)`)
 
         // Log rejected items for debugging
         validationResponse.validated_items
-          .filter((item: any) => !item.valid)
+          .filter((item: any) => !item.valid || item.confidence < 0.7)
           .forEach((item: any) => {
-            const reason = (item.reason || '').toLowerCase()
-            const kept = reason.includes('vague') && !reason.includes('completed')
-            console.log(`   ${kept ? '⚠️ Kept (vague date)' : '❌ Rejected'} item ${item.index}: ${item.reason}`)
+            console.log(`   ❌ Rejected item ${item.index}: ${item.reason} (confidence: ${item.confidence})`)
           })
       }
     } catch (validationError) {

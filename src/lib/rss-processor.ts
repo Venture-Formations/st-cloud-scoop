@@ -1312,56 +1312,63 @@ export class RSSProcessor {
     try {
       console.log('Starting subject line generation for campaign:', campaignId)
 
-      // Get the campaign with its articles for subject line generation
-      const { data: campaignWithArticles, error: campaignError } = await supabaseAdmin
+      // Get the campaign first (simpler query to avoid internal errors)
+      const { data: campaign, error: campaignError } = await supabaseAdmin
         .from('newsletter_campaigns')
-        .select(`
-          id,
-          date,
-          status,
-          subject_line,
-          articles:articles(
-            headline,
-            content,
-            is_active,
-            rss_post:rss_posts(
-              post_rating:post_ratings(total_score)
-            )
-          )
-        `)
+        .select('id, date, status, subject_line')
         .eq('id', campaignId)
         .single()
 
-      if (campaignError || !campaignWithArticles) {
+      if (campaignError || !campaign) {
         console.error('Failed to fetch campaign for subject generation:', campaignError)
         throw new Error(`Campaign not found: ${campaignError?.message}`)
       }
 
       // Check if subject line already exists
-      if (campaignWithArticles.subject_line && campaignWithArticles.subject_line.trim()) {
-        console.log('Subject line already exists:', campaignWithArticles.subject_line)
+      if (campaign.subject_line && campaign.subject_line.trim()) {
+        console.log('Subject line already exists:', campaign.subject_line)
         return
       }
 
-      // Get active articles sorted by AI score
-      const activeArticles = campaignWithArticles.articles
-        ?.filter((article: any) => article.is_active)
-        ?.sort((a: any, b: any) => {
-          const scoreA = a.rss_post?.post_rating?.[0]?.total_score || 0
-          const scoreB = b.rss_post?.post_rating?.[0]?.total_score || 0
-          return scoreB - scoreA
-        }) || []
+      // Get active articles with their ratings separately
+      const { data: articles, error: articlesError } = await supabaseAdmin
+        .from('articles')
+        .select(`
+          id,
+          headline,
+          content,
+          is_active,
+          post_id,
+          rss_posts!inner(
+            id,
+            post_ratings(total_score)
+          )
+        `)
+        .eq('campaign_id', campaignId)
+        .eq('is_active', true)
 
-      if (activeArticles.length === 0) {
+      if (articlesError) {
+        console.error('Failed to fetch articles for subject generation:', articlesError)
+        throw new Error(`Articles not found: ${articlesError.message}`)
+      }
+
+      if (!articles || articles.length === 0) {
         console.log('No active articles found for subject line generation')
         return
       }
 
+      // Sort by AI score
+      const sortedArticles = articles.sort((a: any, b: any) => {
+        const scoreA = a.rss_posts?.post_ratings?.[0]?.total_score || 0
+        const scoreB = b.rss_posts?.post_ratings?.[0]?.total_score || 0
+        return scoreB - scoreA
+      })
+
       // Use the highest scored article for subject line generation
-      const topArticle = activeArticles[0] as any
+      const topArticle = sortedArticles[0] as any
       console.log(`Using top article for subject line generation:`)
       console.log(`- Headline: ${topArticle.headline}`)
-      console.log(`- AI Score: ${topArticle.rss_post?.post_rating?.[0]?.total_score || 0}`)
+      console.log(`- AI Score: ${topArticle.rss_posts?.post_ratings?.[0]?.total_score || 0}`)
 
       // Generate subject line using AI (now calls OpenAI internally)
       console.log('Generating AI subject line...')

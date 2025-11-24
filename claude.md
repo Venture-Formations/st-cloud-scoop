@@ -1,11 +1,11 @@
 # St. Cloud Scoop Development - Main Content Repository
 
-**Last Updated:** 2025-10-06
+**Last Updated:** 2025-11-24
 **Primary Source:** Authoritative development document
 
-## 🔒 **CURRENT SAVE POINT** (2025-10-06)
-**Git Commit:** `319b36b` - Campaign deletion and AI prompt customization complete
-**System State:** Fully functional with complete campaign management
+## 🔒 **CURRENT SAVE POINT** (2025-11-24)
+**Git Commit:** `10fdb37` - Newsletter archiving system complete with all sections
+**System State:** Fully functional with automated newsletter archiving
 
 **Core Features:**
 - ✅ Complete RSS Processing Pipeline (auto event population, subject generation, article ranking)
@@ -19,6 +19,8 @@
 - ✅ AI Prompt Testing (purple "Test Prompt" button with realistic data)
 - ✅ Custom AI Prompt Defaults (save/reset with double confirmation)
 - ✅ Preview Loading States (visual feedback during generation)
+- ✅ Newsletter Archiving System (automatic archiving on send with all sections)
+- ✅ Public Newsletter Archive (matches email layout with responsive design)
 
 ## ⚠️ CRITICAL DEVELOPMENT RULES
 
@@ -49,38 +51,64 @@ Which would you prefer?
 
 **Why:** UTC conversion causes timezone shifts that break filters and comparisons.
 
-## 🆕 Latest Session (2025-10-06): Campaign Deletion & AI Prompts
+## 🆕 Latest Session (2025-11-24): Newsletter Archiving System
 
 ### Features Implemented
 
-#### 1. Complete Campaign Deletion System
-- **Fixed**: Missing `road_work_items` table causing foreign key violations
-- **Handles 12 Tables**: campaign_events, articles, rss_posts, road_work_data, road_work_items, road_work_selections, campaign_dining_selections, campaign_vrbo_selections, user_activities, archived_articles, archived_rss_posts, newsletter_campaigns
-- **Error Tracking**: Returns detailed `child_deletion_errors` showing which tables failed
-- **Non-Blocking**: Child table errors don't stop overall process
+#### 1. Automated Newsletter Archiving
+- **Integration**: Added archiving to both automated send endpoints (`send-newsletter` and `send-final`)
+- **Non-Blocking**: Archiving errors don't prevent newsletter from sending
+- **Complete Data**: Archives capture all newsletter sections in single JSONB structure
+- **Logging**: Detailed console logs for debugging archiving process
 
-#### 2. AI Prompt Testing System
-- **Test Endpoint**: `/api/debug/test-ai-prompts` with realistic St. Cloud data
-- **UI**: Purple "Test Prompt" button on each prompt card
-- **Opens in New Tab**: Easy comparison of results
+#### 2. Complete Section Data Collection
+- **Articles**: With direct `image_url` field for performance (70-82 in archiver)
+- **Events**: Grouped by date with featured status (93-126)
+- **Wordle**: Yesterday's puzzle with definition and fact (129-139)
+- **Poll**: Active poll with all options (141-147)
+- **Minnesota Getaways**: VRBO properties with images (149-160)
+- **Dining Deals**: Restaurant deals by day of week (162-173)
+- **Weather**: HTML forecast data (175-180)
+- **Road Work**: 3x3 grid of road work items (182-188)
+- **Business Spotlight**: Featured local business (190-199)
+- **Metadata**: Flags for section availability (238-250)
 
-#### 3. Custom AI Prompt Defaults
-- **Database**: Added `custom_default` TEXT column to `app_settings`
-- **Save as Default**: Green button with double confirmation
-- **Smart Reset**: Prioritizes custom defaults over code defaults
-- **Migration**: `/api/debug/add-custom-default-column` endpoint
+#### 3. Public Newsletter Archive Pages
+- **Archive List**: `/newsletter` page with newsletter grid, pagination, and preview images (74-96 in page.tsx)
+- **Archive Detail**: `/newsletter/[date]` page matching email layout
+  - Article images to right of content (266-322 in [date]/page.tsx)
+  - 3-column responsive events grid grouped by date (324-390)
+  - Featured event badges with styling
+  - All newsletter sections with correct names
+  - Newsletter color scheme (#1877F2)
+  - Next.js Image optimization
+  - Mobile-responsive design
 
-#### 4. Event Population Integration
-- **Auto-Population**: Events populate during RSS processing (no manual steps)
-- **Smart Selection**: Up to 8 events per day with featured event logic
+#### 4. Manual Archive Management
+- **Manual Archive**: `/api/debug/manual-archive` endpoint for archiving past campaigns
+- **Delete Archive**: `/api/debug/delete-archive` endpoint for re-archiving with updated data
+- **Scripts**: `scripts/archive-campaigns.ts` for batch archiving
+
+### Critical Fixes
+
+#### TypeScript null vs undefined (Line 88 in archiver)
+- **Error**: `Type 'null' is not assignable to type '{ title?: string | undefined; ... } | undefined'`
+- **Fix**: Changed `rss_post: rssPostData ? {...} : null` to `rss_post: rssPostData ? {...} : undefined`
+
+#### newsletter_id Column Missing
+- **Error**: `column newsletter_campaigns.newsletter_id does not exist`
+- **Fix**: Hardcoded newsletter_id to 'stcscoop' and removed column from query (28-32 in archiver)
 
 ### Key Files Modified
 ```
-src/app/api/campaigns/[id]/delete/route.ts         # Campaign deletion
-src/app/api/settings/ai-prompts/route.ts           # Custom defaults
-src/app/api/debug/test-ai-prompts/route.ts         # Testing endpoint
-src/app/dashboard/settings/page.tsx                # UI buttons
-src/lib/rss-processor.ts                           # Event auto-population
+src/app/api/cron/send-newsletter/route.ts          # Added archiving (116-135)
+src/app/api/cron/send-final/route.ts               # Added archiving (171-190)
+src/lib/newsletter-archiver.ts                     # Complete overhaul (129-236)
+src/app/newsletter/[date]/page.tsx                 # Complete rewrite (645 lines)
+src/app/newsletter/page.tsx                        # Archive list page (74-96)
+src/app/api/debug/manual-archive/route.ts          # New file
+src/app/api/debug/delete-archive/route.ts          # New file
+scripts/archive-campaigns.ts                       # New file
 ```
 
 ## 🔧 Technical Configuration
@@ -122,6 +150,8 @@ src/lib/rss-processor.ts                           # Event auto-population
 - `/api/debug/test-subject-generation` - Tests subject line generation
 - `/api/debug/test-ai-prompts` - Tests AI prompts with realistic data
 - `/api/debug/check-campaign-relations` - Diagnoses campaign relationships
+- `/api/debug/manual-archive?campaign_id=X` - Manually archive a campaign
+- `/api/debug/delete-archive?campaign_id=X` - Delete an archived newsletter
 
 ### Production URLs
 - Base: `https://st-cloud-scoop.vercel.app`
@@ -129,12 +159,19 @@ src/lib/rss-processor.ts                           # Event auto-population
 
 ## 📋 Historical Context (Condensed)
 
+### Session 2025-10-06: Campaign Deletion & AI Prompts
+- **Campaign Deletion**: Fixed missing `road_work_items` table causing foreign key violations. Now handles 12 related tables with error tracking.
+- **AI Prompt Testing**: Added `/api/debug/test-ai-prompts` endpoint with purple "Test Prompt" button in UI
+- **Custom AI Prompt Defaults**: Added `custom_default` column to `app_settings` with save/reset functionality
+- **Event Population**: Integrated auto-population during RSS processing (no manual steps needed)
+
 ### Major Issues Resolved
 1. **Events Not Populating**: Fixed by moving event population to start of RSS processing
 2. **Subject Line Generation Failing**: Fixed AI response format from JSON to plain text
 3. **Facebook Images Expiring**: Added GitHub re-hosting during RSS processing
 4. **Campaign Deletion Errors**: Fixed by including all 12 related tables
 5. **Vercel Cron Authentication**: Updated routes to handle GET requests
+6. **Newsletter Archives Missing**: Added archiving to send endpoints with all section data
 
 ### RSS Processing Evolution
 - **Original**: Events at end (timed out), 60-second delays
@@ -172,6 +209,11 @@ src/app/api/campaigns/[id]/delete/route.ts           # Campaign deletion
 src/app/api/cron/rss-processing/route.ts             # Main automation
 src/app/api/cron/create-campaign/route.ts            # Campaign creation
 src/app/api/cron/generate-road-work/route.ts         # Road work generation
+src/app/api/cron/send-newsletter/route.ts            # Automated send (with archiving)
+src/app/api/cron/send-final/route.ts                 # Final send (with archiving)
+src/app/api/debug/manual-archive/route.ts            # Manual newsletter archiving
+src/app/api/debug/delete-archive/route.ts            # Delete archived newsletter
+src/app/api/newsletters/archived/route.ts            # Fetch archived newsletters list
 ```
 
 ### Core Libraries
@@ -179,6 +221,7 @@ src/app/api/cron/generate-road-work/route.ts         # Road work generation
 src/lib/rss-processor.ts                # RSS processing + event population
 src/lib/subject-line-generator.ts       # Shared subject line logic
 src/lib/road-work-manager.ts            # Road work generation
+src/lib/newsletter-archiver.ts          # Newsletter archiving service
 src/lib/mailerlite.ts                   # Email service integration
 src/lib/openai.ts                       # AI prompts and generation
 src/lib/slack.ts                        # Notification system
@@ -186,10 +229,12 @@ src/lib/slack.ts                        # Notification system
 
 ### UI Components
 ```
-src/app/dashboard/campaigns/[id]/page.tsx  # Campaign detail page
-src/app/dashboard/campaigns/page.tsx       # Campaign list
-src/app/dashboard/settings/page.tsx        # Settings with AI prompts
+src/app/dashboard/campaigns/[id]/page.tsx   # Campaign detail page
+src/app/dashboard/campaigns/page.tsx        # Campaign list
+src/app/dashboard/settings/page.tsx         # Settings with AI prompts
 src/app/dashboard/databases/events/page.tsx # Events management
+src/app/newsletter/page.tsx                 # Public newsletter archive list
+src/app/newsletter/[date]/page.tsx          # Public newsletter archive detail
 ```
 
 ### Database Types

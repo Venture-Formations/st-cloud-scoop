@@ -47,13 +47,7 @@ export class NewsletterArchiver {
           rank,
           final_position,
           created_at,
-          post_id,
-          rss_post:rss_posts!post_id(
-            title,
-            source_url,
-            image_url,
-            publication_date
-          )
+          post_id
         `)
         .eq('campaign_id', campaignId)
         .eq('is_active', true)
@@ -66,15 +60,30 @@ export class NewsletterArchiver {
       }
 
       console.log(`[ARCHIVE] Found ${articles?.length || 0} articles`)
-      console.log(`[ARCHIVE] First article structure:`, JSON.stringify(articles?.[0], null, 2))
 
-      // Transform articles to match interface (rss_post is array from DB, but we want single object)
+      // 2b. Fetch RSS posts separately for this campaign
+      const { data: rssPosts, error: rssError } = await supabaseAdmin
+        .from('rss_posts')
+        .select('id, title, source_url, image_url, publication_date')
+        .eq('campaign_id', campaignId)
+
+      if (rssError) {
+        console.error('[ARCHIVE] Error fetching RSS posts:', rssError)
+      }
+
+      console.log(`[ARCHIVE] Found ${rssPosts?.length || 0} RSS posts`)
+
+      // Create a map of RSS posts by ID for quick lookup
+      const rssPostMap = new Map()
+      rssPosts?.forEach((post: any) => {
+        rssPostMap.set(post.id, post)
+      })
+
+      // Transform articles and attach RSS post data
       const transformedArticles = articles?.map((article: any) => {
-        const rssPostData = Array.isArray(article.rss_post) && article.rss_post.length > 0
-          ? article.rss_post[0]
-          : null
+        const rssPostData = article.post_id ? rssPostMap.get(article.post_id) : null
 
-        console.log(`[ARCHIVE] Article ${article.headline}: rssPostData =`, rssPostData ? 'FOUND' : 'NULL', rssPostData?.image_url || 'NO IMAGE')
+        console.log(`[ARCHIVE] Article "${article.headline}": post_id=${article.post_id}, rss_post=${rssPostData ? 'FOUND' : 'NULL'}, image=${rssPostData?.image_url || 'NO IMAGE'}`)
 
         return {
           id: article.id,

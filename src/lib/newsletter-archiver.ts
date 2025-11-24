@@ -126,22 +126,104 @@ export class NewsletterArchiver {
 
       console.log(`[ARCHIVE] Found ${events.length} events`)
 
-      // 4. Fetch road work data
-      const { data: roadWorkData, error: roadWorkError } = await supabaseAdmin
+      // 4. Fetch Wordle data (yesterday's date)
+      const newsletterDate = new Date(campaignDate + 'T00:00:00')
+      const yesterday = new Date(newsletterDate)
+      yesterday.setDate(yesterday.getDate() - 1)
+      const yesterdayDate = yesterday.toISOString().split('T')[0]
+
+      const { data: wordleData } = await supabaseAdmin
+        .from('wordle')
+        .select('word, definition, interesting_fact, date')
+        .eq('date', yesterdayDate)
+        .single()
+
+      // 5. Fetch Poll data
+      const { data: pollData } = await supabaseAdmin
+        .from('polls')
+        .select('id, question, option_a, option_b, option_c, option_d, campaign_id')
+        .eq('campaign_id', campaignId)
+        .eq('is_active', true)
+        .single()
+
+      // 6. Fetch VRBO/Getaway properties
+      const { data: vrboSelections } = await supabaseAdmin
+        .from('campaign_vrbo_selections')
+        .select(`
+          property:vrbo_properties(
+            id, title, city, state, bedrooms, bathrooms, sleeps,
+            main_image_url, adjusted_image_url, link
+          )
+        `)
+        .eq('campaign_id', campaignId)
+
+      const vrboProperties = vrboSelections?.map((s: any) => s.property).filter(Boolean) || []
+
+      // 7. Fetch Dining Deals
+      const { data: diningSelections } = await supabaseAdmin
+        .from('campaign_dining_selections')
+        .select(`
+          dining_deal:dining_deals(
+            id, restaurant_name, address, phone, deal_description,
+            image_url, website_url, day_of_week
+          )
+        `)
+        .eq('campaign_id', campaignId)
+
+      const diningDeals = diningSelections?.map((s: any) => s.dining_deal).filter(Boolean) || []
+
+      // 8. Fetch Weather data
+      const { data: weatherData } = await supabaseAdmin
+        .from('weather_data')
+        .select('weather_html, forecast_date')
+        .eq('campaign_id', campaignId)
+        .single()
+
+      // 9. Fetch Road Work data
+      const { data: roadWorkData } = await supabaseAdmin
         .from('road_work_data')
         .select('road_work_data, generated_at')
         .eq('campaign_id', campaignId)
         .eq('is_active', true)
         .single()
 
-      if (roadWorkError && roadWorkError.code !== 'PGRST116') {
-        console.error('[ARCHIVE] Error fetching road work:', roadWorkError)
-      }
+      // 10. Fetch Business Spotlight
+      const { data: spotlightData } = await supabaseAdmin
+        .from('business_spotlights')
+        .select(`
+          id, business_name, description, image_url, website_url,
+          contact_email, contact_phone, address, campaign_id
+        `)
+        .eq('campaign_id', campaignId)
+        .eq('is_active', true)
+        .single()
 
-      // 5. Build sections object
+      // 11. Build sections object
       const sections: any = {}
 
-      // Road Work section
+      if (wordleData) {
+        sections.wordle = wordleData
+      }
+
+      if (pollData) {
+        sections.poll = pollData
+      }
+
+      if (vrboProperties.length > 0) {
+        sections.minnesota_getaways = { properties: vrboProperties }
+      }
+
+      if (diningDeals.length > 0) {
+        sections.dining_deals = { deals: diningDeals }
+      }
+
+      if (weatherData) {
+        sections.weather = {
+          html: weatherData.weather_html,
+          forecast_date: weatherData.forecast_date
+        }
+      }
+
       if (roadWorkData && roadWorkData.road_work_data) {
         sections.road_work = {
           items: roadWorkData.road_work_data,
@@ -149,15 +231,25 @@ export class NewsletterArchiver {
         }
       }
 
-      // 6. Gather metadata
+      if (spotlightData) {
+        sections.business_spotlight = spotlightData
+      }
+
+      // 12. Gather metadata
       const metadata = {
         total_articles: transformedArticles.length,
         total_events: events.length,
+        has_wordle: !!wordleData,
+        has_poll: !!pollData,
+        has_getaways: vrboProperties.length > 0,
+        has_dining_deals: diningDeals.length > 0,
+        has_weather: !!weatherData,
         has_road_work: !!roadWorkData,
+        has_business_spotlight: !!spotlightData,
         archived_at: new Date().toISOString()
       }
 
-      // 7. Create archive record
+      // 13. Create archive record
       const archiveData: Partial<ArchivedNewsletter> = {
         campaign_id: campaignId,
         newsletter_id: 'stcscoop', // Default newsletter ID

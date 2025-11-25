@@ -23,7 +23,8 @@
       "Bash(python3:*)",
       "Bash(npx ts-node:*)",
       "Bash(npx tsx:*)",
-      "mcp__vercel__getDeployment"
+      "mcp__vercel__getDeployment",
+      "Bash(source:*)"
     ],
     "deny": [],
     "ask": []

@@ -1159,6 +1159,19 @@ export class RSSProcessor {
     try {
       console.log(`Generating article for: ${post.title}`)
 
+      // Check if article already exists for this post + campaign (prevents duplicates on retry)
+      const { data: existingArticle } = await supabaseAdmin
+        .from('articles')
+        .select('id')
+        .eq('post_id', post.id)
+        .eq('campaign_id', campaignId)
+        .maybeSingle()
+
+      if (existingArticle) {
+        console.log(`Article already exists for post ${post.id}, skipping duplicate creation`)
+        return
+      }
+
       // Generate newsletter content
       const content = await this.generateNewsletterContent(post)
 

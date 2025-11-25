@@ -213,18 +213,40 @@ export class NewsletterArchiver {
       }
       console.log(`[ARCHIVE] Weather data found: ${!!weatherData}`)
 
-      // 9. Fetch Road Work items (stored directly in road_work_items with campaign_id)
-      const { data: roadWorkItems, error: roadWorkError } = await supabaseAdmin
-        .from('road_work_items')
-        .select('id, road_name, road_range, city_or_township, reason, start_date, expected_reopen, source_url, display_order')
+      // 9. Fetch SELECTED Road Work items (only items that were used in the final send)
+      // First try to get from campaign_road_work_selections table
+      let roadWorkItems: any[] = []
+      const { data: selectedRoadWork, error: selectedError } = await supabaseAdmin
+        .from('campaign_road_work_selections')
+        .select(`
+          selection_order,
+          road_work_item:road_work_items(
+            id, road_name, road_range, city_or_township, reason, start_date, expected_reopen, source_url, display_order
+          )
+        `)
         .eq('campaign_id', campaignId)
-        .eq('is_active', true)
-        .order('display_order', { ascending: true })
+        .order('selection_order', { ascending: true })
 
-      if (roadWorkError) {
-        console.error('[ARCHIVE] Error fetching road work items:', roadWorkError)
+      if (selectedError) {
+        console.log('[ARCHIVE] No selections table or error, falling back to all road work items:', selectedError.message)
+        // Fallback to all road work items if selections table doesn't exist
+        const { data: allRoadWork, error: roadWorkError } = await supabaseAdmin
+          .from('road_work_items')
+          .select('id, road_name, road_range, city_or_township, reason, start_date, expected_reopen, source_url, display_order')
+          .eq('campaign_id', campaignId)
+          .eq('is_active', true)
+          .order('display_order', { ascending: true })
+          .limit(9)
+
+        if (roadWorkError) {
+          console.error('[ARCHIVE] Error fetching road work items:', roadWorkError)
+        }
+        roadWorkItems = allRoadWork || []
+      } else {
+        // Extract road_work_item from the joined data
+        roadWorkItems = selectedRoadWork?.map((s: any) => s.road_work_item).filter(Boolean) || []
       }
-      console.log(`[ARCHIVE] Found ${roadWorkItems?.length || 0} road work items`)
+      console.log(`[ARCHIVE] Found ${roadWorkItems.length} selected road work items`)
 
       // 10. Fetch Advertisements
       const { data: adSelections, error: adError } = await supabaseAdmin

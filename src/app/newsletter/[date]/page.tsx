@@ -63,6 +63,7 @@ interface Newsletter {
     weather?: {
       html: string
       forecast_date: string
+      image_url?: string
     }
     minnesota_getaways?: {
       properties: Array<{
@@ -123,6 +124,8 @@ export default function NewsletterPage({ params }: PageProps) {
   const [newsletter, setNewsletter] = useState<Newsletter | null>(null)
   const [loading, setLoading] = useState(true)
   const [notFound, setNotFound] = useState(false)
+  const [votedOption, setVotedOption] = useState<string | null>(null)
+  const [voting, setVoting] = useState(false)
 
   useEffect(() => {
     loadNewsletter()
@@ -185,6 +188,30 @@ export default function NewsletterPage({ params }: PageProps) {
       return `${formatTime(start)} - ${formatTime(end)}`
     }
     return formatTime(start)
+  }
+
+  const handlePollVote = async (pollId: string, option: string) => {
+    if (voting || votedOption) return
+    setVoting(true)
+    try {
+      // Generate a simple anonymous identifier for website votes
+      const visitorId = localStorage.getItem('stcscoop_visitor_id') || `web_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+      if (!localStorage.getItem('stcscoop_visitor_id')) {
+        localStorage.setItem('stcscoop_visitor_id', visitorId)
+      }
+
+      const response = await fetch(`/api/polls/${pollId}/respond?option=${encodeURIComponent(option)}&email=${encodeURIComponent(visitorId)}&source=website`, {
+        method: 'GET'
+      })
+
+      if (response.redirected || response.ok) {
+        setVotedOption(option)
+      }
+    } catch (error) {
+      console.error('Error voting:', error)
+    } finally {
+      setVoting(false)
+    }
   }
 
   if (loading) {
@@ -391,12 +418,28 @@ export default function NewsletterPage({ params }: PageProps) {
                 <h3 className="font-bold text-gray-900 mb-4">{sections.poll.question}</h3>
                 <div className="space-y-2">
                   {sections.poll.options?.map((option: string, index: number) => (
-                    <div key={index} className="bg-white border border-gray-200 rounded p-3 text-gray-800">
+                    <button
+                      key={index}
+                      onClick={() => handlePollVote(sections.poll!.id, option)}
+                      disabled={voting || !!votedOption}
+                      className={`w-full text-left p-3 rounded transition-all ${
+                        votedOption === option
+                          ? 'bg-blue-600 text-white border-blue-600'
+                          : votedOption
+                          ? 'bg-gray-100 border border-gray-200 text-gray-500 cursor-not-allowed'
+                          : 'bg-white border border-gray-200 text-gray-800 hover:border-blue-400 hover:bg-blue-50 cursor-pointer'
+                      }`}
+                    >
                       {String.fromCharCode(65 + index)}) {option}
-                    </div>
+                      {votedOption === option && ' ✓'}
+                    </button>
                   ))}
                 </div>
-                <p className="text-sm text-gray-600 mt-4 italic">Poll results were available to newsletter subscribers.</p>
+                {votedOption ? (
+                  <p className="text-sm text-green-600 mt-4 font-medium">Thanks for voting!</p>
+                ) : (
+                  <p className="text-sm text-gray-600 mt-4 italic">Click an option to vote</p>
+                )}
               </div>
             </div>
           )}
@@ -405,7 +448,17 @@ export default function NewsletterPage({ params }: PageProps) {
           {sections.weather && (
             <div className="bg-white rounded-xl shadow-sm p-6 sm:p-8 mb-6 border border-gray-200">
               <h2 className="text-2xl font-bold text-[#1877F2] mb-6">Local Weather</h2>
-              <div dangerouslySetInnerHTML={{ __html: sections.weather.html }} />
+              {sections.weather.image_url ? (
+                <div className="w-full relative">
+                  <img
+                    src={sections.weather.image_url}
+                    alt={`Weather forecast for ${sections.weather.forecast_date}`}
+                    className="w-full h-auto rounded-lg"
+                  />
+                </div>
+              ) : (
+                <div dangerouslySetInnerHTML={{ __html: sections.weather.html }} />
+              )}
             </div>
           )}
 
@@ -431,15 +484,15 @@ export default function NewsletterPage({ params }: PageProps) {
             </div>
           )}
 
-          {/* Minnesota Getaways */}
+          {/* Minnesota Getaways - 3 across, stack on mobile */}
           {sections.minnesota_getaways && sections.minnesota_getaways.properties.length > 0 && (
             <div className="bg-white rounded-xl shadow-sm p-6 sm:p-8 mb-6 border border-gray-200">
               <h2 className="text-2xl font-bold text-[#1877F2] mb-6">Minnesota Getaways</h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 {sections.minnesota_getaways.properties.map((property: any) => (
                   <div key={property.id} className="border border-gray-200 rounded-lg overflow-hidden hover:shadow-md transition-shadow">
                     {property.adjusted_image_url || property.main_image_url ? (
-                      <div className="w-full h-48 relative">
+                      <div className="w-full h-40 relative">
                         <Image
                           src={property.adjusted_image_url || property.main_image_url}
                           alt={property.title}
@@ -449,23 +502,23 @@ export default function NewsletterPage({ params }: PageProps) {
                       </div>
                     ) : null}
                     <div className="p-4">
-                      <h3 className="font-bold text-gray-900 mb-2">{property.title}</h3>
+                      <h3 className="font-bold text-gray-900 mb-2 text-sm line-clamp-2">{property.title}</h3>
                       {property.city && (
-                        <p className="text-sm text-gray-600 mb-3">
+                        <p className="text-xs text-gray-600 mb-2">
                           {property.city}{property.listing_type === 'Greater' ? ', MN' : ''}
                         </p>
                       )}
-                      <div className="text-sm text-gray-700 mb-3">
-                        {property.bedrooms && `🛏️ ${property.bedrooms} bed`}
-                        {property.bathrooms && ` · 🛁 ${property.bathrooms} bath`}
-                        {property.sleeps && ` · 👥 Sleeps ${property.sleeps}`}
+                      <div className="text-xs text-gray-700 mb-3">
+                        {property.bedrooms && `${property.bedrooms} bed`}
+                        {property.bathrooms && ` · ${property.bathrooms} bath`}
+                        {property.sleeps && ` · Sleeps ${property.sleeps}`}
                       </div>
                       {property.link && (
                         <a
                           href={property.link}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="text-blue-600 hover:text-blue-700 text-sm font-medium inline-flex items-center gap-1"
+                          className="text-blue-600 hover:text-blue-700 text-xs font-medium inline-flex items-center gap-1"
                         >
                           View property
                           <ExternalLink className="w-3 h-3" />
@@ -520,10 +573,10 @@ export default function NewsletterPage({ params }: PageProps) {
             </div>
           )}
 
-          {/* Road Work */}
+          {/* Road Work - no emoji */}
           {sections.road_work && sections.road_work.items && sections.road_work.items.length > 0 && (
             <div className="bg-white rounded-xl shadow-sm p-6 sm:p-8 mb-6 border border-gray-200">
-              <h2 className="text-2xl font-bold text-[#1877F2] mb-6">🚧 Road Work</h2>
+              <h2 className="text-2xl font-bold text-[#1877F2] mb-6">Road Work</h2>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 {sections.road_work.items.map((item: any, index: number) => (
                   <div key={index} className="border border-gray-200 rounded-lg p-4">

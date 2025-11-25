@@ -287,7 +287,73 @@ export default function NewsletterPage({ params }: PageProps) {
             <p className="text-gray-600">{formatDate(newsletter.send_date)}</p>
           </div>
 
-          {/* The Local Scoop - Top Stories */}
+          {/* 1. Local Weather */}
+          {sections.weather && (
+            <div className="bg-white rounded-xl shadow-sm p-6 sm:p-8 mb-6 border border-gray-200">
+              <h2 className="text-2xl font-bold text-[#1877F2] mb-6">Local Weather</h2>
+              {sections.weather.image_url ? (
+                <div className="flex justify-center">
+                  <img
+                    src={sections.weather.image_url}
+                    alt={`Weather forecast for ${sections.weather.forecast_date}`}
+                    className="w-full h-auto rounded-lg"
+                    style={{ maxWidth: '650px' }}
+                  />
+                </div>
+              ) : (
+                <div dangerouslySetInnerHTML={{ __html: sections.weather.html }} />
+              )}
+            </div>
+          )}
+
+          {/* 2. Community Business Spotlight */}
+          {sections.business_spotlight && (
+            <div className="bg-white rounded-xl shadow-sm p-6 sm:p-8 mb-6 border border-gray-200">
+              <h2 className="text-2xl font-bold text-[#1877F2] mb-6">Community Business Spotlight</h2>
+              <div className="border border-gray-200 rounded-lg p-6">
+                {sections.business_spotlight.image_url && (
+                  <div className="w-full h-48 relative rounded-lg overflow-hidden mb-4">
+                    <Image
+                      src={sections.business_spotlight.image_url}
+                      alt={sections.business_spotlight.business_name}
+                      fill
+                      className="object-cover"
+                    />
+                  </div>
+                )}
+                <h3 className="text-xl font-bold text-gray-900 mb-3">
+                  {sections.business_spotlight.business_name}
+                </h3>
+                <p className="text-gray-800 leading-relaxed mb-4">
+                  {sections.business_spotlight.description}
+                </p>
+                <div className="space-y-2 text-sm text-gray-700">
+                  {sections.business_spotlight.address && (
+                    <div>📍 {sections.business_spotlight.address}</div>
+                  )}
+                  {sections.business_spotlight.contact_phone && (
+                    <div>📞 {sections.business_spotlight.contact_phone}</div>
+                  )}
+                  {sections.business_spotlight.contact_email && (
+                    <div>✉️ {sections.business_spotlight.contact_email}</div>
+                  )}
+                </div>
+                {sections.business_spotlight.website_url && (
+                  <a
+                    href={sections.business_spotlight.website_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-blue-600 hover:text-blue-700 text-sm font-medium inline-flex items-center gap-1 mt-4"
+                  >
+                    Visit website
+                    <ExternalLink className="w-3 h-3" />
+                  </a>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* 3. The Local Scoop - Top Stories */}
           {articles.length > 0 && (
             <div className="bg-white rounded-xl shadow-sm p-6 sm:p-8 mb-6 border border-gray-200">
               <h2 className="text-2xl font-bold text-[#1877F2] mb-6">The Local Scoop</h2>
@@ -345,7 +411,54 @@ export default function NewsletterPage({ params }: PageProps) {
             </div>
           )}
 
-          {/* Local Events */}
+          {/* 4. Minnesota Getaways - 3 across, stack on mobile */}
+          {sections.minnesota_getaways && sections.minnesota_getaways.properties.length > 0 && (
+            <div className="bg-white rounded-xl shadow-sm p-6 sm:p-8 mb-6 border border-gray-200">
+              <h2 className="text-2xl font-bold text-[#1877F2] mb-6">Minnesota Getaways</h2>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                {sections.minnesota_getaways.properties.map((property: any) => (
+                  <div key={property.id} className="border border-gray-200 rounded-lg overflow-hidden hover:shadow-md transition-shadow">
+                    {property.adjusted_image_url || property.main_image_url ? (
+                      <div className="w-full h-40 relative">
+                        <Image
+                          src={property.adjusted_image_url || property.main_image_url}
+                          alt={property.title}
+                          fill
+                          className="object-cover"
+                        />
+                      </div>
+                    ) : null}
+                    <div className="p-4">
+                      <h3 className="font-bold text-gray-900 mb-2 text-sm line-clamp-2">{property.title}</h3>
+                      {property.city && (
+                        <p className="text-xs text-gray-600 mb-2">
+                          {property.city}{property.listing_type === 'Greater' ? ', MN' : ''}
+                        </p>
+                      )}
+                      <div className="text-xs text-gray-700 mb-3">
+                        {property.bedrooms && `${property.bedrooms} bed`}
+                        {property.bathrooms && ` · ${property.bathrooms} bath`}
+                        {property.sleeps && ` · Sleeps ${property.sleeps}`}
+                      </div>
+                      {property.link && (
+                        <a
+                          href={property.link}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-blue-600 hover:text-blue-700 text-xs font-medium inline-flex items-center gap-1"
+                        >
+                          View property
+                          <ExternalLink className="w-3 h-3" />
+                        </a>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* 5. Local Events */}
           {events.length > 0 && (
             <div className="bg-white rounded-xl shadow-sm p-6 sm:p-8 mb-6 border border-gray-200">
               <h2 className="text-2xl font-bold text-[#1877F2] mb-6">Local Events</h2>
@@ -410,7 +523,7 @@ export default function NewsletterPage({ params }: PageProps) {
             </div>
           )}
 
-          {/* Poll Section */}
+          {/* 6. Poll Section */}
           {sections.poll && (
             <div className="bg-white rounded-xl shadow-sm p-6 sm:p-8 mb-6 border border-gray-200">
               <h2 className="text-2xl font-bold text-[#1877F2] mb-6">Poll</h2>
@@ -444,94 +557,7 @@ export default function NewsletterPage({ params }: PageProps) {
             </div>
           )}
 
-          {/* Local Weather */}
-          {sections.weather && (
-            <div className="bg-white rounded-xl shadow-sm p-6 sm:p-8 mb-6 border border-gray-200">
-              <h2 className="text-2xl font-bold text-[#1877F2] mb-6">Local Weather</h2>
-              {sections.weather.image_url ? (
-                <div className="w-full relative">
-                  <img
-                    src={sections.weather.image_url}
-                    alt={`Weather forecast for ${sections.weather.forecast_date}`}
-                    className="w-full h-auto rounded-lg"
-                  />
-                </div>
-              ) : (
-                <div dangerouslySetInnerHTML={{ __html: sections.weather.html }} />
-              )}
-            </div>
-          )}
-
-          {/* Yesterday's Wordle */}
-          {sections.wordle && (
-            <div className="bg-white rounded-xl shadow-sm p-6 sm:p-8 mb-6 border border-gray-200">
-              <h2 className="text-2xl font-bold text-[#1877F2] mb-6">Yesterday's Wordle</h2>
-              <div className="bg-[#F8F9FA] rounded-lg p-6">
-                <div className="text-center mb-4">
-                  <div className="text-3xl font-bold text-gray-900 uppercase tracking-wider">
-                    {sections.wordle.word}
-                  </div>
-                </div>
-                <div className="space-y-3 text-gray-800">
-                  <div>
-                    <strong>Definition:</strong> {sections.wordle.definition}
-                  </div>
-                  <div>
-                    <strong>Interesting Fact:</strong> {sections.wordle.interesting_fact}
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Minnesota Getaways - 3 across, stack on mobile */}
-          {sections.minnesota_getaways && sections.minnesota_getaways.properties.length > 0 && (
-            <div className="bg-white rounded-xl shadow-sm p-6 sm:p-8 mb-6 border border-gray-200">
-              <h2 className="text-2xl font-bold text-[#1877F2] mb-6">Minnesota Getaways</h2>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                {sections.minnesota_getaways.properties.map((property: any) => (
-                  <div key={property.id} className="border border-gray-200 rounded-lg overflow-hidden hover:shadow-md transition-shadow">
-                    {property.adjusted_image_url || property.main_image_url ? (
-                      <div className="w-full h-40 relative">
-                        <Image
-                          src={property.adjusted_image_url || property.main_image_url}
-                          alt={property.title}
-                          fill
-                          className="object-cover"
-                        />
-                      </div>
-                    ) : null}
-                    <div className="p-4">
-                      <h3 className="font-bold text-gray-900 mb-2 text-sm line-clamp-2">{property.title}</h3>
-                      {property.city && (
-                        <p className="text-xs text-gray-600 mb-2">
-                          {property.city}{property.listing_type === 'Greater' ? ', MN' : ''}
-                        </p>
-                      )}
-                      <div className="text-xs text-gray-700 mb-3">
-                        {property.bedrooms && `${property.bedrooms} bed`}
-                        {property.bathrooms && ` · ${property.bathrooms} bath`}
-                        {property.sleeps && ` · Sleeps ${property.sleeps}`}
-                      </div>
-                      {property.link && (
-                        <a
-                          href={property.link}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-blue-600 hover:text-blue-700 text-xs font-medium inline-flex items-center gap-1"
-                        >
-                          View property
-                          <ExternalLink className="w-3 h-3" />
-                        </a>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Dining Deals */}
+          {/* 7. Dining Deals */}
           {sections.dining_deals && sections.dining_deals.deals.length > 0 && (
             <div className="bg-white rounded-xl shadow-sm p-6 sm:p-8 mb-6 border border-gray-200">
               <h2 className="text-2xl font-bold text-[#1877F2] mb-6">Dining Deals</h2>
@@ -573,7 +599,29 @@ export default function NewsletterPage({ params }: PageProps) {
             </div>
           )}
 
-          {/* Road Work - no emoji */}
+          {/* 8. Yesterday's Wordle */}
+          {sections.wordle && (
+            <div className="bg-white rounded-xl shadow-sm p-6 sm:p-8 mb-6 border border-gray-200">
+              <h2 className="text-2xl font-bold text-[#1877F2] mb-6">Yesterday's Wordle</h2>
+              <div className="bg-[#F8F9FA] rounded-lg p-6">
+                <div className="text-center mb-4">
+                  <div className="text-3xl font-bold text-gray-900 uppercase tracking-wider">
+                    {sections.wordle.word}
+                  </div>
+                </div>
+                <div className="space-y-3 text-gray-800">
+                  <div>
+                    <strong>Definition:</strong> {sections.wordle.definition}
+                  </div>
+                  <div>
+                    <strong>Interesting Fact:</strong> {sections.wordle.interesting_fact}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* 9. Road Work */}
           {sections.road_work && sections.road_work.items && sections.road_work.items.length > 0 && (
             <div className="bg-white rounded-xl shadow-sm p-6 sm:p-8 mb-6 border border-gray-200">
               <h2 className="text-2xl font-bold text-[#1877F2] mb-6">Road Work</h2>
@@ -599,53 +647,6 @@ export default function NewsletterPage({ params }: PageProps) {
                     )}
                   </div>
                 ))}
-              </div>
-            </div>
-          )}
-
-          {/* Community Business Spotlight */}
-          {sections.business_spotlight && (
-            <div className="bg-white rounded-xl shadow-sm p-6 sm:p-8 mb-6 border border-gray-200">
-              <h2 className="text-2xl font-bold text-[#1877F2] mb-6">Community Business Spotlight</h2>
-              <div className="border border-gray-200 rounded-lg p-6">
-                {sections.business_spotlight.image_url && (
-                  <div className="w-full h-48 relative rounded-lg overflow-hidden mb-4">
-                    <Image
-                      src={sections.business_spotlight.image_url}
-                      alt={sections.business_spotlight.business_name}
-                      fill
-                      className="object-cover"
-                    />
-                  </div>
-                )}
-                <h3 className="text-xl font-bold text-gray-900 mb-3">
-                  {sections.business_spotlight.business_name}
-                </h3>
-                <p className="text-gray-800 leading-relaxed mb-4">
-                  {sections.business_spotlight.description}
-                </p>
-                <div className="space-y-2 text-sm text-gray-700">
-                  {sections.business_spotlight.address && (
-                    <div>📍 {sections.business_spotlight.address}</div>
-                  )}
-                  {sections.business_spotlight.contact_phone && (
-                    <div>📞 {sections.business_spotlight.contact_phone}</div>
-                  )}
-                  {sections.business_spotlight.contact_email && (
-                    <div>✉️ {sections.business_spotlight.contact_email}</div>
-                  )}
-                </div>
-                {sections.business_spotlight.website_url && (
-                  <a
-                    href={sections.business_spotlight.website_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-blue-600 hover:text-blue-700 text-sm font-medium inline-flex items-center gap-1 mt-4"
-                  >
-                    Visit website
-                    <ExternalLink className="w-3 h-3" />
-                  </a>
-                )}
               </div>
             </div>
           )}

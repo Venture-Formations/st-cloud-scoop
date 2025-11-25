@@ -156,37 +156,53 @@ export class NewsletterArchiver {
         .single()
 
       // 6. Fetch VRBO/Getaway properties
-      const { data: vrboSelections } = await supabaseAdmin
+      const { data: vrboSelections, error: vrboError } = await supabaseAdmin
         .from('campaign_vrbo_selections')
         .select(`
-          property:vrbo_properties(
+          listing:vrbo_listings(
             id, title, city, state, bedrooms, bathrooms, sleeps,
             main_image_url, adjusted_image_url, link
           )
         `)
         .eq('campaign_id', campaignId)
 
-      const vrboProperties = vrboSelections?.map((s: any) => s.property).filter(Boolean) || []
+      if (vrboError) {
+        console.error('[ARCHIVE] Error fetching VRBO selections:', vrboError)
+      }
+
+      const vrboProperties = vrboSelections?.map((s: any) => s.listing).filter(Boolean) || []
+      console.log(`[ARCHIVE] Found ${vrboProperties.length} VRBO properties`)
 
       // 7. Fetch Dining Deals
-      const { data: diningSelections } = await supabaseAdmin
+      const { data: diningSelections, error: diningError } = await supabaseAdmin
         .from('campaign_dining_selections')
         .select(`
-          dining_deal:dining_deals(
-            id, restaurant_name, address, phone, deal_description,
-            image_url, website_url, day_of_week
+          deal:dining_deals(
+            id, business_name, business_address, google_profile,
+            special_description, special_time, day_of_week
           )
         `)
         .eq('campaign_id', campaignId)
 
-      const diningDeals = diningSelections?.map((s: any) => s.dining_deal).filter(Boolean) || []
+      if (diningError) {
+        console.error('[ARCHIVE] Error fetching dining selections:', diningError)
+      }
 
-      // 8. Fetch Weather data
-      const { data: weatherData } = await supabaseAdmin
+      const diningDeals = diningSelections?.map((s: any) => s.deal).filter(Boolean) || []
+      console.log(`[ARCHIVE] Found ${diningDeals.length} dining deals`)
+
+      // 8. Fetch Weather data (keyed by forecast_date, not campaign_id)
+      const { data: weatherData, error: weatherError } = await supabaseAdmin
         .from('weather_forecasts')
         .select('weather_html, forecast_date')
-        .eq('campaign_id', campaignId)
+        .eq('forecast_date', campaignDate)
+        .eq('is_active', true)
         .single()
+
+      if (weatherError && weatherError.code !== 'PGRST116') {
+        console.error('[ARCHIVE] Error fetching weather:', weatherError)
+      }
+      console.log(`[ARCHIVE] Weather data found: ${!!weatherData}`)
 
       // 9. Fetch Road Work selections
       const { data: roadWorkSelections, error: roadWorkError } = await supabaseAdmin
@@ -202,15 +218,20 @@ export class NewsletterArchiver {
       // Fetch road work items separately
       const roadWorkItemIds = roadWorkSelections?.map((s: any) => s.road_work_item_id).filter(Boolean) || []
       let roadWorkItems: any[] = []
+      console.log(`[ARCHIVE] Road work selection IDs: ${roadWorkItemIds.length}`)
 
       if (roadWorkItemIds.length > 0) {
-        const { data: items } = await supabaseAdmin
+        const { data: items, error: roadWorkItemsError } = await supabaseAdmin
           .from('road_work_items')
           .select('id, road_name, road_range, city_or_township, reason, expected_reopen')
           .in('id', roadWorkItemIds)
 
+        if (roadWorkItemsError) {
+          console.error('[ARCHIVE] Error fetching road work items:', roadWorkItemsError)
+        }
         roadWorkItems = items || []
       }
+      console.log(`[ARCHIVE] Found ${roadWorkItems.length} road work items`)
 
       // 10. Fetch Advertisements
       const { data: adSelections, error: adError } = await supabaseAdmin
@@ -237,7 +258,7 @@ export class NewsletterArchiver {
       }
 
       // 11. Fetch Business Spotlight
-      const { data: spotlightData } = await supabaseAdmin
+      const { data: spotlightData, error: spotlightError } = await supabaseAdmin
         .from('business_spotlights')
         .select(`
           id, business_name, description, image_url, website_url,
@@ -246,6 +267,11 @@ export class NewsletterArchiver {
         .eq('campaign_id', campaignId)
         .eq('is_active', true)
         .single()
+
+      if (spotlightError && spotlightError.code !== 'PGRST116') {
+        console.error('[ARCHIVE] Error fetching business spotlight:', spotlightError)
+      }
+      console.log(`[ARCHIVE] Business spotlight found: ${!!spotlightData}`)
 
       // 12. Build sections object
       const sections: any = {}

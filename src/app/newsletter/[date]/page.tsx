@@ -83,12 +83,11 @@ interface Newsletter {
     dining_deals?: {
       deals: Array<{
         id: string
-        restaurant_name: string
-        address: string
-        phone: string
-        deal_description: string
-        image_url: string
-        website_url: string
+        business_name: string
+        business_address: string | null
+        google_profile: string | null
+        special_description: string
+        special_time: string | null
         day_of_week: string
       }>
     }
@@ -496,39 +495,37 @@ export default function NewsletterPage({ params }: PageProps) {
           {sections.dining_deals && sections.dining_deals.deals.length > 0 && (
             <div className="bg-white rounded-xl shadow-sm p-6 sm:p-8 mb-6 border border-gray-200">
               <h2 className="text-2xl font-bold text-[#1877F2] mb-6">Dining Deals</h2>
-              <div className="space-y-6">
+              <div className="space-y-4">
                 {sections.dining_deals.deals.map((deal: any) => (
                   <div key={deal.id} className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
-                    <div className="flex items-start gap-4">
-                      {deal.image_url && (
-                        <div className="w-24 h-24 relative rounded-lg overflow-hidden flex-shrink-0">
-                          <Image
-                            src={deal.image_url}
-                            alt={deal.restaurant_name}
-                            fill
-                            className="object-cover"
-                          />
-                        </div>
-                      )}
-                      <div className="flex-1">
-                        <h3 className="font-bold text-gray-900 mb-1">{deal.restaurant_name}</h3>
+                    <div className="flex-1">
+                      <h3 className="font-bold text-gray-900 mb-1">{deal.business_name}</h3>
+                      {deal.business_address && (
                         <p className="text-sm text-gray-600 mb-2">
-                          {deal.address} · {deal.phone}
+                          {deal.business_address}
                         </p>
-                        <p className="text-gray-800 mb-2">{deal.deal_description}</p>
-                        <p className="text-sm text-blue-600 font-medium">{deal.day_of_week}</p>
-                        {deal.website_url && (
-                          <a
-                            href={deal.website_url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-blue-600 hover:text-blue-700 text-sm font-medium inline-flex items-center gap-1 mt-2"
-                          >
-                            Visit website
-                            <ExternalLink className="w-3 h-3" />
-                          </a>
+                      )}
+                      <p className="text-gray-800 mb-2">{deal.special_description}</p>
+                      <div className="flex items-center gap-2 text-sm">
+                        <span className="text-blue-600 font-medium">{deal.day_of_week}</span>
+                        {deal.special_time && (
+                          <>
+                            <span className="text-gray-400">·</span>
+                            <span className="text-gray-600">{deal.special_time}</span>
+                          </>
                         )}
                       </div>
+                      {deal.google_profile && (
+                        <a
+                          href={deal.google_profile}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-blue-600 hover:text-blue-700 text-sm font-medium inline-flex items-center gap-1 mt-2"
+                        >
+                          View on Google Maps
+                          <ExternalLink className="w-3 h-3" />
+                        </a>
+                      )}
                     </div>
                   </div>
                 ))}

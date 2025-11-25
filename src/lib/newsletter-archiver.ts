@@ -147,24 +147,33 @@ export class NewsletterArchiver {
         .eq('date', yesterdayDate)
         .single()
 
-      // 5. Fetch Poll data
-      const { data: pollData } = await supabaseAdmin
+      // 5. Fetch Poll data (polls are global, not campaign-specific - get the active one)
+      // Note: This captures the poll that was active at archive time
+      const { data: pollData, error: pollError } = await supabaseAdmin
         .from('polls')
-        .select('id, question, option_a, option_b, option_c, option_d, campaign_id')
-        .eq('campaign_id', campaignId)
+        .select('id, title, question, options, is_active')
         .eq('is_active', true)
+        .order('created_at', { ascending: false })
+        .limit(1)
         .single()
+
+      if (pollError && pollError.code !== 'PGRST116') {
+        console.error('[ARCHIVE] Error fetching poll:', pollError)
+      }
+      console.log(`[ARCHIVE] Poll found: ${!!pollData}`)
 
       // 6. Fetch VRBO/Getaway properties
       const { data: vrboSelections, error: vrboError } = await supabaseAdmin
         .from('campaign_vrbo_selections')
         .select(`
+          selection_order,
           listing:vrbo_listings(
-            id, title, city, state, bedrooms, bathrooms, sleeps,
-            main_image_url, adjusted_image_url, link
+            id, title, city, bedrooms, bathrooms, sleeps,
+            main_image_url, adjusted_image_url, link, listing_type
           )
         `)
         .eq('campaign_id', campaignId)
+        .order('selection_order', { ascending: true })
 
       if (vrboError) {
         console.error('[ARCHIVE] Error fetching VRBO selections:', vrboError)
@@ -194,7 +203,7 @@ export class NewsletterArchiver {
       // 8. Fetch Weather data (keyed by forecast_date, not campaign_id)
       const { data: weatherData, error: weatherError } = await supabaseAdmin
         .from('weather_forecasts')
-        .select('weather_html, forecast_date')
+        .select('html_content, forecast_date, weather_data, image_url')
         .eq('forecast_date', campaignDate)
         .eq('is_active', true)
         .single()
@@ -204,34 +213,18 @@ export class NewsletterArchiver {
       }
       console.log(`[ARCHIVE] Weather data found: ${!!weatherData}`)
 
-      // 9. Fetch Road Work selections
-      const { data: roadWorkSelections, error: roadWorkError } = await supabaseAdmin
-        .from('campaign_road_work_selections')
-        .select('road_work_item_id, display_order')
+      // 9. Fetch Road Work items (stored directly in road_work_items with campaign_id)
+      const { data: roadWorkItems, error: roadWorkError } = await supabaseAdmin
+        .from('road_work_items')
+        .select('id, road_name, road_range, city_or_township, reason, start_date, expected_reopen, source_url, display_order')
         .eq('campaign_id', campaignId)
+        .eq('is_active', true)
         .order('display_order', { ascending: true })
 
       if (roadWorkError) {
-        console.error('[ARCHIVE] Error fetching road work selections:', roadWorkError)
+        console.error('[ARCHIVE] Error fetching road work items:', roadWorkError)
       }
-
-      // Fetch road work items separately
-      const roadWorkItemIds = roadWorkSelections?.map((s: any) => s.road_work_item_id).filter(Boolean) || []
-      let roadWorkItems: any[] = []
-      console.log(`[ARCHIVE] Road work selection IDs: ${roadWorkItemIds.length}`)
-
-      if (roadWorkItemIds.length > 0) {
-        const { data: items, error: roadWorkItemsError } = await supabaseAdmin
-          .from('road_work_items')
-          .select('id, road_name, road_range, city_or_township, reason, expected_reopen')
-          .in('id', roadWorkItemIds)
-
-        if (roadWorkItemsError) {
-          console.error('[ARCHIVE] Error fetching road work items:', roadWorkItemsError)
-        }
-        roadWorkItems = items || []
-      }
-      console.log(`[ARCHIVE] Found ${roadWorkItems.length} road work items`)
+      console.log(`[ARCHIVE] Found ${roadWorkItems?.length || 0} road work items`)
 
       // 10. Fetch Advertisements
       const { data: adSelections, error: adError } = await supabaseAdmin
@@ -294,12 +287,14 @@ export class NewsletterArchiver {
 
       if (weatherData) {
         sections.weather = {
-          html: weatherData.weather_html,
-          forecast_date: weatherData.forecast_date
+          html: weatherData.html_content,
+          forecast_date: weatherData.forecast_date,
+          weather_data: weatherData.weather_data,
+          image_url: weatherData.image_url
         }
       }
 
-      if (roadWorkItems.length > 0) {
+      if (roadWorkItems && roadWorkItems.length > 0) {
         sections.road_work = {
           items: roadWorkItems
         }
@@ -322,7 +317,7 @@ export class NewsletterArchiver {
         has_getaways: vrboProperties.length > 0,
         has_dining_deals: diningDeals.length > 0,
         has_weather: !!weatherData,
-        has_road_work: roadWorkItems.length > 0,
+        has_road_work: (roadWorkItems?.length || 0) > 0,
         has_advertisements: advertisements.length > 0,
         has_business_spotlight: !!spotlightData,
         archived_at: new Date().toISOString()

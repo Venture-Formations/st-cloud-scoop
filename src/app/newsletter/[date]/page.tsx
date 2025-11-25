@@ -56,11 +56,9 @@ interface Newsletter {
     }
     poll?: {
       id: string
+      title?: string
       question: string
-      option_a: string
-      option_b: string
-      option_c: string
-      option_d: string
+      options: string[]
     }
     weather?: {
       html: string
@@ -70,14 +68,14 @@ interface Newsletter {
       properties: Array<{
         id: string
         title: string
-        city: string
-        state: string
-        bedrooms: number
-        bathrooms: number
-        sleeps: number
-        main_image_url: string
-        adjusted_image_url: string
+        city: string | null
+        bedrooms: number | null
+        bathrooms: number | null
+        sleeps: number | null
+        main_image_url: string | null
+        adjusted_image_url: string | null
         link: string
+        listing_type?: string
       }>
     }
     dining_deals?: {
@@ -392,26 +390,11 @@ export default function NewsletterPage({ params }: PageProps) {
               <div className="bg-gray-50 rounded-lg p-6">
                 <h3 className="font-bold text-gray-900 mb-4">{sections.poll.question}</h3>
                 <div className="space-y-2">
-                  {sections.poll.option_a && (
-                    <div className="bg-white border border-gray-200 rounded p-3 text-gray-800">
-                      A) {sections.poll.option_a}
+                  {sections.poll.options?.map((option: string, index: number) => (
+                    <div key={index} className="bg-white border border-gray-200 rounded p-3 text-gray-800">
+                      {String.fromCharCode(65 + index)}) {option}
                     </div>
-                  )}
-                  {sections.poll.option_b && (
-                    <div className="bg-white border border-gray-200 rounded p-3 text-gray-800">
-                      B) {sections.poll.option_b}
-                    </div>
-                  )}
-                  {sections.poll.option_c && (
-                    <div className="bg-white border border-gray-200 rounded p-3 text-gray-800">
-                      C) {sections.poll.option_c}
-                    </div>
-                  )}
-                  {sections.poll.option_d && (
-                    <div className="bg-white border border-gray-200 rounded p-3 text-gray-800">
-                      D) {sections.poll.option_d}
-                    </div>
-                  )}
+                  ))}
                 </div>
                 <p className="text-sm text-gray-600 mt-4 italic">Poll results were available to newsletter subscribers.</p>
               </div>
@@ -467,11 +450,15 @@ export default function NewsletterPage({ params }: PageProps) {
                     ) : null}
                     <div className="p-4">
                       <h3 className="font-bold text-gray-900 mb-2">{property.title}</h3>
-                      <p className="text-sm text-gray-600 mb-3">
-                        {property.city}, {property.state}
-                      </p>
+                      {property.city && (
+                        <p className="text-sm text-gray-600 mb-3">
+                          {property.city}{property.listing_type === 'Greater' ? ', MN' : ''}
+                        </p>
+                      )}
                       <div className="text-sm text-gray-700 mb-3">
-                        🛏️ {property.bedrooms} bed · 🛁 {property.bathrooms} bath · 👥 Sleeps {property.sleeps}
+                        {property.bedrooms && `🛏️ ${property.bedrooms} bed`}
+                        {property.bathrooms && ` · 🛁 ${property.bathrooms} bath`}
+                        {property.sleeps && ` · 👥 Sleeps ${property.sleeps}`}
                       </div>
                       {property.link && (
                         <a

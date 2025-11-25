@@ -526,9 +526,8 @@ export default function NewsletterPage({ params }: PageProps) {
           {/* 6. Poll Section */}
           {sections.poll && (
             <div className="bg-white rounded-xl shadow-sm p-6 sm:p-8 mb-6 border border-gray-200">
-              <h2 className="text-2xl font-bold text-[#1877F2] mb-6">Poll</h2>
-              <div className="bg-gray-50 rounded-lg p-6">
-                <h3 className="font-bold text-gray-900 mb-4">{sections.poll.question}</h3>
+              <div className="mx-auto" style={{ maxWidth: '650px' }}>
+                <h3 className="font-bold text-gray-900 mb-4 text-lg">{sections.poll.question}</h3>
                 <div className="space-y-2">
                   {sections.poll.options?.map((option: string, index: number) => (
                     <button
@@ -537,10 +536,10 @@ export default function NewsletterPage({ params }: PageProps) {
                       disabled={voting || !!votedOption}
                       className={`w-full text-left p-3 rounded transition-all ${
                         votedOption === option
-                          ? 'bg-blue-600 text-white border-blue-600'
+                          ? 'bg-[#1877F2] text-white border-[#1877F2]'
                           : votedOption
                           ? 'bg-gray-100 border border-gray-200 text-gray-500 cursor-not-allowed'
-                          : 'bg-white border border-gray-200 text-gray-800 hover:border-blue-400 hover:bg-blue-50 cursor-pointer'
+                          : 'bg-[#1877F2] border border-[#1877F2] text-white hover:bg-[#1565D8] cursor-pointer'
                       }`}
                     >
                       {String.fromCharCode(65 + index)}) {option}
